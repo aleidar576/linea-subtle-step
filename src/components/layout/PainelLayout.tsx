@@ -1,0 +1,360 @@
+import { useState, useEffect } from 'react';
+import { Link, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useLojistaAuth } from '@/hooks/useLojistaAuth';
+import { useLojas, useCreateLoja } from '@/hooks/useLojas';
+import { useTheme } from '@/hooks/useTheme';
+import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
+import { lojistaApi } from '@/services/saas-api';
+import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
+import { ContentTransition } from '@/components/PageTransition';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Store, Home, Plus, LogOut, User, CreditCard, ChevronDown, ChevronRight,
+  Loader2, BarChart3, Package, Settings, ShoppingCart, Layers, Boxes, Truck,
+  Users, Image, Tag, Palette, CreditCard as PayIcon, Sun, Moon, Monitor,
+  Code, FileText, Bell, TrendingUp, Star
+} from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import type { Loja } from '@/services/saas-api';
+
+const LOJA_SUBMENUS = [
+  { path: '', label: 'Overview', icon: BarChart3 },
+  { path: '/pedidos', label: 'Pedidos', icon: ShoppingCart },
+  { path: '/produtos', label: 'Produtos', icon: Package },
+  { path: '/categorias', label: 'Categorias', icon: Layers },
+  { path: '/estoque', label: 'Estoque', icon: Boxes },
+  { path: '/fretes', label: 'Fretes', icon: Truck },
+  { path: '/clientes', label: 'Clientes', icon: Users },
+  { path: '/conteudo', label: 'Conteúdo', icon: Image },
+  { path: '/paginas', label: 'Páginas', icon: FileText },
+  { path: '/cupons', label: 'Cupons', icon: Tag },
+  { path: '/pacotes-avaliacoes', label: 'Avaliações', icon: Star },
+  { path: '/pixels', label: 'Pixels & Scripts', icon: Code },
+  { path: '/relatorios', label: 'Relatórios', icon: TrendingUp },
+  { path: '/temas', label: 'Temas', icon: Palette },
+  { path: '/configuracoes', label: 'Configurações', icon: Settings },
+  { path: '/integracoes', label: 'Integrações', icon: PayIcon },
+];
+
+const PainelLayout = () => {
+  const { user, loading: authLoading, logout, isAuthenticated } = useLojistaAuth();
+  const { data: lojas, isLoading: lojasLoading } = useLojas();
+  const { theme, themeChoice, toggleTheme } = useTheme();
+  const { data: notificacoes } = useNotificacoes();
+  const marcarTodasLidas = useMarcarTodasLidas();
+  const { brandName } = useSaaSBrand();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
+  const [emailPrefs, setEmailPrefs] = useState({ pedidos_pendentes: false, pedidos_pagos: false });
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const { toast } = useToast();
+  useFaviconUpdater();
+
+  // Dynamic title: {nomeLoja} · {menu} · {brandName} or Painel · {brandName}
+  useEffect(() => {
+    const safeLojas = Array.isArray(lojas) ? lojas : [];
+    // Check if we're inside a loja: /painel/loja/:id/...
+    const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
+    if (lojaMatch) {
+      const lojaId = lojaMatch[1];
+      const currentLoja = safeLojas.find(l => l._id === lojaId);
+      const lojaName = currentLoja?.nome || 'Loja';
+      // Find active submenu
+      const afterLojaId = location.pathname.replace(`/painel/loja/${lojaId}`, '');
+      const activeSub = LOJA_SUBMENUS.find(sub => {
+        if (sub.path === '') return afterLojaId === '' || afterLojaId === '/';
+        return afterLojaId.startsWith(sub.path);
+      });
+      const menuLabel = activeSub?.label || 'Overview';
+      document.title = `${lojaName} · ${menuLabel} · ${brandName}`;
+    } else {
+      document.title = `Painel · ${brandName}`;
+    }
+  }, [location.pathname, lojas, brandName]);
+
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  const ThemeIcon = themeChoice === 'dark' ? Sun : themeChoice === 'light' ? Moon : Monitor;
+  const themeLabel = themeChoice === 'dark' ? 'Modo Claro' : themeChoice === 'light' ? 'Modo Escuro' : 'Seguir Sistema';
+
+  const safeNotifs = Array.isArray(notificacoes) ? notificacoes : [];
+  const unreadCount = safeNotifs.filter(n => !n.lida).length;
+
+  const handleSaveEmailPrefs = async () => {
+    setSavingPrefs(true);
+    try {
+      await lojistaApi.atualizar({ config_emails: { ...emailPrefs, alteracao_senha: true } } as any);
+      toast({ title: 'Preferências salvas!' });
+      setShowNotifPrefs(false);
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-border bg-sidebar flex flex-col shrink-0 h-screen sticky top-0">
+        <div className="p-4 border-b border-sidebar-border">
+          <Link to="/painel" className="flex items-center gap-2">
+            <SaaSLogo context="panel" theme="auto" nameClassName="text-sidebar-foreground" />
+          </Link>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          <Link
+            to="/painel"
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              location.pathname === '/painel'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+            }`}
+          >
+            <Home className="h-4 w-4" /> Início
+          </Link>
+
+          <div className="pt-3 pb-1 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lojas</div>
+
+          {lojasLoading ? (
+            <div className="px-3 py-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
+          ) : lojas && Array.isArray(lojas) && lojas.filter(l => l.is_active).length > 0 ? (
+            lojas.filter(l => l.is_active).map(loja => (
+              <LojaMenuItem key={loja._id} loja={loja} currentPath={location.pathname} />
+            ))
+          ) : null}
+
+          <CreateLojaButton />
+        </nav>
+
+        <div className="p-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+              title={themeLabel}
+            >
+              <ThemeIcon className="h-4 w-4" />
+            </button>
+
+            {/* Bell Notifications */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="relative flex items-center justify-center h-8 w-8 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors">
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                  <span className="text-sm font-semibold">Notificações</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => marcarTodasLidas.mutate()}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Marcar todas como lidas
+                    </button>
+                  )}
+                </div>
+                {!safeNotifs.length ? (
+                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhuma notificação</div>
+                ) : (
+                  safeNotifs.slice(0, 20).map(n => (
+                    <div key={n._id} className={`px-3 py-2 border-b border-border last:border-0 ${!n.lida ? 'bg-accent/30' : ''}`}>
+                      <p className="text-sm font-medium">{n.titulo}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{n.mensagem}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{new Date(n.criado_em).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-sidebar-accent text-sm">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Avatar" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
+                    {user?.nome?.slice(0, 3).toUpperCase() || 'USR'}
+                  </div>
+                )}
+                <div className="flex-1 text-left">
+                  <div className="font-medium text-sidebar-foreground truncate">{user?.nome}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {user?.modo_amigo ? (
+                      <span className="inline-flex items-center gap-1 text-green-500 font-semibold">VIP</span>
+                    ) : (
+                      <span className="capitalize">{user?.plano || 'Free'}</span>
+                    )}
+                  </div>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/perfil')}><User className="h-4 w-4" /> Perfil</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/assinatura')}><CreditCard className="h-4 w-4" /> Assinatura</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2" onClick={() => setShowNotifPrefs(true)}><Bell className="h-4 w-4" /> Notificações</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2 text-destructive" onClick={() => { logout(); navigate('/login'); }}>
+                <LogOut className="h-4 w-4" /> Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="flex-1 p-6 overflow-y-auto">
+        <ContentTransition>
+          <Outlet />
+        </ContentTransition>
+      </main>
+
+      {/* Email Preferences Dialog */}
+      <Dialog open={showNotifPrefs} onOpenChange={setShowNotifPrefs}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Preferências de Notificação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Pedidos Pendentes</Label>
+              <Switch checked={emailPrefs.pedidos_pendentes} onCheckedChange={v => setEmailPrefs({ ...emailPrefs, pedidos_pendentes: v })} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Pedidos Pagos</Label>
+              <Switch checked={emailPrefs.pedidos_pagos} onCheckedChange={v => setEmailPrefs({ ...emailPrefs, pedidos_pagos: v })} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm">Alteração de Senha</Label>
+                <p className="text-xs text-muted-foreground">Obrigatório por segurança</p>
+              </div>
+              <Switch checked={true} disabled />
+            </div>
+            <Button onClick={handleSaveEmailPrefs} className="w-full" disabled={savingPrefs}>
+              {savingPrefs ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar Preferências
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+const LojaMenuItem = ({ loja, currentPath }: { loja: Loja; currentPath: string }) => {
+  const basePath = `/painel/loja/${loja._id}`;
+  const isInThisLoja = currentPath.startsWith(basePath);
+  const [open, setOpen] = useState(isInThisLoja);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
+          isInThisLoja ? 'bg-sidebar-accent/50 text-sidebar-foreground font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+        }`}
+      >
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <Store className="h-4 w-4" />
+        <span className="truncate flex-1 text-left">{loja.nome}</span>
+      </button>
+      {open && (
+        <div className="ml-6 space-y-0.5">
+          {LOJA_SUBMENUS.map((sub) => {
+            const fullPath = `${basePath}${sub.path}`;
+            const isActive = sub.path === ''
+              ? currentPath === basePath
+              : currentPath.startsWith(fullPath);
+            return (
+              <Link
+                key={sub.path}
+                to={fullPath}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded transition-colors ${
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                }`}
+              >
+                <sub.icon className="h-3 w-3" />
+                {sub.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CreateLojaButton = () => {
+  const [open, setOpen] = useState(false);
+  const [nome, setNome] = useState('');
+  const createLoja = useCreateLoja();
+  const { toast } = useToast();
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createLoja.mutateAsync({ nome });
+      toast({ title: 'Loja criada!', description: `"${nome}" está pronta.` });
+      setOpen(false);
+      setNome('');
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-sidebar-accent text-sm text-primary font-medium">
+          <Plus className="h-4 w-4" /> Nova Loja
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Criar Nova Loja</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block">Nome da Loja</label>
+            <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Minha Loja" required />
+          </div>
+          <Button type="submit" className="w-full" disabled={createLoja.isPending}>
+            {createLoja.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Criar Loja
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default PainelLayout;
