@@ -1,0 +1,120 @@
+// ============================================
+// 💰 /api/create-pix - Proxy para SealPay + Webhook
+// ============================================
+
+const connectDB = require('../lib/mongodb');
+const Setting = require('../models/Setting.js');
+
+module.exports = async function handler(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  await connectDB();
+
+  // ── Webhook scope ──
+  const scope = req.query?.scope || req.body?.scope;
+  if (scope === 'webhook') {
+    const { txid, status } = req.body || {};
+    if (!txid) return res.status(400).json({ error: 'txid é obrigatório' });
+
+    const paidStatuses = ['paid', 'approved', 'confirmed', 'completed'];
+    if (paidStatuses.includes((status || '').toLowerCase())) {
+      try {
+        const Pedido = require('../models/Pedido.js');
+        const result = await Pedido.findOneAndUpdate(
+          { 'pagamento.txid': txid },
+          { $set: { status: 'pago', 'pagamento.pago_em': new Date() } },
+          { new: true }
+        );
+        if (result) {
+          console.log(`[WEBHOOK] Pedido ${result._id} marcado como pago (txid: ${txid})`);
+        } else {
+          console.warn(`[WEBHOOK] Pedido não encontrado para txid: ${txid}`);
+        }
+      } catch (err) {
+        console.error('[WEBHOOK] Erro ao atualizar pedido:', err.message);
+      }
+    }
+    return res.status(200).json({ ok: true });
+  }
+
+  // ── Create PIX flow ──
+  const body = req.body;
+
+  if (!body.amount || body.amount < 100) {
+    return res.status(400).json({ error: 'amount deve ser em centavos e no mínimo 100' });
+  }
+  if (!body.customer?.name || body.customer.name.length < 2) {
+    return res.status(400).json({ error: 'customer.name é obrigatório' });
+  }
+  if (!body.customer?.email || !body.customer.email.includes('@')) {
+    return res.status(400).json({ error: 'customer.email é obrigatório' });
+  }
+
+  // Se loja_id fornecido, buscar chave específica da loja
+  let SEALPAY_API_KEY = null;
+  if (body.loja_id) {
+    const Loja = require('../models/Loja.js');
+    const loja = await Loja.findById(body.loja_id).lean();
+    if (loja?.configuracoes?.sealpay_api_key) {
+      SEALPAY_API_KEY = loja.configuracoes.sealpay_api_key;
+    }
+  }
+
+  // Fallback para chave global
+  if (!SEALPAY_API_KEY) {
+    const settings = await Setting.find({ key: { $in: ['sealpay_api_url', 'sealpay_api_key'] } }).lean();
+    const settingsMap = Object.fromEntries(settings.map(s => [s.key, s.value]));
+    SEALPAY_API_KEY = settingsMap['sealpay_api_key'] || process.env.SEALPAY_API_KEY;
+  }
+
+  const settings2 = await Setting.find({ key: 'sealpay_api_url' }).lean();
+  const SEALPAY_API_URL = settings2[0]?.value || 'https://abacate-5eo1.onrender.com/create-pix';
+
+  if (!SEALPAY_API_KEY) {
+    return res.status(500).json({ error: 'API Key não encontrada' });
+  }
+
+  const cleanPhone = (body.customer.cellphone || '').replace(/\D/g, '');
+
+  const payload = {
+    amount: body.amount,
+    description: body.description || 'Pagamento Livraria Fé & Amor',
+    customer: {
+      name: body.customer.name,
+      email: body.customer.email,
+      cellphone: cleanPhone,
+      taxId: (body.customer.taxId || '').replace(/\D/g, ''),
+    },
+    tracking: { utm: body.tracking?.utm || {}, src: body.tracking?.src || '' },
+    api_key: SEALPAY_API_KEY,
+    fbp: body.fbp || '',
+    fbc: body.fbc || '',
+    user_agent: body.user_agent || '',
+  };
+
+  try {
+    const response = await fetch(SEALPAY_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) return res.status(response.status).json({ error: data.message });
+
+    if (data.pix_qr_code && !data.pix_qr_code.startsWith('data:image')) {
+      data.pix_qr_code = `data:image/png;base64,${data.pix_qr_code}`;
+    }
+
+    return res.status(200).json(data);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
