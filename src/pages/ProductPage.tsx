@@ -231,7 +231,7 @@ const ProductPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-40" ref={topRef}>
+    <div className="min-h-screen bg-background pb-24" ref={topRef}>
       {/* Top Navigation - Fixed */}
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between bg-background/95 px-4 py-3 backdrop-blur-lg">
         <UtmLink 
