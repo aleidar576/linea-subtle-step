@@ -1,86 +1,90 @@
 
 
-# Plano de Execucao: 3 Hotfixes Criticos
+# Plano: UX do Botao "Verificar" + Debug Profundo
 
-## HOTFIX 1: Inteligencia da Verificacao de Dominio
+## Diagnostico
 
-**Arquivo:** `src/pages/painel/LojaConfiguracoes.tsx` (linhas 73-84)
+O backend `add-domain` (api/lojas.js linhas 96-121) ja esta correto:
+- Faz POST para `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/domains`
+- Repassa erros da Vercel com `res.status(400).json({ error: ... })`
+- Aceita `domain_already_exists` como sucesso (idempotente)
 
-**Problema:** `handleCheckDomain` trata qualquer resposta 200 como sucesso. A Vercel retorna 200 com `verified: false` quando o dominio ainda nao propagou.
+O problema esta exclusivamente no frontend: o `handleCheckDomain` atual nao chama `addDomain`, e o `handleSave` engole o erro do `addDomain` com um `catch` vazio.
 
-**Correcao:** Alterar a funcao `handleCheckDomain` para inspecionar o payload retornado:
+## Alteracoes
+
+### Arquivo 1: `src/pages/painel/LojaConfiguracoes.tsx`
+
+**Alteracao A -- Refatorar `handleCheckDomain` (linhas 80-94)**
+
+Novo fluxo com addDomain automatico e debug visivel:
 
 ```text
 const handleCheckDomain = async () => {
-  if (!dominioCustomizado.trim()) return;
+  if (!dominioCustomizado.trim() || !id) return;
   setIsCheckingDomain(true);
   try {
+    // 1. Registrar dominio na Vercel (idempotente)
+    await lojasApi.addDomain(id, dominioCustomizado.trim());
+
+    // 2. Respiro para a Vercel processar
+    await new Promise(r => setTimeout(r, 2000));
+
+    // 3. Verificacao real
     const result = await lojasApi.checkDomain(dominioCustomizado.trim());
     if (result.verified === true && !result.misconfigured) {
       toast({ title: 'Dominio verificado!', description: 'Dominio verificado e propagado com sucesso!' });
     } else {
       toast({ title: 'Propagacao pendente', description: 'Dominio ainda nao propagou ou DNS incorreto. Verifique o apontamento CNAME e aguarde.', variant: 'destructive' });
     }
-  } catch {
-    toast({ title: 'Erro na verificacao', description: 'Nao foi possivel verificar o dominio. Tente novamente.', variant: 'destructive' });
+  } catch (e: any) {
+    toast({
+      title: 'Erro ao registrar na Vercel',
+      description: e?.message || 'Erro desconhecido. Verifique token e project ID.',
+      variant: 'destructive',
+    });
   } finally {
     setIsCheckingDomain(false);
   }
 };
 ```
 
----
+Pontos-chave:
+- SEM catch silencioso -- o erro real da Vercel (token invalido, project ID errado, etc) aparece no Toast
+- O `addDomain` roda ANTES do `checkDomain`, tornando o botao independente do "Salvar"
+- Delay de 2s entre registro e verificacao
 
-## HOTFIX 2: Registro do Dominio na Vercel ao Salvar
+**Alteracao B -- Tornar o `addDomain` no `handleSave` visivel (linhas 64-68)**
 
-**Arquivo:** `src/pages/painel/LojaConfiguracoes.tsx` (funcao `handleSave`, linhas 48-71)
-
-**Problema:** Ao salvar um dominio customizado, ele e persistido no banco mas nunca registrado na Vercel, causando 404.
-
-**Correcao:** Apos o `updateLoja.mutateAsync` com sucesso, verificar se `dominioCustomizado` tem valor e chamar `lojasApi.addDomain(id, dominioCustomizado)`:
+Substituir o catch silencioso por um que mostra o erro:
 
 ```text
-// Dentro do try, apos updateLoja.mutateAsync:
 if (dominioCustomizado?.trim()) {
   try {
     await lojasApi.addDomain(id, dominioCustomizado.trim());
-  } catch {
-    // nao bloqueia o save, apenas avisa
+  } catch (e: any) {
+    toast({
+      title: 'Aviso: dominio nao registrado na Vercel',
+      description: e?.message || 'Erro ao registrar. Use o botao Verificar Propagacao.',
+      variant: 'destructive',
+    });
   }
 }
 ```
 
-O toast de sucesso permanece. Se o `addDomain` falhar, o save do banco ja foi feito -- nao bloqueamos.
+### Arquivo 2: `api/lojas.js` -- SEM ALTERACAO
 
----
-
-## HOTFIX 3: Espacamento Fantasma no Mobile
-
-**Arquivo:** `src/pages/loja/LojaProduto.tsx` (linha 374)
-
-**Problema:** A div raiz tem `pb-40` (160px) no mobile, criando um espaco branco excessivo abaixo do conteudo.
-
-**Correcao:** Reduzir de `pb-40` para `pb-24` (96px), suficiente para a bottom bar de "Comprar Agora" sem deixar espaco morto:
-
-```text
-// ANTES:
-<div className="min-h-screen bg-background md:pb-0 pb-40">
-
-// DEPOIS:
-<div className="min-h-screen bg-background md:pb-0 pb-24">
-```
-
-Tambem corrigir em `src/pages/ProductPage.tsx` (linha 234) de `pb-40` para `pb-24` por consistencia.
-
----
+O backend ja repassa erros corretamente (linha 113: `return res.status(400).json({ error: vercelData.error?.message ... })`). Nenhuma mudanca necessaria.
 
 ## Resumo
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/painel/LojaConfiguracoes.tsx` | EDITAR - handleCheckDomain (payload) + handleSave (addDomain) |
-| `src/pages/loja/LojaProduto.tsx` | EDITAR - pb-40 para pb-24 |
-| `src/pages/ProductPage.tsx` | EDITAR - pb-40 para pb-24 |
+| `src/pages/painel/LojaConfiguracoes.tsx` | EDITAR - handleCheckDomain (addDomain + debug) + handleSave (catch visivel) |
+| `api/lojas.js` | SEM ALTERACAO (backend ja correto) |
 | `vite.config.mts` | INTOCAVEL |
-| `api/*` | SEM ALTERACAO |
+
+## Nota sobre o erro de build
+
+O erro "Permission denied" no vite e um problema transitorio do ambiente sandbox, nao do codigo. O arquivo `vite.config.mts` existe e nao sera tocado.
 
