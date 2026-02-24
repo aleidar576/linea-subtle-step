@@ -701,7 +701,7 @@ export interface Cupom {
   _id: string;
   loja_id: string;
   codigo: string;
-  tipo: 'percentual' | 'fixo';
+  tipo: 'percentual' | 'fixo' | 'frete_gratis';
   valor: number;
   valor_minimo_pedido: number | null;
   limite_usos: number | null;

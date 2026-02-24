@@ -58,7 +58,11 @@ const LojaCupons = () => {
   const handleSave = async () => {
     if (!form.codigo?.trim()) { toast.error('Código é obrigatório'); return; }
     try {
-      const payload = { ...form, validade: form.validade ? new Date(form.validade).toISOString() : null };
+      const payload = {
+        ...form,
+        validade: form.validade ? new Date(form.validade).toISOString() : null,
+        ...(form.tipo === 'frete_gratis' ? { valor: 0, produtos_ids: [] } : {}),
+      };
       if (editId) {
         await updateMut.mutateAsync({ id: editId, data: payload });
         toast.success('Cupom atualizado');
@@ -84,7 +88,8 @@ const LojaCupons = () => {
     !search || c.codigo.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatValor = (c: Cupom) => c.tipo === 'percentual' ? `${c.valor}%` : `R$ ${(c.valor / 100).toFixed(2).replace('.', ',')}`;
+  const formatValor = (c: Cupom) => c.tipo === 'frete_gratis' ? 'Frete Grátis' : c.tipo === 'percentual' ? `${c.valor}%` : `R$ ${(c.valor / 100).toFixed(2).replace('.', ',')}`;
+  const formatTipo = (t: string) => t === 'frete_gratis' ? '🚚' : t === 'percentual' ? '%' : 'R$';
   const formatValidade = (v: string | null) => {
     if (!v) return 'Sem validade';
     const d = new Date(v);
@@ -151,7 +156,7 @@ const LojaCupons = () => {
                 {filtered.map(c => (
                   <TableRow key={c._id}>
                     <TableCell><code className="bg-muted px-2 py-0.5 rounded text-sm">{c.codigo}</code></TableCell>
-                    <TableCell>{c.tipo === 'percentual' ? '%' : 'R$'}</TableCell>
+                    <TableCell>{formatTipo(c.tipo)}</TableCell>
                     <TableCell>{formatValor(c)}</TableCell>
                     <TableCell>{formatValidade(c.validade)}</TableCell>
                     <TableCell>{c.usos}{c.limite_usos !== null ? `/${c.limite_usos}` : '/∞'}</TableCell>
@@ -193,13 +198,16 @@ const LojaCupons = () => {
                 <SelectContent>
                   <SelectItem value="percentual">Percentual (%)</SelectItem>
                   <SelectItem value="fixo">Valor fixo (R$)</SelectItem>
+                  <SelectItem value="frete_gratis">Frete Grátis 🚚</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Valor {form.tipo === 'percentual' ? '(%)' : '(centavos)'}</Label>
-              <Input type="number" min={0} value={form.valor ?? 0} onChange={e => setForm({ ...form, valor: Number(e.target.value) })} />
-            </div>
+            {form.tipo !== 'frete_gratis' && (
+              <div>
+                <Label>Valor {form.tipo === 'percentual' ? '(%)' : '(centavos)'}</Label>
+                <Input type="number" min={0} value={form.valor ?? 0} onChange={e => setForm({ ...form, valor: Number(e.target.value) })} />
+              </div>
+            )}
             <div>
               <Label>Valor mínimo do pedido (centavos, vazio = sem mínimo)</Label>
               <Input type="number" min={0} value={form.valor_minimo_pedido ?? ''} onChange={e => setForm({ ...form, valor_minimo_pedido: e.target.value ? Number(e.target.value) : null })} />
@@ -213,8 +221,8 @@ const LojaCupons = () => {
               <Input type="date" value={form.validade?.slice(0, 10) || ''} onChange={e => setForm({ ...form, validade: e.target.value || null })} />
             </div>
 
-            {/* Product search with badges */}
-            <div>
+            {/* Product search with badges - hidden for frete_gratis */}
+            {form.tipo !== 'frete_gratis' && <div>
               <Label className="mb-2 block">Produtos específicos (vazio = todos)</Label>
               {/* Selected products as badges */}
               {selectedProducts.length > 0 && (
@@ -265,7 +273,7 @@ const LojaCupons = () => {
               {selectedProducts.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">{selectedProducts.length} produto(s) selecionado(s)</p>
               )}
-            </div>
+            </div>}
 
             <div className="flex items-center justify-between">
               <Label>Ativo</Label>
