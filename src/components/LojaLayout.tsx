@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2 } from 'lucide-react';
+import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag } from 'lucide-react';
 import { useLojaByDomain } from '@/hooks/useLojaPublica';
 import { LojaProvider } from '@/contexts/LojaContext';
 import { useCart } from '@/contexts/CartContext';
@@ -359,9 +359,10 @@ function CookieConsent({ ativo }: { ativo: boolean }) {
 }
 
 // ── Welcome Popup ──
-function WelcomePopup({ config }: { config: any }) {
+function WelcomePopup({ config, lojaId }: { config: any; lojaId: string }) {
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
+  const [cuponsLoaded, setCuponsLoaded] = useState<Array<{ _id: string; codigo: string; tipo: string; valor: number }>>([]);
   const location = useLocation();
 
   useEffect(() => {
@@ -373,6 +374,12 @@ function WelcomePopup({ config }: { config: any }) {
     }
   }, [config?.ativo, location.pathname]);
 
+  // Fetch coupons when type is CUPONS and popup becomes visible
+  useEffect(() => {
+    if (!visible || config?.tipo !== 'CUPONS' || !config?.cupons_ids?.length) return;
+    cuponsPopupApi.getBulk(lojaId, config.cupons_ids).then(setCuponsLoaded).catch(() => {});
+  }, [visible, config?.tipo, config?.cupons_ids, lojaId]);
+
   if (!visible) return null;
 
   const handleClose = () => {
@@ -380,37 +387,138 @@ function WelcomePopup({ config }: { config: any }) {
     setVisible(false);
   };
 
+  const popupBg = config.cores?.fundo || undefined;
+  const popupText = config.cores?.texto || undefined;
+  const btnBg = config.cores?.botao_fundo || undefined;
+  const btnText = config.cores?.botao_texto || undefined;
+
+  const handleResgatarCupons = () => {
+    cuponsLoaded.forEach(c => {
+      const key = `cupom_resgatado_${c.codigo}`;
+      localStorage.setItem(key, JSON.stringify(c));
+    });
+    sessionStorage.setItem('popup_seen', 'true');
+    setVisible(false);
+    toast.success('Cupons resgatados!');
+  };
+
   return (
     <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={handleClose}>
-      <div className="bg-card rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0" onClick={e => e.stopPropagation()}>
+      <div
+        className="rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0"
+        style={{ backgroundColor: popupBg || 'hsl(var(--card))', color: popupText }}
+        onClick={e => e.stopPropagation()}
+      >
         {config.imagem_url && (
           <img src={config.imagem_url} alt="" className="w-full h-40 object-cover" />
         )}
-        <div className="p-6 space-y-3 text-center">
-          <h2 className="text-lg font-bold text-foreground">{config.titulo || 'Bem-vindo!'}</h2>
-          {config.subtitulo && <p className="text-sm text-muted-foreground">{config.subtitulo}</p>}
-          {config.tipo === 'newsletter' && (
-            <div className="space-y-2">
-              <Input value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Seu melhor e-mail" />
-              <Button className="w-full" onClick={() => { handleClose(); }}>
-                {config.botao_texto || 'Quero meu cupom!'}
-              </Button>
-            </div>
+        <div className="p-6 space-y-4 text-center">
+          {/* CUPONS type */}
+          {config.tipo === 'CUPONS' && (
+            <>
+              <div className="flex justify-center">
+                <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ backgroundColor: popupText ? `${popupText}10` : 'hsl(var(--muted))' }}>
+                  <Gift className="h-7 w-7" style={{ color: popupText || 'hsl(var(--foreground))' }} />
+                </div>
+              </div>
+              <h2 className="text-lg font-bold" style={{ color: popupText }}>{config.titulo || '🎉 Parabéns!'}</h2>
+              {config.subtitulo && <p className="text-sm opacity-70" style={{ color: popupText }}>{config.subtitulo}</p>}
+              {cuponsLoaded.length > 0 && (
+                <div className="space-y-2 text-left">
+                  {cuponsLoaded.map(c => (
+                    <div key={c._id} className="flex items-center justify-between rounded-lg border p-3" style={{ borderColor: popupText ? `${popupText}20` : 'hsl(var(--border))' }}>
+                      <div>
+                        <p className="font-bold text-sm" style={{ color: popupText }}>{c.codigo}</p>
+                        <p className="text-xs opacity-60" style={{ color: popupText }}>
+                          {c.tipo === 'percentual' ? `${c.valor}% de desconto` : c.valor === 0 ? 'Frete grátis' : `R$ ${c.valor.toFixed(2)} de desconto`}
+                        </p>
+                      </div>
+                      <Tag className="h-5 w-5 opacity-40" style={{ color: popupText }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={handleResgatarCupons}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-opacity hover:opacity-90"
+                style={{
+                  backgroundColor: btnBg || 'hsl(var(--foreground))',
+                  color: btnText || 'hsl(var(--background))',
+                }}
+              >
+                <Gift className="h-4 w-4" />
+                {config.texto_botao || 'RESGATAR CUPONS'}
+              </button>
+              <button onClick={handleClose} className="text-xs opacity-50 hover:opacity-80 underline" style={{ color: popupText }}>
+                Não, obrigado
+              </button>
+            </>
           )}
-          {config.tipo === 'aviso' && config.botao_texto && (
-            <Button className="w-full" onClick={handleClose}>
-              {config.botao_texto}
-            </Button>
+
+          {/* NEWSLETTER type */}
+          {(config.tipo === 'NEWSLETTER' || config.tipo === 'newsletter') && (
+            <>
+              <h2 className="text-lg font-bold" style={{ color: popupText }}>{config.titulo || 'Bem-vindo!'}</h2>
+              {config.subtitulo && <p className="text-sm opacity-70" style={{ color: popupText }}>{config.subtitulo}</p>}
+              <div className="space-y-2">
+                <Input value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Seu melhor e-mail" />
+                <button
+                  className="w-full py-3 px-4 rounded-xl font-bold text-sm transition-opacity hover:opacity-90"
+                  style={{
+                    backgroundColor: btnBg || 'hsl(var(--primary))',
+                    color: btnText || 'hsl(var(--primary-foreground))',
+                  }}
+                  onClick={() => { handleClose(); }}
+                >
+                  {config.texto_botao || 'Quero participar!'}
+                </button>
+              </div>
+              <button onClick={handleClose} className="text-xs opacity-50 hover:opacity-80" style={{ color: popupText }}>
+                Fechar
+              </button>
+            </>
           )}
-          {config.cupom_codigo && (
-            <div className="bg-primary/10 rounded-lg p-2">
-              <p className="text-xs text-muted-foreground">Use o cupom:</p>
-              <p className="text-lg font-bold text-primary">{config.cupom_codigo}</p>
-            </div>
+
+          {/* BANNER type */}
+          {config.tipo === 'BANNER' && (
+            <>
+              <h2 className="text-lg font-bold" style={{ color: popupText }}>{config.titulo || 'Bem-vindo!'}</h2>
+              {config.subtitulo && <p className="text-sm opacity-70" style={{ color: popupText }}>{config.subtitulo}</p>}
+              {config.texto_botao && (
+                <button
+                  className="w-full py-3 px-4 rounded-xl font-bold text-sm transition-opacity hover:opacity-90"
+                  style={{
+                    backgroundColor: btnBg || 'hsl(var(--primary))',
+                    color: btnText || 'hsl(var(--primary-foreground))',
+                  }}
+                  onClick={handleClose}
+                >
+                  {config.texto_botao}
+                </button>
+              )}
+              <button onClick={handleClose} className="text-xs opacity-50 hover:opacity-80" style={{ color: popupText }}>
+                Fechar
+              </button>
+            </>
           )}
-          <button onClick={handleClose} className="text-xs text-muted-foreground hover:text-foreground">
-            Fechar
-          </button>
+
+          {/* Legacy aviso type */}
+          {config.tipo === 'aviso' && (
+            <>
+              <h2 className="text-lg font-bold" style={{ color: popupText }}>{config.titulo || 'Bem-vindo!'}</h2>
+              {config.subtitulo && <p className="text-sm opacity-70" style={{ color: popupText }}>{config.subtitulo}</p>}
+              {config.texto_botao && (
+                <button
+                  className="w-full py-3 px-4 rounded-xl font-bold text-sm"
+                  style={{ backgroundColor: btnBg || 'hsl(var(--primary))', color: btnText || 'hsl(var(--primary-foreground))' }}
+                  onClick={handleClose}
+                >
+                  {config.texto_botao}
+                </button>
+              )}
+              <button onClick={handleClose} className="text-xs opacity-50 hover:opacity-80" style={{ color: popupText }}>Fechar</button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -699,7 +807,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
         <CookieConsent ativo={homepageConfig?.cookie_consent?.ativo ?? false} />
 
         {/* Welcome Popup */}
-        <WelcomePopup config={homepageConfig?.popup} />
+        <WelcomePopup config={homepageConfig?.popup} lojaId={loja._id} />
       </div>
     </LojaProvider>
   );
