@@ -185,10 +185,16 @@ const LojaCheckout = () => {
   const [cupomCode, setCupomCode] = useState('');
   const [cupomApplied, setCupomApplied] = useState<{ tipo: string; valor: number; codigo: string } | null>(null);
 
+  // If coupon is frete_gratis, shipping becomes free
+  const effectiveShippingCost = cupomApplied?.tipo === 'frete_gratis' ? 0 : shippingCost;
+  const finalTotalWithShipping = cartFinalPrice + effectiveShippingCost;
+
   const totalWithCupom = cupomApplied
     ? (cupomApplied.tipo === 'percentual'
-      ? finalTotal - Math.round(finalTotal * cupomApplied.valor / 100)
-      : Math.max(0, finalTotal - cupomApplied.valor))
+      ? finalTotalWithShipping - Math.round(finalTotalWithShipping * cupomApplied.valor / 100)
+      : cupomApplied.tipo === 'frete_gratis'
+        ? finalTotalWithShipping
+        : Math.max(0, finalTotalWithShipping - cupomApplied.valor))
     : finalTotal;
 
   useEffect(() => {
@@ -365,8 +371,8 @@ const LojaCheckout = () => {
         loja_id: lojaId,
         itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
         subtotal: totalPrice,
-        desconto: discountAmount + (cupomApplied ? (cupomApplied.tipo === 'percentual' ? Math.round(finalTotal * cupomApplied.valor / 100) : cupomApplied.valor) : 0),
-        frete: selectedFrete?.valor || 0,
+        desconto: discountAmount + (cupomApplied ? (cupomApplied.tipo === 'percentual' ? Math.round(finalTotalWithShipping * cupomApplied.valor / 100) : cupomApplied.tipo === 'frete_gratis' ? shippingCost : cupomApplied.valor) : 0),
+        frete: effectiveShippingCost,
         frete_nome: selectedFrete?.nome || null,
         total: totalWithCupom,
         cupom: cupomApplied ? { codigo: cupomApplied.codigo, tipo: cupomApplied.tipo, valor: cupomApplied.valor } : null,
@@ -452,12 +458,15 @@ const LojaCheckout = () => {
       <div className="border-t border-border mt-3 pt-3 space-y-1.5">
         <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal</span><span>{formatPrice(totalPrice)}</span></div>
         {discountPercent > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto ({discountPercent}%)</span><span>-{formatPrice(discountAmount)}</span></div>}
-        {cupomApplied && <div className="flex justify-between text-sm text-primary"><span>Cupom {cupomApplied.codigo}</span><span>-{cupomApplied.tipo === 'percentual' ? formatPrice(Math.round(finalTotal * cupomApplied.valor / 100)) : formatPrice(cupomApplied.valor)}</span></div>}
+        {cupomApplied && cupomApplied.tipo !== 'frete_gratis' && <div className="flex justify-between text-sm text-primary"><span>Cupom {cupomApplied.codigo}</span><span>-{cupomApplied.tipo === 'percentual' ? formatPrice(Math.round(finalTotalWithShipping * cupomApplied.valor / 100)) : formatPrice(cupomApplied.valor)}</span></div>}
         {selectedFrete !== null && (
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Frete ({selectedFrete.nome})</span>
-            <span className={selectedFrete.valor === 0 ? 'text-primary font-semibold' : ''}>
-              {selectedFrete.valor === 0 ? 'Grátis' : formatPrice(selectedFrete.valor)}
+            <span className={effectiveShippingCost === 0 ? 'text-primary font-semibold' : ''}>
+              {effectiveShippingCost === 0 ? 'Grátis' : formatPrice(effectiveShippingCost)}
+              {cupomApplied?.tipo === 'frete_gratis' && selectedFrete.valor > 0 && (
+                <span className="line-through text-muted-foreground ml-1 text-xs">{formatPrice(selectedFrete.valor)}</span>
+              )}
             </span>
           </div>
         )}
@@ -676,7 +685,7 @@ const LojaCheckout = () => {
                   <Input placeholder="Cupom de desconto" value={cupomCode} onChange={e => setCupomCode(e.target.value)} />
                   <Button variant="outline" onClick={applyCupom} disabled={!!cupomApplied}>Aplicar</Button>
                 </div>
-                {cupomApplied && <p className="text-xs text-primary font-semibold">✅ Cupom {cupomApplied.codigo} aplicado ({cupomApplied.tipo === 'percentual' ? `${cupomApplied.valor}%` : formatPrice(cupomApplied.valor)} de desconto)</p>}
+                {cupomApplied && <p className="text-xs text-primary font-semibold">✅ Cupom {cupomApplied.codigo} aplicado ({cupomApplied.tipo === 'frete_gratis' ? 'Frete Grátis' : cupomApplied.tipo === 'percentual' ? `${cupomApplied.valor}%` : formatPrice(cupomApplied.valor)} de desconto)</p>}
 
                 {/* Mobile: show summary inline */}
                 <div className="lg:hidden">{orderSummaryJSX}</div>
