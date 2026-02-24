@@ -5,7 +5,7 @@ import { useLojaCategories } from '@/hooks/useLojaCategories';
 import { useTemaConfig, useUpdateTema, usePaginas, useCupons } from '@/hooks/useLojaExtras';
 import {
   Palette, Check, Code, MessageSquare, Globe, Layout, ShoppingBag, Plus, Trash2, ShoppingCart, CreditCard as CreditCardIcon,
-  ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame,
+  ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame, Gift, Tag,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -105,6 +105,7 @@ const LojaTemas = () => {
   const { data: categoriesData } = useLojaCategories(id);
   const { data: temaConfig, isError: temaError } = useTemaConfig(id);
   const { data: paginas } = usePaginas(id);
+  const { data: cuponsData } = useCupons(id);
   const updateTema = useUpdateTema();
 
   const temaAtual = temaConfig?.tema || 'market-tok';
@@ -902,6 +903,41 @@ const LojaTemas = () => {
                       {id && <ImageUploader lojaId={id} value={popup.imagem_url || ''} onChange={url => updatePopup({ imagem_url: url })} placeholder="Imagem do popup" />}
                     </div>
                   </div>
+                  {popup.tipo === 'CUPONS' && (
+                    <div className="border border-border rounded-lg p-4 space-y-3">
+                      <Label className="text-sm font-medium">Selecione os Cupons</Label>
+                      <p className="text-xs text-muted-foreground">Escolha quais cupons ativos serão exibidos no popup.</p>
+                      {(!cuponsData || cuponsData.length === 0) ? (
+                        <p className="text-xs text-muted-foreground italic">Nenhum cupom cadastrado. Crie cupons na seção Cupons.</p>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {cuponsData.filter(c => c.is_active).map(cupom => {
+                            const selected = popup.cupons_ids?.includes(cupom._id) ?? false;
+                            const descricao = cupom.tipo === 'percentual' ? `${cupom.valor}% de desconto` : `R$ ${cupom.valor.toFixed(2)} de desconto`;
+                            return (
+                              <label key={cupom._id} className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={() => {
+                                    const ids = popup.cupons_ids || [];
+                                    const next = selected ? ids.filter((i: string) => i !== cupom._id) : [...ids, cupom._id];
+                                    updatePopup({ cupons_ids: next });
+                                  }}
+                                  className="rounded border-input"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-semibold">{cupom.codigo}</span>
+                                  <span className="text-xs text-muted-foreground ml-2">{descricao}</span>
+                                </div>
+                                <Tag className="h-4 w-4 text-primary shrink-0" />
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {popup.tipo === 'BANNER' && (
                     <div><Label className="text-xs">Link do Botão (máx 500)</Label><Input maxLength={500} value={popup.botao_link || ''} onChange={e => updatePopup({ botao_link: e.target.value })} placeholder="https://..." /></div>
                   )}
