@@ -878,7 +878,7 @@ const LojaTemas = () => {
             {hp.popup?.ativo && (() => {
               const popup = hp.popup!;
               const updatePopup = (partial: Partial<typeof popup>) => setHp({ popup: { ...popup, ...partial } as any });
-              const cuponsData = (categoriesData as any)?._cupons;
+              // cuponsData comes from useCupons(id) at the top level
               return (
                 <div className="space-y-4">
                   <div>
