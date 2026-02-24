@@ -65,8 +65,12 @@ const LojaConfiguracoes = () => {
       if (dominioCustomizado?.trim()) {
         try {
           await lojasApi.addDomain(id, dominioCustomizado.trim());
-        } catch {
-          // não bloqueia o save — domínio será registrado na próxima tentativa
+        } catch (e: any) {
+          toast({
+            title: 'Aviso: domínio não registrado na Vercel',
+            description: e?.message || 'Erro ao registrar. Use o botão Verificar Propagação.',
+            variant: 'destructive',
+          });
         }
       }
       toast({ title: 'Configurações salvas!', description: 'As alterações foram aplicadas com sucesso.' });
@@ -78,17 +82,28 @@ const LojaConfiguracoes = () => {
   };
 
   const handleCheckDomain = async () => {
-    if (!dominioCustomizado.trim()) return;
+    if (!dominioCustomizado.trim() || !id) return;
     setIsCheckingDomain(true);
     try {
+      // 1. Registrar domínio na Vercel (idempotente)
+      await lojasApi.addDomain(id, dominioCustomizado.trim());
+
+      // 2. Respiro para a Vercel processar
+      await new Promise(r => setTimeout(r, 2000));
+
+      // 3. Verificação real
       const result = await lojasApi.checkDomain(dominioCustomizado.trim());
       if (result.verified === true && !result.misconfigured) {
         toast({ title: 'Domínio verificado!', description: 'Domínio verificado e propagado com sucesso!' });
       } else {
         toast({ title: 'Propagação pendente', description: 'Domínio ainda não propagou ou DNS incorreto. Verifique o apontamento CNAME e aguarde.', variant: 'destructive' });
       }
-    } catch {
-      toast({ title: 'Erro na verificação', description: 'Não foi possível verificar o domínio. Tente novamente.', variant: 'destructive' });
+    } catch (e: any) {
+      toast({
+        title: 'Erro ao registrar na Vercel',
+        description: e?.message || 'Erro desconhecido. Verifique token e project ID.',
+        variant: 'destructive',
+      });
     } finally {
       setIsCheckingDomain(false);
     }
