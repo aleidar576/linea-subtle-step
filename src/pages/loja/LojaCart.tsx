@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Flame, Shield, Truck, ShieldCheck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Gift, ChevronDown, Tag, Loader2 } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Flame, Shield, Truck, ShieldCheck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Ticket, ChevronDown, Tag, Loader2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -157,20 +157,20 @@ const LojaCart = () => {
 
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-fit rounded-2xl border border-border bg-card p-5 space-y-4">
             {/* Coupon section */}
-            <div className="border border-dashed border-border rounded-xl overflow-hidden">
+            <div className="border border-border/60 rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => setCupomSectionOpen(prev => !prev)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+                className="w-full flex items-center justify-start gap-2 py-3 px-4 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
               >
-                <Gift className="h-4 w-4" />
-                <span>Tem cupom? Resgate aqui!</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${cupomSectionOpen ? 'rotate-180' : ''}`} />
+                <Ticket className="h-4 w-4 text-muted-foreground" />
+                <span>Possui um cupom de desconto?</span>
+                <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${cupomSectionOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {cupomSectionOpen && (
-                <div className="px-4 pb-4 space-y-3">
-                  <div className="flex gap-2">
+                <div className="px-4 pb-4 pt-3 space-y-3 border-t border-border/50">
+                  <div className="flex flex-row gap-2">
                     <Input
                       placeholder="Código do cupom"
                       value={cupomCode}
@@ -179,32 +179,39 @@ const LojaCart = () => {
                       className="flex-1"
                     />
                     <Button
+                      variant="outline"
                       onClick={applyCupom}
                       disabled={cupomLoading || !cupomCode.trim()}
-                      className="rounded-lg font-bold text-xs px-4"
+                      className="shrink-0 px-4 text-xs font-semibold"
                     >
                       {cupomLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'APLICAR'}
                     </Button>
                   </div>
 
-                  {cuponsApplied.map(c => (
-                    <div key={c.codigo} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50 border border-border">
-                      <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-bold text-foreground">{c.codigo}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeCupom(c.codigo)}
-                          className="text-xs text-primary hover:underline font-medium"
-                        >
-                          remover
-                        </button>
-                      </div>
-                      <span className="text-sm font-semibold text-primary">
-                        {c.tipo === 'frete_gratis' ? 'Frete grátis' : c.tipo === 'percentual' ? `-${c.valor}%` : `-${formatPrice(c.valor)}`}
-                      </span>
+                  {cuponsApplied.length > 0 && (
+                    <div className="space-y-0">
+                      {cuponsApplied.map((c, i) => (
+                        <div key={c.codigo} className={`flex items-center justify-between py-2 ${i < cuponsApplied.length - 1 ? 'border-b border-border/50' : ''}`}>
+                          <div className="flex items-center gap-2">
+                            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm font-bold text-foreground">{c.codigo}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-green-600">
+                              {c.tipo === 'frete_gratis' ? 'Frete grátis' : c.tipo === 'percentual' ? `-${c.valor}%` : `-${formatPrice(c.valor)}`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeCupom(c.codigo)}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
