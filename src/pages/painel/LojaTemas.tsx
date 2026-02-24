@@ -55,6 +55,7 @@ const DEFAULT_FOOTER: FooterConfig = {
   texto_endereco: '',
   texto_cnpj: '',
   cores: undefined,
+  newsletter_cores: undefined,
 };
 
 const DEFAULT_CORES: CoresGlobais = {
@@ -203,6 +204,12 @@ const LojaTemas = () => {
   };
   const resetFooterCores = () => {
     setFooter({ ...footer, cores: undefined });
+  };
+  const updateNewsletterCores = (key: 'fundo' | 'texto', value: string) => {
+    setFooter({ ...footer, newsletter_cores: { ...footer.newsletter_cores, [key]: value } });
+  };
+  const resetNewsletterCores = () => {
+    setFooter({ ...footer, newsletter_cores: undefined });
   };
 
   // Homepage helpers
@@ -1220,15 +1227,46 @@ const LojaTemas = () => {
           </div>
 
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <Label className="text-base font-semibold block">Newsletter e Redes Sociais</Label>
+
+            {/* Newsletter toggle */}
             <div className="flex items-center justify-between">
-              <Label>Newsletter</Label>
+              <Label className="text-sm">Ativar Newsletter no Rodapé</Label>
               <Switch checked={footer.newsletter} onCheckedChange={v => setFooter({ ...footer, newsletter: v })} />
             </div>
-            <Label className="text-base font-semibold block pt-2">Redes Sociais</Label>
+
+            {/* Newsletter colors (only when newsletter is active) */}
+            {footer.newsletter && (
+              <div className="border border-border rounded-lg p-4 space-y-3">
+                <Label className="text-sm font-medium">Cores da Newsletter</Label>
+                <p className="text-xs text-muted-foreground">Se vazio, herda as cores do rodapé.</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs">Cor de Fundo</Label>
+                    <div className="flex gap-1">
+                      <Input value={footer.newsletter_cores?.fundo || ''} onChange={e => updateNewsletterCores('fundo', e.target.value)} className="flex-1 text-xs" placeholder="Herda do rodapé" />
+                      <input type="color" value={footer.newsletter_cores?.fundo || footer.cores?.fundo || '#1a1a2e'} onChange={e => updateNewsletterCores('fundo', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cor do Texto</Label>
+                    <div className="flex gap-1">
+                      <Input value={footer.newsletter_cores?.texto || ''} onChange={e => updateNewsletterCores('texto', e.target.value)} className="flex-1 text-xs" placeholder="Herda do rodapé" />
+                      <input type="color" value={footer.newsletter_cores?.texto || footer.cores?.texto || '#ffffff'} onChange={e => updateNewsletterCores('texto', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                    </div>
+                  </div>
+                </div>
+                {footer.newsletter_cores && (footer.newsletter_cores.fundo || footer.newsletter_cores.texto) && (
+                  <Button variant="outline" size="sm" onClick={resetNewsletterCores}>Resetar para padrão</Button>
+                )}
+              </div>
+            )}
+
+            {/* Redes Sociais */}
+            <Label className="text-sm font-medium block pt-2">Redes Sociais</Label>
             {(['instagram', 'tiktok', 'facebook', 'youtube'] as const).map(rede => {
               const redeData = (footer.redes_sociais as any)[rede];
               const isAtivo = redeData?.ativo ?? false;
-              const urlVazia = isAtivo && (!redeData?.url || redeData?.url === '#');
               return (
                 <div key={rede} className="flex items-center gap-3">
                   <Switch checked={isAtivo} onCheckedChange={v => updateRede(rede, 'ativo', v)} />

@@ -131,6 +131,10 @@ export interface FooterConfig {
     fundo?: string;
     texto?: string;
   };
+  newsletter_cores?: {
+    fundo?: string;
+    texto?: string;
+  };
 }
 
 export interface CoresGlobais {
