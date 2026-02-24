@@ -134,6 +134,12 @@ const LojaProduto = () => {
     setCurrentImage(0); setQuantity(1); setSelectedSize(undefined); setSelectedColor(undefined); setVariationError('');
     if (product) {
       firePixelEvent('ViewContent', { content_id: product.product_id, content_name: product.name, value: product.price / 100, currency: 'BRL' });
+      // Auto-select single variations
+      const cVars = (product.variacoes || []).filter(v => v.tipo === 'Cor');
+      const sVars = (product.variacoes || []).filter(v => v.tipo === 'Tamanho');
+      if (cVars.length === 1) setSelectedColor(cVars[0].nome);
+      if (sVars.length === 1) setSelectedSize(sVars[0].nome);
+      if (!sVars.length && product.sizes?.length === 1) setSelectedSize(product.sizes[0]);
     }
   }, [productSlug, product?.product_id]);
 
@@ -546,7 +552,7 @@ const LojaProduto = () => {
             </div>
 
             {/* ========== BLOCO 3: Variações Resumidas (Mobile) ========== */}
-            {hasVariations && (
+            {hasVariations && totalVariationOptions > 1 && (
               <>
                 <button
                   onClick={() => openDrawer('cart')}

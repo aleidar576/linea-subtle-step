@@ -102,9 +102,11 @@ export interface Loja {
 }
 
 export interface FooterLink {
-  label: string;
+  nome: string;
+  url: string;
+  // Legacy compat
+  label?: string;
   pagina_slug?: string;
-  url?: string;
 }
 
 export interface FooterColuna {
@@ -125,6 +127,10 @@ export interface FooterConfig {
   texto_copyright: string;
   texto_endereco: string;
   texto_cnpj: string;
+  cores?: {
+    fundo?: string;
+    texto?: string;
+  };
 }
 
 export interface CoresGlobais {
@@ -215,12 +221,17 @@ export interface HomepageConfig {
   trust_badges?: Array<{ texto: string; icone: string }>;
   popup?: {
     ativo: boolean;
-    tipo: 'newsletter' | 'aviso';
+    tipo: 'CUPONS' | 'NEWSLETTER' | 'BANNER';
     titulo: string;
     subtitulo: string;
+    texto_botao: string;
     imagem_url: string;
-    botao_texto: string;
-    cupom_codigo: string;
+    cupons_ids: string[];
+    cores?: { fundo?: string; texto?: string; botao_fundo?: string; botao_texto?: string };
+    botao_link?: string;
+    // Legacy compat
+    botao_texto?: string;
+    cupom_codigo?: string;
   };
   cookie_consent?: {
     ativo: boolean;
@@ -778,6 +789,48 @@ export const paginasApi = {
     request<{ success: boolean }>(`/loja-extras?scope=pagina&id=${id}`, { method: 'DELETE' }),
   getPublic: (lojaId: string, slug: string) =>
     request<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+};
+
+// === Leads API (Newsletter) ===
+
+export interface LeadData {
+  _id: string;
+  loja_id: string;
+  email: string;
+  origem: 'POPUP' | 'FOOTER';
+  criado_em: string;
+  vinculo?: string;
+}
+
+export const leadsApi = {
+  subscribe: async (lojaId: string, email: string, origem: 'POPUP' | 'FOOTER') => {
+    const res = await fetch(`${API_BASE_PUB}/loja-extras?scope=lead-newsletter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loja_id: lojaId, email, origem }),
+    });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Erro'); }
+    return res.json() as Promise<{ success: boolean }>;
+  },
+  list: (lojaId: string) =>
+    request<LeadData[]>(`/loja-extras?scope=leads&loja_id=${lojaId}`),
+  update: (id: string, data: { email: string }) =>
+    request<LeadData>(`/loja-extras?scope=lead&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request<{ success: boolean }>(`/loja-extras?scope=lead&id=${id}`, { method: 'DELETE' }),
+  import: (lojaId: string, emails: string[], origem: 'POPUP' | 'FOOTER') =>
+    request<{ success: boolean; inseridos: number }>('/loja-extras?scope=leads-import', {
+      method: 'POST', body: JSON.stringify({ loja_id: lojaId, emails, origem }),
+    }),
+};
+
+// === Cupons Popup API (público) ===
+
+export const cuponsPopupApi = {
+  getBulk: (lojaId: string, ids: string[]) =>
+    publicRequest<Array<{ _id: string; codigo: string; tipo: string; valor: number }>>(
+      `/loja-extras?scope=cupons-popup&loja_id=${lojaId}&ids=${ids.join(',')}`
+    ),
 };
 
 // ============================================

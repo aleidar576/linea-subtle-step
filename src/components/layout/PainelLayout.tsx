@@ -16,7 +16,7 @@ import {
   Store, Home, Plus, LogOut, User, CreditCard, ChevronDown, ChevronRight,
   Loader2, BarChart3, Package, Settings, ShoppingCart, Layers, Boxes, Truck,
   Users, Image, Tag, Palette, CreditCard as PayIcon, Sun, Moon, Monitor,
-  Code, FileText, Bell, TrendingUp, Star
+  Code, FileText, Bell, TrendingUp, Star, Mail
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -39,6 +39,7 @@ const LOJA_SUBMENUS = [
   { path: '/paginas', label: 'Páginas', icon: FileText },
   { path: '/cupons', label: 'Cupons', icon: Tag },
   { path: '/pacotes-avaliacoes', label: 'Avaliações', icon: Star },
+  { path: '/newsletter', label: 'Newsletter', icon: Mail },
   { path: '/pixels', label: 'Pixels & Scripts', icon: Code },
   { path: '/relatorios', label: 'Relatórios', icon: TrendingUp },
   { path: '/temas', label: 'Temas', icon: Palette },

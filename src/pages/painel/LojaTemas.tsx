@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { useLojaCategories } from '@/hooks/useLojaCategories';
-import { useTemaConfig, useUpdateTema, usePaginas } from '@/hooks/useLojaExtras';
+import { useTemaConfig, useUpdateTema, usePaginas, useCupons } from '@/hooks/useLojaExtras';
 import {
   Palette, Check, Code, MessageSquare, Globe, Layout, ShoppingBag, Plus, Trash2, ShoppingCart, CreditCard as CreditCardIcon,
   ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame,
@@ -42,11 +42,7 @@ const getIconComponent = (name: string): LucideIcon => {
 };
 
 const DEFAULT_FOOTER: FooterConfig = {
-  colunas: [
-    { titulo: 'Links', links: [] },
-    { titulo: 'Ajuda', links: [] },
-    { titulo: 'Institucional', links: [] },
-  ],
+  colunas: [],
   newsletter: false,
   redes_sociais: {
     instagram: { ativo: false, url: '' },
@@ -58,6 +54,7 @@ const DEFAULT_FOOTER: FooterConfig = {
   texto_copyright: '',
   texto_endereco: '',
   texto_cnpj: '',
+  cores: undefined,
 };
 
 const DEFAULT_CORES: CoresGlobais = {
@@ -172,9 +169,17 @@ const LojaTemas = () => {
     cols[idx] = { ...cols[idx], [key]: value };
     setFooter({ ...footer, colunas: cols });
   };
+  const addColuna = () => {
+    if (footer.colunas.length >= 5) return;
+    setFooter({ ...footer, colunas: [...footer.colunas, { titulo: '', links: [] }] });
+  };
+  const removeColuna = (idx: number) => {
+    setFooter({ ...footer, colunas: footer.colunas.filter((_, i) => i !== idx) });
+  };
   const addLinkToColuna = (idx: number) => {
+    if (footer.colunas[idx].links.length >= 8) return;
     const cols = [...footer.colunas];
-    cols[idx].links = [...cols[idx].links, { label: '', pagina_slug: '' }];
+    cols[idx].links = [...cols[idx].links, { nome: '', url: '' }];
     setFooter({ ...footer, colunas: cols });
   };
   const removeLinkFromColuna = (colIdx: number, linkIdx: number) => {
@@ -192,6 +197,12 @@ const LojaTemas = () => {
       ...footer,
       redes_sociais: { ...footer.redes_sociais, [rede]: { ...(footer.redes_sociais as any)[rede], [key]: value } },
     });
+  };
+  const updateFooterCores = (key: 'fundo' | 'texto', value: string) => {
+    setFooter({ ...footer, cores: { ...footer.cores, [key]: value } });
+  };
+  const resetFooterCores = () => {
+    setFooter({ ...footer, cores: undefined });
   };
 
   // Homepage helpers
@@ -845,6 +856,69 @@ const LojaTemas = () => {
               );
             })}
           </div>
+
+          {/* Popup de Boas-Vindas */}
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-semibold block">Popup de Boas-Vindas</Label>
+                <p className="text-xs text-muted-foreground mt-1">Exibido 1x por sessão ao visitar a loja.</p>
+              </div>
+              <Switch checked={hp.popup?.ativo ?? false} onCheckedChange={v => setHp({ popup: { ...(hp.popup || { tipo: 'NEWSLETTER', titulo: '', subtitulo: '', texto_botao: '', imagem_url: '', cupons_ids: [] }), ativo: v } as any })} />
+            </div>
+            {hp.popup?.ativo && (() => {
+              const popup = hp.popup!;
+              const updatePopup = (partial: Partial<typeof popup>) => setHp({ popup: { ...popup, ...partial } as any });
+              const cuponsData = (categoriesData as any)?._cupons;
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs">Tipo</Label>
+                    <Select value={popup.tipo || 'NEWSLETTER'} onValueChange={(v: any) => updatePopup({ tipo: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CUPONS">Cupons</SelectItem>
+                        <SelectItem value="NEWSLETTER">Newsletter</SelectItem>
+                        <SelectItem value="BANNER">Banner</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label className="text-xs">Título (máx 60)</Label><Input maxLength={60} value={popup.titulo || ''} onChange={e => updatePopup({ titulo: e.target.value })} placeholder="Bem-vindo!" /></div>
+                    <div><Label className="text-xs">Subtítulo (máx 120)</Label><Input maxLength={120} value={popup.subtitulo || ''} onChange={e => updatePopup({ subtitulo: e.target.value })} placeholder="Aproveite nossas ofertas" /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label className="text-xs">Texto do Botão (máx 30)</Label><Input maxLength={30} value={popup.texto_botao || ''} onChange={e => updatePopup({ texto_botao: e.target.value })} placeholder="Quero meu cupom!" /></div>
+                    <div>
+                      <Label className="text-xs">Imagem</Label>
+                      {id && <ImageUploader lojaId={id} value={popup.imagem_url || ''} onChange={url => updatePopup({ imagem_url: url })} placeholder="Imagem do popup" />}
+                    </div>
+                  </div>
+                  {popup.tipo === 'BANNER' && (
+                    <div><Label className="text-xs">Link do Botão (máx 500)</Label><Input maxLength={500} value={popup.botao_link || ''} onChange={e => updatePopup({ botao_link: e.target.value })} placeholder="https://..." /></div>
+                  )}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <Label className="text-xs">Cor de Fundo</Label>
+                      <div className="flex gap-1"><Input value={popup.cores?.fundo || ''} onChange={e => updatePopup({ cores: { ...popup.cores, fundo: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.fundo || '#ffffff'} onChange={e => updatePopup({ cores: { ...popup.cores, fundo: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Cor do Texto</Label>
+                      <div className="flex gap-1"><Input value={popup.cores?.texto || ''} onChange={e => updatePopup({ cores: { ...popup.cores, texto: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.texto || '#000000'} onChange={e => updatePopup({ cores: { ...popup.cores, texto: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Cor Botão Fundo</Label>
+                      <div className="flex gap-1"><Input value={popup.cores?.botao_fundo || ''} onChange={e => updatePopup({ cores: { ...popup.cores, botao_fundo: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.botao_fundo || '#000000'} onChange={e => updatePopup({ cores: { ...popup.cores, botao_fundo: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Cor Botão Texto</Label>
+                      <div className="flex gap-1"><Input value={popup.cores?.botao_texto || ''} onChange={e => updatePopup({ cores: { ...popup.cores, botao_texto: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.botao_texto || '#ffffff'} onChange={e => updatePopup({ cores: { ...popup.cores, botao_texto: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </TabsContent>
 
         {/* ===== PRODUTO ===== */}
@@ -1080,33 +1154,66 @@ const LojaTemas = () => {
         <TabsContent value="footer" className="space-y-6">
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
-              <MessageSquare className="h-5 w-5 text-green-500" />
+              <MessageSquare className="h-5 w-5 text-primary" />
               <Label className="text-base font-semibold">WhatsApp Flutuante</Label>
             </div>
             <p className="text-sm text-muted-foreground mb-3">Se preenchido, um botão flutuante aparecerá na loja.</p>
             <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="5511999999999" />
           </div>
 
+          {/* Cores do Rodapé */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <Label className="text-base font-semibold">Colunas Navegáveis (3)</Label>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Label className="text-base font-semibold">Cores do Rodapé</Label>
+            <p className="text-xs text-muted-foreground">Defina cores independentes para o rodapé. Se vazio, herda as cores do tema global.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Cor de Fundo do Rodapé</Label>
+                <div className="flex gap-1">
+                  <Input value={footer.cores?.fundo || ''} onChange={e => updateFooterCores('fundo', e.target.value)} className="flex-1 text-xs" placeholder="Padrão: cor de superfície do tema" />
+                  <input type="color" value={footer.cores?.fundo || '#ffffff'} onChange={e => updateFooterCores('fundo', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Cor do Texto do Rodapé</Label>
+                <div className="flex gap-1">
+                  <Input value={footer.cores?.texto || ''} onChange={e => updateFooterCores('texto', e.target.value)} className="flex-1 text-xs" placeholder="Padrão: cor de texto do tema" />
+                  <input type="color" value={footer.cores?.texto || '#111111'} onChange={e => updateFooterCores('texto', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                </div>
+              </div>
+            </div>
+            {footer.cores && (footer.cores.fundo || footer.cores.texto) && (
+              <Button variant="outline" size="sm" onClick={resetFooterCores}>Resetar para padrão</Button>
+            )}
+          </div>
+
+          {/* Colunas do Rodapé */}
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Colunas do Rodapé</Label>
+              {footer.colunas.length < 5 && (
+                <Button size="sm" variant="outline" className="gap-1" onClick={addColuna}><Plus className="h-3 w-3" /> Adicionar Coluna</Button>
+              )}
+            </div>
+            {footer.colunas.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma coluna configurada. Clique em "Adicionar Coluna" para começar.</p>
+            )}
+            <div className="space-y-4">
               {footer.colunas.map((col, colIdx) => (
                 <div key={colIdx} className="border border-border rounded-lg p-4 space-y-3">
-                  <Input value={col.titulo} onChange={e => updateColuna(colIdx, 'titulo', e.target.value)} placeholder="Título da coluna" className="font-semibold" />
+                  <div className="flex items-center gap-2">
+                    <Input value={col.titulo} onChange={e => updateColuna(colIdx, 'titulo', e.target.value)} placeholder="Título da coluna" className="font-semibold flex-1" />
+                    <Button variant="ghost" size="icon" onClick={() => removeColuna(colIdx)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
                   {col.links.map((link, linkIdx) => (
                     <div key={linkIdx} className="flex gap-2 items-center">
-                      <Input value={link.label} onChange={e => updateLink(colIdx, linkIdx, 'label', e.target.value)} placeholder="Texto" className="flex-1 text-xs" />
-                      <Select value={link.pagina_slug || '_url'} onValueChange={v => updateLink(colIdx, linkIdx, 'pagina_slug', v === '_url' ? '' : v)}>
-                        <SelectTrigger className="w-[120px] text-xs"><SelectValue placeholder="Página" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_url">URL externa</SelectItem>
-                          {(paginas || []).map(p => <SelectItem key={p._id} value={p.slug}>{p.titulo}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Input value={link.nome || (link as any).label || ''} onChange={e => updateLink(colIdx, linkIdx, 'nome', e.target.value)} placeholder="Nome do link" className="flex-1 text-xs" maxLength={50} />
+                      <Input value={link.url || ''} onChange={e => updateLink(colIdx, linkIdx, 'url', e.target.value)} placeholder="/contato ou https://..." className="flex-1 text-xs" maxLength={500} />
                       <Button variant="ghost" size="icon" onClick={() => removeLinkFromColuna(colIdx, linkIdx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                     </div>
                   ))}
-                  <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => addLinkToColuna(colIdx)}><Plus className="h-3 w-3" /> Link</Button>
+                  {col.links.length < 8 && (
+                    <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => addLinkToColuna(colIdx)}><Plus className="h-3 w-3" /> Adicionar Link</Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -1118,13 +1225,24 @@ const LojaTemas = () => {
               <Switch checked={footer.newsletter} onCheckedChange={v => setFooter({ ...footer, newsletter: v })} />
             </div>
             <Label className="text-base font-semibold block pt-2">Redes Sociais</Label>
-            {(['instagram', 'tiktok', 'facebook', 'youtube'] as const).map(rede => (
-              <div key={rede} className="flex items-center gap-3">
-                <Switch checked={(footer.redes_sociais as any)[rede]?.ativo ?? false} onCheckedChange={v => updateRede(rede, 'ativo', v)} />
-                <span className="text-sm capitalize w-20">{rede}</span>
-                <Input value={(footer.redes_sociais as any)[rede]?.url || ''} onChange={e => updateRede(rede, 'url', e.target.value)} placeholder={`https://${rede}.com/...`} className="flex-1 text-xs" disabled={!(footer.redes_sociais as any)[rede]?.ativo} />
-              </div>
-            ))}
+            {(['instagram', 'tiktok', 'facebook', 'youtube'] as const).map(rede => {
+              const redeData = (footer.redes_sociais as any)[rede];
+              const isAtivo = redeData?.ativo ?? false;
+              const urlVazia = isAtivo && (!redeData?.url || redeData?.url === '#');
+              return (
+                <div key={rede} className="flex items-center gap-3">
+                  <Switch checked={isAtivo} onCheckedChange={v => updateRede(rede, 'ativo', v)} />
+                  <span className="text-sm capitalize w-20">{rede}</span>
+                  <Input
+                    value={redeData?.url || ''}
+                    onChange={e => updateRede(rede, 'url', e.target.value)}
+                    placeholder={`https://${rede}.com/...`}
+                    className={`flex-1 text-xs ${urlVazia ? 'border-destructive' : ''}`}
+                    disabled={!isAtivo}
+                  />
+                </div>
+              );
+            })}
             <div className="pt-2 space-y-2">
               <Label className="text-base font-semibold block">Selos de Segurança</Label>
               <div className="flex items-center gap-3">
