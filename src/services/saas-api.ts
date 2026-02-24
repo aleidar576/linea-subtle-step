@@ -135,6 +135,14 @@ export interface FooterConfig {
     fundo?: string;
     texto?: string;
   };
+  footer_logo?: {
+    ativo: boolean;
+    tipo: 'upload' | 'url' | 'texto';
+    imagem_url: string;
+    texto: string;
+    fonte: string;
+    tamanho: number;
+  };
 }
 
 export interface CoresGlobais {
