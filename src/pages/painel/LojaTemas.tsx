@@ -56,6 +56,7 @@ const DEFAULT_FOOTER: FooterConfig = {
   texto_cnpj: '',
   cores: undefined,
   newsletter_cores: undefined,
+  footer_logo: undefined,
 };
 
 const DEFAULT_CORES: CoresGlobais = {
@@ -1287,7 +1288,63 @@ const LojaTemas = () => {
                 <Switch checked={footer.selos.ativo} onCheckedChange={v => setFooter({ ...footer, selos: { ...footer.selos, ativo: v } })} />
                 <Input value={footer.selos.url} onChange={e => setFooter({ ...footer, selos: { ...footer.selos, url: e.target.value } })} placeholder="URL (# = sem link)" className="flex-1 text-xs" disabled={!footer.selos.ativo} />
               </div>
+          </div>
+
+          {/* Personalizar Logo do Footer */}
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-semibold block">Personalizar Logo do Footer</Label>
+                <p className="text-xs text-muted-foreground mt-1">Ao ativar, o rodapé deixa de seguir a logo principal e usa uma logo exclusiva.</p>
+              </div>
+              <Switch
+                checked={footer.footer_logo?.ativo ?? false}
+                onCheckedChange={v => setFooter({
+                  ...footer,
+                  footer_logo: v
+                    ? { ativo: true, tipo: 'upload', imagem_url: '', texto: '', fonte: 'Inter', tamanho: 48 }
+                    : undefined,
+                })}
+              />
             </div>
+            {footer.footer_logo?.ativo && (() => {
+              const fl = footer.footer_logo;
+              const updateFl = (partial: Partial<typeof fl>) => setFooter({ ...footer, footer_logo: { ...fl, ...partial } });
+              return (
+                <div className="border border-border rounded-lg p-4 space-y-4">
+                  <RadioGroup value={fl.tipo} onValueChange={(v: 'upload' | 'url' | 'texto') => updateFl({ tipo: v })} className="flex gap-4">
+                    <div className="flex items-center gap-2"><RadioGroupItem value="upload" id="fl-upload" /><Label htmlFor="fl-upload" className="text-sm cursor-pointer">Upload</Label></div>
+                    <div className="flex items-center gap-2"><RadioGroupItem value="url" id="fl-url" /><Label htmlFor="fl-url" className="text-sm cursor-pointer">URL</Label></div>
+                    <div className="flex items-center gap-2"><RadioGroupItem value="texto" id="fl-texto" /><Label htmlFor="fl-texto" className="text-sm cursor-pointer">Texto</Label></div>
+                  </RadioGroup>
+                  {fl.tipo === 'upload' && id && <ImageUploader lojaId={id} value={fl.imagem_url} onChange={url => updateFl({ imagem_url: url })} placeholder="Envie a logo do footer" />}
+                  {fl.tipo === 'url' && <Input value={fl.imagem_url} onChange={e => updateFl({ imagem_url: e.target.value })} placeholder="https://minha-loja.com/logo-footer.png" />}
+                  {fl.tipo === 'texto' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label className="text-xs">Texto</Label><Input value={fl.texto} onChange={e => updateFl({ texto: e.target.value })} placeholder="Minha Loja" /></div>
+                      <div><Label className="text-xs">Fonte</Label><Select value={fl.fonte} onValueChange={v => updateFl({ fonte: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-xs">Tamanho (px)</Label>
+                    <Input type="number" min={24} max={120} value={fl.tamanho || 48} onChange={e => updateFl({ tamanho: parseInt(e.target.value) || 48 })} className="w-32" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
+                    <div className="border border-border rounded-lg p-4 bg-background flex items-center justify-center min-h-[64px]">
+                      {(fl.tipo === 'upload' || fl.tipo === 'url') && fl.imagem_url ? (
+                        <img src={fl.imagem_url} alt="Logo Footer" style={{ maxHeight: `${fl.tamanho || 48}px` }} className="object-contain" />
+                      ) : fl.tipo === 'texto' && fl.texto ? (
+                        <span className="font-bold" style={{ fontFamily: fl.fonte, fontSize: `${Math.min((fl.tamanho || 48) * 0.5, 32)}px` }}>{fl.texto}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Nenhuma logo configurada</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
           </div>
 
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">

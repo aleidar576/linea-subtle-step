@@ -105,6 +105,16 @@ function HeaderLogo({ logo, icone, nome }: { logo: LogoConfig | null; icone: str
 }
 
 // ── Full Footer (Premium Responsivo) ──
+function FooterCustomLogo({ footerLogo, nome }: { footerLogo: NonNullable<FooterConfig['footer_logo']>; nome: string }) {
+  if ((footerLogo.tipo === 'upload' || footerLogo.tipo === 'url') && footerLogo.imagem_url) {
+    return <img src={footerLogo.imagem_url} alt={nome} style={{ maxHeight: `${footerLogo.tamanho || 48}px` }} className="object-contain" />;
+  }
+  if (footerLogo.tipo === 'texto' && footerLogo.texto) {
+    return <span className="font-bold" style={{ fontFamily: footerLogo.fonte, fontSize: `${Math.min((footerLogo.tamanho || 48) * 0.5, 32)}px` }}>{footerLogo.texto}</span>;
+  }
+  return <span className="font-semibold">{nome}</span>;
+}
+
 function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: FooterConfig | null; nome: string; slug: string; lojaId: string; logo: LogoConfig | null; icone: string }) {
   const location = useLocation();
   const isProductPage = location.pathname.startsWith('/produto/');
@@ -190,7 +200,11 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
             {/* Logo + Redes */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <HeaderLogo logo={logo} icone={icone} nome={nome} />
+                {footer.footer_logo?.ativo ? (
+                  <FooterCustomLogo footerLogo={footer.footer_logo} nome={nome} />
+                ) : (
+                  <HeaderLogo logo={logo} icone={icone} nome={nome} />
+                )}
               </div>
               {activeRedes.length > 0 && (
                 <div className="flex items-center gap-4 mt-2">
@@ -236,7 +250,11 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
           {/* Mobile */}
           <div className="md:hidden space-y-6">
             <div className="flex flex-col items-center gap-3">
-              <HeaderLogo logo={logo} icone={icone} nome={nome} />
+              {footer.footer_logo?.ativo ? (
+                <FooterCustomLogo footerLogo={footer.footer_logo} nome={nome} />
+              ) : (
+                <HeaderLogo logo={logo} icone={icone} nome={nome} />
+              )}
               {activeRedes.length > 0 && (
                 <div className="flex items-center gap-5 mt-1">
                   {activeRedes.map(([key, val]) => {
