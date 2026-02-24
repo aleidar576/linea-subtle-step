@@ -366,13 +366,13 @@ function WelcomePopup({ config, lojaId }: { config: any; lojaId: string }) {
   const location = useLocation();
 
   useEffect(() => {
-    if (!config?.ativo || location.pathname !== '/') return;
+    if (!config?.ativo) return;
     const seen = sessionStorage.getItem('popup_seen');
     if (!seen) {
       const timer = setTimeout(() => setVisible(true), 2500);
       return () => clearTimeout(timer);
     }
-  }, [config?.ativo, location.pathname]);
+  }, [config?.ativo]);
 
   // Fetch coupons when type is CUPONS and popup becomes visible
   useEffect(() => {
