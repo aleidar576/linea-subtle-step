@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLoja, useUpdateLoja } from '@/hooks/useLojas';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
-import { platformApi } from '@/services/saas-api';
+import { platformApi, lojasApi } from '@/services/saas-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -26,6 +26,7 @@ const LojaConfiguracoes = () => {
   const [dominioCustomizado, setDominioCustomizado] = useState('');
   const [saving, setSaving] = useState(false);
   const [platformDomain, setPlatformDomain] = useState('');
+  const [isCheckingDomain, setIsCheckingDomain] = useState(false);
 
   useEffect(() => {
     platformApi.getDomain().then(r => setPlatformDomain(r.domain)).catch(() => setPlatformDomain('dusking.com.br'));
@@ -66,6 +67,19 @@ const LojaConfiguracoes = () => {
       toast({ title: 'Erro ao salvar', description: e.message, variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCheckDomain = async () => {
+    if (!dominioCustomizado.trim()) return;
+    setIsCheckingDomain(true);
+    try {
+      await lojasApi.checkDomain(dominioCustomizado.trim());
+      toast({ title: 'Domínio verificado!', description: 'Domínio verificado e propagado com sucesso!' });
+    } catch {
+      toast({ title: 'Propagação pendente', description: 'Domínio ainda não propagou. Verifique o apontamento CNAME na sua hospedagem e aguarde.', variant: 'destructive' });
+    } finally {
+      setIsCheckingDomain(false);
     }
   };
 
@@ -147,7 +161,10 @@ const LojaConfiguracoes = () => {
             {canEditCustomDomain && (
               <>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">Verificar Propagação</Button>
+                  <Button variant="outline" size="sm" onClick={handleCheckDomain} disabled={isCheckingDomain || !dominioCustomizado.trim()}>
+                    {isCheckingDomain ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    {isCheckingDomain ? 'Verificando...' : 'Verificar Propagação'}
+                  </Button>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
