@@ -1237,7 +1237,7 @@ const LojaTemas = () => {
                     value={redeData?.url || ''}
                     onChange={e => updateRede(rede, 'url', e.target.value)}
                     placeholder={`https://${rede}.com/...`}
-                    className={`flex-1 text-xs ${urlVazia ? 'border-destructive' : ''}`}
+                    className="flex-1 text-xs"
                     disabled={!isAtivo}
                   />
                 </div>

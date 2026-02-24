@@ -146,20 +146,33 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
 
   return (
     <footer className={isProductPage ? 'pb-20' : ''} style={{ backgroundColor: footerBg, color: footerText }}>
-      {/* BLOCO 1 - Newsletter */}
+      {/* BLOCO 1 - Newsletter (design "FIQUE POR DENTRO") */}
       {footer.newsletter && (
-        <div className="bg-black/5" style={footerBg ? { backgroundColor: `${footerBg}dd` } : undefined}>
-          <div className="container py-8">
-            <div className="flex flex-col items-center text-center gap-4 md:flex-row md:justify-between md:items-center md:text-left">
-              <div>
-                <h3 className="text-lg font-bold" style={{ color: footerText }}>Receba nossas novidades</h3>
-                <p className="text-sm opacity-70">Cadastre-se e fique por dentro das promoções.</p>
+        <div className="border-b border-border" style={footerBg ? { backgroundColor: footerBg, borderColor: footerText ? `${footerText}22` : undefined } : { backgroundColor: 'hsl(var(--card))' }}>
+          <div className="container py-10 flex flex-col items-center text-center gap-4">
+            <h3 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: footerText }}>FIQUE POR DENTRO</h3>
+            <p className="text-sm opacity-70" style={{ color: footerText }}>Receba nossa newsletter com novidades e promoções!</p>
+            <form onSubmit={handleNewsletterSubmit} className="w-full max-w-md mt-2">
+              <div className="relative border-b-2 border-current opacity-60 focus-within:opacity-100 transition-opacity" style={{ borderColor: footerText || 'currentColor' }}>
+                <input
+                  value={nlEmail}
+                  onChange={e => setNlEmail(e.target.value)}
+                  placeholder="E-MAIL"
+                  type="email"
+                  className="w-full bg-transparent py-3 pr-12 text-sm placeholder:tracking-widest placeholder:text-current/50 focus:outline-none"
+                  style={{ color: footerText }}
+                />
+                <button
+                  type="submit"
+                  disabled={nlLoading}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2 hover:opacity-80 transition-opacity"
+                  style={{ color: footerText }}
+                  aria-label="Inscrever"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </button>
               </div>
-              <form onSubmit={handleNewsletterSubmit} className="flex gap-2 w-full max-w-sm">
-                <Input value={nlEmail} onChange={e => setNlEmail(e.target.value)} placeholder="Seu melhor e-mail" className="flex-1" type="email" />
-                <Button type="submit" disabled={nlLoading}>{nlLoading ? '...' : 'Inscrever'}</Button>
-              </form>
-            </div>
+            </form>
           </div>
         </div>
       )}
@@ -175,12 +188,12 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
                 <HeaderLogo logo={logo} icone={icone} nome={nome} />
               </div>
               {activeRedes.length > 0 && (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4 mt-2">
                   {activeRedes.map(([key, val]) => {
                     const Icon = redeIcons[key] || MessageCircle;
                     return (
                       <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity">
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-6 w-6" />
                       </a>
                     );
                   })}
@@ -217,12 +230,12 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
             <div className="flex flex-col items-center gap-3">
               <HeaderLogo logo={logo} icone={icone} nome={nome} />
               {activeRedes.length > 0 && (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-5 mt-1">
                   {activeRedes.map(([key, val]) => {
                     const Icon = redeIcons[key] || MessageCircle;
                     return (
                       <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity">
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-7 w-7" />
                       </a>
                     );
                   })}
