@@ -1,12 +1,15 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User } from 'lucide-react';
+import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2 } from 'lucide-react';
 import { useLojaByDomain } from '@/hooks/useLojaPublica';
 import { LojaProvider } from '@/contexts/LojaContext';
 import { useCart } from '@/contexts/CartContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { leadsApi, cuponsPopupApi } from '@/services/saas-api';
 import type { FooterConfig, LogoConfig } from '@/services/saas-api';
+import { toast } from 'sonner';
 
 // ── Hex to HSL converter ──
 function hexToHsl(hex: string): string {
@@ -101,10 +104,12 @@ function HeaderLogo({ logo, icone, nome }: { logo: LogoConfig | null; icone: str
   );
 }
 
-// ── Full Footer ──
-function LojaFooter({ footer, nome, slug }: { footer: FooterConfig | null; nome: string; slug: string }) {
+// ── Full Footer (Premium Responsivo) ──
+function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: FooterConfig | null; nome: string; slug: string; lojaId: string; logo: LogoConfig | null; icone: string }) {
   const location = useLocation();
   const isProductPage = location.pathname.startsWith('/produto/');
+  const [nlEmail, setNlEmail] = useState('');
+  const [nlLoading, setNlLoading] = useState(false);
 
   if (!footer) {
     return (
@@ -116,64 +121,165 @@ function LojaFooter({ footer, nome, slug }: { footer: FooterConfig | null; nome:
     );
   }
 
-  const hasColunas = footer.colunas?.some(c => c.links.length > 0);
+  const footerBg = footer.cores?.fundo || undefined;
+  const footerText = footer.cores?.texto || undefined;
   const redes = footer.redes_sociais || {};
-  const activeRedes = Object.entries(redes).filter(([, v]) => v?.ativo && v?.url);
+  const activeRedes = Object.entries(redes).filter(([, v]) => v?.ativo && v?.url && v.url !== '#' && v.url.trim() !== '');
+
+  const redeIcons: Record<string, any> = { instagram: Instagram, tiktok: Music2, facebook: Facebook, youtube: Youtube };
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(nlEmail)) { toast.error('E-mail inválido'); return; }
+    setNlLoading(true);
+    try {
+      await leadsApi.subscribe(lojaId, nlEmail, 'FOOTER');
+      toast.success('Inscrito com sucesso!');
+      setNlEmail('');
+    } catch { toast.error('Erro ao inscrever'); }
+    finally { setNlLoading(false); }
+  };
+
+  const colunasComLinks = footer.colunas?.filter(c => c.links.length > 0) || [];
+  const gridCols = Math.min(colunasComLinks.length + 1, 5);
 
   return (
-    <footer className={`border-t border-border bg-card ${isProductPage ? 'pt-4 pb-20' : 'py-8'}`}>
-      <div className="container space-y-6">
-        {hasColunas && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {footer.colunas.filter(c => c.links.length > 0).map((col, i) => (
+    <footer className={isProductPage ? 'pb-20' : ''} style={{ backgroundColor: footerBg, color: footerText }}>
+      {/* BLOCO 1 - Newsletter */}
+      {footer.newsletter && (
+        <div className="bg-black/5" style={footerBg ? { backgroundColor: `${footerBg}dd` } : undefined}>
+          <div className="container py-8">
+            <div className="flex flex-col items-center text-center gap-4 md:flex-row md:justify-between md:items-center md:text-left">
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: footerText }}>Receba nossas novidades</h3>
+                <p className="text-sm opacity-70">Cadastre-se e fique por dentro das promoções.</p>
+              </div>
+              <form onSubmit={handleNewsletterSubmit} className="flex gap-2 w-full max-w-sm">
+                <Input value={nlEmail} onChange={e => setNlEmail(e.target.value)} placeholder="Seu melhor e-mail" className="flex-1" type="email" />
+                <Button type="submit" disabled={nlLoading}>{nlLoading ? '...' : 'Inscrever'}</Button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BLOCO 2 - Grid de Navegação e Marca */}
+      <div className={`border-t border-border ${!footer.newsletter ? '' : ''}`} style={{ backgroundColor: footerBg }}>
+        <div className="container py-8">
+          {/* Desktop */}
+          <div className={`hidden md:grid gap-8`} style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
+            {/* Logo + Redes */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <HeaderLogo logo={logo} icone={icone} nome={nome} />
+              </div>
+              {activeRedes.length > 0 && (
+                <div className="flex items-center gap-3">
+                  {activeRedes.map(([key, val]) => {
+                    const Icon = redeIcons[key] || MessageCircle;
+                    return (
+                      <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity">
+                        <Icon className="h-5 w-5" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* Colunas */}
+            {colunasComLinks.map((col, i) => (
               <div key={i}>
-                <h4 className="font-semibold text-foreground text-sm mb-3">{col.titulo}</h4>
+                <h4 className="font-semibold text-sm mb-3">{col.titulo}</h4>
                 <ul className="space-y-2">
-                  {col.links.map((link, j) => (
-                    <li key={j}>
-                      {link.pagina_slug ? (
-                        <Link to={`/pagina/${link.pagina_slug}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                          {link.label}
-                        </Link>
-                      ) : link.url ? (
-                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                          {link.label}
-                        </a>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">{link.label}</span>
-                      )}
-                    </li>
-                  ))}
+                  {col.links.map((link, j) => {
+                    const linkName = link.nome || (link as any).label || '';
+                    const linkUrl = link.url || (link as any).pagina_slug ? `/${(link as any).pagina_slug ? `pagina/${(link as any).pagina_slug}` : ''}` : '';
+                    const finalUrl = link.url || (link as any).pagina_slug ? (link.url || `/pagina/${(link as any).pagina_slug}`) : '#';
+                    const isInternal = finalUrl.startsWith('/') || finalUrl.startsWith('#');
+                    return (
+                      <li key={j}>
+                        {isInternal ? (
+                          <Link to={finalUrl} className="text-sm opacity-70 hover:opacity-100 transition-opacity">{linkName}</Link>
+                        ) : (
+                          <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="text-sm opacity-70 hover:opacity-100 transition-opacity">{linkName}</a>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
           </div>
-        )}
 
-        {activeRedes.length > 0 && (
-          <div className="flex items-center justify-center gap-4 pt-2">
-            {activeRedes.map(([key, val]) => (
-              <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors text-sm capitalize">
-                {key}
-              </a>
-            ))}
+          {/* Mobile */}
+          <div className="md:hidden space-y-6">
+            <div className="flex flex-col items-center gap-3">
+              <HeaderLogo logo={logo} icone={icone} nome={nome} />
+              {activeRedes.length > 0 && (
+                <div className="flex items-center gap-4">
+                  {activeRedes.map(([key, val]) => {
+                    const Icon = redeIcons[key] || MessageCircle;
+                    return (
+                      <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity">
+                        <Icon className="h-5 w-5" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {colunasComLinks.length > 0 && (
+              <Accordion type="multiple" className="w-full">
+                {colunasComLinks.map((col, i) => (
+                  <AccordionItem key={i} value={`col-${i}`}>
+                    <AccordionTrigger className="text-sm font-semibold">{col.titulo}</AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-2 py-1">
+                        {col.links.map((link, j) => {
+                          const linkName = link.nome || (link as any).label || '';
+                          const finalUrl = link.url || ((link as any).pagina_slug ? `/pagina/${(link as any).pagina_slug}` : '#');
+                          const isInternal = finalUrl.startsWith('/') || finalUrl.startsWith('#');
+                          return (
+                            <li key={j}>
+                              {isInternal ? (
+                                <Link to={finalUrl} className="text-sm opacity-70 hover:opacity-100">{linkName}</Link>
+                              ) : (
+                                <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="text-sm opacity-70 hover:opacity-100">{linkName}</a>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            )}
           </div>
-        )}
-
-        {footer.selos?.ativo && footer.selos?.url && (
-          <div className="flex justify-center">
-            <img src={footer.selos.url} alt="Selos de segurança" className="max-h-12 object-contain" />
-          </div>
-        )}
-
-        <div className="border-t border-border pt-4 text-center space-y-1">
-          <p className="text-sm text-muted-foreground">
-            {footer.texto_copyright || `© ${new Date().getFullYear()} ${nome}. Todos os direitos reservados.`}
-          </p>
-          {footer.texto_cnpj && <p className="text-xs text-muted-foreground">{footer.texto_cnpj}</p>}
-          {footer.texto_endereco && <p className="text-xs text-muted-foreground">{footer.texto_endereco}</p>}
         </div>
       </div>
+
+      {/* BLOCO 3 - Créditos */}
+      <div className="border-t" style={{ borderColor: footerText ? `${footerText}33` : undefined }}>
+        <div className="container py-4">
+          <div className="flex flex-col items-center text-center gap-1 md:flex-row md:justify-between md:text-left">
+            <p className="text-sm opacity-70">
+              {footer.texto_copyright || `© ${new Date().getFullYear()} ${nome}. Todos os direitos reservados.`}
+            </p>
+            <div className="flex flex-col items-center gap-0.5 md:flex-row md:gap-3 md:items-center">
+              {footer.texto_cnpj && <p className="text-xs opacity-50">{footer.texto_cnpj}</p>}
+              {footer.texto_endereco && <p className="text-xs opacity-50">{footer.texto_endereco}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {footer.selos?.ativo && footer.selos?.url && (
+        <div className="flex justify-center py-2" style={{ backgroundColor: footerBg }}>
+          <img src={footer.selos.url} alt="Selos de segurança" className="max-h-12 object-contain" />
+        </div>
+      )}
     </footer>
   );
 }
@@ -542,7 +648,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
         </main>
 
         {/* Footer */}
-        <LojaFooter footer={footerConfig} nome={displayName} slug={loja.slug} />
+        <LojaFooter footer={footerConfig} nome={displayName} slug={loja.slug} lojaId={loja._id} logo={logoConfig} icone={loja.icone || ''} />
 
         {/* WhatsApp */}
         <WhatsAppFloat numero={whatsappNumero} />

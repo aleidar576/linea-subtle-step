@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  fretesApi, cuponsApi, midiasApi, temasApi, pixelsApi, paginasApi,
+  fretesApi, cuponsApi, midiasApi, temasApi, pixelsApi, paginasApi, leadsApi,
   type RegraFrete, type Cupom, type MidiaItem, type TemaConfig,
-  type TrackingPixelData, type PaginaData,
+  type TrackingPixelData, type PaginaData, type LeadData,
 } from '@/services/saas-api';
 
 // === FRETES ===
@@ -185,5 +185,47 @@ export function useDeletePagina() {
   return useMutation({
     mutationFn: (id: string) => paginasApi.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['paginas'] }); },
+  });
+}
+
+// === LEADS (Newsletter) ===
+
+export function useLeads(lojaId: string | undefined) {
+  return useQuery<LeadData[]>({
+    queryKey: ['leads', lojaId],
+    queryFn: () => leadsApi.list(lojaId!),
+    enabled: !!lojaId,
+  });
+}
+
+export function useSubscribeNewsletter() {
+  return useMutation({
+    mutationFn: ({ lojaId, email, origem }: { lojaId: string; email: string; origem: 'POPUP' | 'FOOTER' }) =>
+      leadsApi.subscribe(lojaId, email, origem),
+  });
+}
+
+export function useUpdateLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { email: string } }) => leadsApi.update(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['leads'] }); },
+  });
+}
+
+export function useDeleteLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => leadsApi.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['leads'] }); },
+  });
+}
+
+export function useImportLeads() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lojaId, emails, origem }: { lojaId: string; emails: string[]; origem: 'POPUP' | 'FOOTER' }) =>
+      leadsApi.import(lojaId, emails, origem),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['leads'] }); },
   });
 }

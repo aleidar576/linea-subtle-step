@@ -15,6 +15,7 @@ const Product = require('../models/Product.js');
 const TrackingPixel = require('../models/TrackingPixel.js');
 const Pagina = require('../models/Pagina.js');
 const Setting = require('../models/Setting.js');
+const Lead = require('../models/Lead.js');
 
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -105,6 +106,30 @@ module.exports = async function handler(req, res) {
     const pagina = await Pagina.findOne({ loja_id, slug: pageSlug, is_active: true }).lean();
     if (!pagina) return res.status(404).json({ error: 'Página não encontrada' });
     return res.json(pagina);
+  }
+
+  // === PUBLIC: Newsletter subscribe (lead) ===
+  if (scope === 'lead-newsletter' && method === 'POST') {
+    const { loja_id: bodyLojaId, email, origem } = req.body;
+    const lid = bodyLojaId || loja_id;
+    if (!lid || !email) return res.status(400).json({ error: 'loja_id e email são obrigatórios' });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(email)) return res.status(400).json({ error: 'E-mail inválido' });
+    await Lead.findOneAndUpdate(
+      { loja_id: lid, email: email.toLowerCase().trim() },
+      { $setOnInsert: { loja_id: lid, email: email.toLowerCase().trim(), origem: origem || 'POPUP' } },
+      { upsert: true, new: true }
+    );
+    return res.json({ success: true });
+  }
+
+  // === PUBLIC: Bulk cupons for popup ===
+  if (scope === 'cupons-popup' && method === 'GET') {
+    const ids = req.query.ids;
+    if (!loja_id || !ids) return res.status(400).json({ error: 'loja_id e ids são obrigatórios' });
+    const idList = ids.split(',').map(s => s.trim()).filter(Boolean);
+    const cupons = await Cupom.find({ _id: { $in: idList }, loja_id, is_active: true }).lean();
+    return res.json(cupons.map(c => ({ _id: c._id, codigo: c.codigo, tipo: c.tipo, valor: c.valor })));
   }
 
   // === AUTH REQUIRED ===
@@ -402,6 +427,81 @@ module.exports = async function handler(req, res) {
       } catch (err) {
         console.error('[BUNNY]', err);
         return res.status(500).json({ error: 'Erro no upload', details: err.message });
+      }
+    }
+
+    // ==========================================
+    // LEADS (Newsletter)
+    // ==========================================
+    if (scope === 'leads' && method === 'GET') {
+      const leads = await Lead.find({ loja_id: resolvedLojaId }).sort({ criado_em: -1 }).lean();
+      // Check vinculo with Cliente collection
+      const Cliente = require('../models/Cliente.js');
+      const emails = leads.map(l => l.email);
+      const clientes = await Cliente.find({ loja_id: resolvedLojaId, email: { $in: emails } }).select('email').lean();
+      const clienteEmails = new Set(clientes.map(c => c.email.toLowerCase()));
+      const result = leads.map(l => ({
+        ...l,
+        vinculo: clienteEmails.has(l.email) ? 'Cliente Cadastrado' : 'Visitante',
+      }));
+      return res.json(result);
+    }
+
+    if (scope === 'leads-export' && method === 'GET') {
+      const leads = await Lead.find({ loja_id: resolvedLojaId }).sort({ criado_em: -1 }).lean();
+      const Cliente = require('../models/Cliente.js');
+      const emails = leads.map(l => l.email);
+      const clientes = await Cliente.find({ loja_id: resolvedLojaId, email: { $in: emails } }).select('email').lean();
+      const clienteEmails = new Set(clientes.map(c => c.email.toLowerCase()));
+      return res.json(leads.map(l => ({
+        ...l,
+        vinculo: clienteEmails.has(l.email) ? 'Cliente Cadastrado' : 'Visitante',
+      })));
+    }
+
+    if (scope === 'lead') {
+      if (method === 'PUT' && id) {
+        const lead = await Lead.findById(id);
+        if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
+        const owns = await verifyOwnership(user, lead.loja_id);
+        if (!owns) return res.status(403).json({ error: 'Sem permissão' });
+        const { email } = req.body;
+        if (email) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+          if (!emailRegex.test(email)) return res.status(400).json({ error: 'E-mail inválido' });
+          lead.email = email.toLowerCase().trim();
+          await lead.save();
+        }
+        return res.json(lead);
+      }
+
+      if (method === 'DELETE' && id) {
+        const lead = await Lead.findById(id);
+        if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
+        const owns = await verifyOwnership(user, lead.loja_id);
+        if (!owns) return res.status(403).json({ error: 'Sem permissão' });
+        await Lead.findByIdAndDelete(id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (scope === 'leads-import' && method === 'POST') {
+      const { emails, origem } = req.body;
+      if (!resolvedLojaId || !Array.isArray(emails)) return res.status(400).json({ error: 'loja_id e emails[] obrigatórios' });
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+      const validEmails = emails.filter(e => typeof e === 'string' && emailRegex.test(e.trim())).map(e => ({
+        loja_id: resolvedLojaId,
+        email: e.toLowerCase().trim(),
+        origem: origem || 'POPUP',
+      }));
+      if (!validEmails.length) return res.status(400).json({ error: 'Nenhum e-mail válido' });
+      try {
+        const result = await Lead.insertMany(validEmails, { ordered: false });
+        return res.json({ success: true, inseridos: result.length });
+      } catch (err) {
+        // Duplicate key errors are expected, count successful inserts
+        const inserted = err.insertedDocs?.length || 0;
+        return res.json({ success: true, inseridos: inserted });
       }
     }
 
