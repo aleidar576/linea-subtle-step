@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Copy, Check, Gift, ChevronRight, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Check, Gift, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,12 +87,17 @@ const shippingSchema = z.object({
 
 type Step = 'identification' | 'customer' | 'shipping' | 'payment';
 
+interface AppliedCoupon {
+  tipo: string;
+  valor: number;
+  codigo: string;
+}
+
 const LojaCheckout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart } = useCart();
   const { lojaId, exigirCadastro, nomeExibicao, slogan } = useLoja();
 
-  // Dynamic title: Checkout · {nomeLoja} · {slogan}
   useEffect(() => {
     const parts = ['Checkout', nomeExibicao];
     if (slogan) parts.push(slogan);
@@ -126,12 +131,9 @@ const LojaCheckout = () => {
   const computedFretes = useMemo(() => {
     const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id).filter(Boolean);
     const cartProducts = allCheckoutProducts.filter((p: any) => cartProductIds.includes(p.product_id) || cartProductIds.includes(p._id));
-
-    // Check if any product has fretes_vinculados
     const hasVinculados = cartProducts.some((p: any) => p.fretes_vinculados && p.fretes_vinculados.length > 0);
 
     if (!hasVinculados) {
-      // Fallback: use global active freights
       return activeFretes.map((f: any) => ({
         nome: f.nome,
         valor: f.valor || 0,
@@ -140,13 +142,10 @@ const LojaCheckout = () => {
       }));
     }
 
-    // Group by frete_id: for each active frete, find the most expensive value across cart products
     const freteMap = new Map<string, { nome: string; valor: number; prazo_dias_min: number; prazo_dias_max: number }>();
-
     for (const frete of activeFretes) {
       const freteId = frete._id;
       let maxValor = -1;
-
       for (const product of cartProducts) {
         const vinculados = (product as any).fretes_vinculados || [];
         const vinculo = vinculados.find((v: any) => v.frete_id === freteId);
@@ -155,47 +154,87 @@ const LojaCheckout = () => {
           if (valor > maxValor) maxValor = valor;
         }
       }
-
       if (maxValor >= 0) {
-        freteMap.set(freteId, {
-          nome: frete.nome,
-          valor: maxValor,
-          prazo_dias_min: frete.prazo_dias_min || 3,
-          prazo_dias_max: frete.prazo_dias_max || 7,
-        });
+        freteMap.set(freteId, { nome: frete.nome, valor: maxValor, prazo_dias_min: frete.prazo_dias_min || 3, prazo_dias_max: frete.prazo_dias_max || 7 });
       }
     }
-
     return Array.from(freteMap.values());
   }, [items, allCheckoutProducts, activeFretes]);
 
   const shippingCost = selectedFrete?.valor || 0;
-  const finalTotal = cartFinalPrice + shippingCost;
-
   const addressFilled = shippingData.street.length >= 3 && shippingData.neighborhood.length >= 2 && shippingData.city.length >= 2 && shippingData.state.length === 2;
-
-  // No auto-selection - user must choose
 
   // Inline login state
   const [loginForm, setLoginForm] = useState({ email: '', senha: '' });
   const [loginLoading, setLoginLoading] = useState(false);
   const { login } = useClienteAuth();
 
-  // Cupom state
+  // ── Multiple Coupons state ──
   const [cupomCode, setCupomCode] = useState('');
-  const [cupomApplied, setCupomApplied] = useState<{ tipo: string; valor: number; codigo: string } | null>(null);
+  const [cuponsApplied, setCuponsApplied] = useState<AppliedCoupon[]>([]);
+  const [cupomSectionOpen, setCupomSectionOpen] = useState(false);
+  const [cupomLoading, setCupomLoading] = useState(false);
 
-  // If coupon is frete_gratis, shipping becomes free
-  const effectiveShippingCost = cupomApplied?.tipo === 'frete_gratis' ? 0 : shippingCost;
-  const finalTotalWithShipping = cartFinalPrice + effectiveShippingCost;
+  // Auto-load coupons redeemed from popup (localStorage)
+  useEffect(() => {
+    if (!lojaId) return;
+    const redeemed: AppliedCoupon[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('cupom_resgatado_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key)!);
+          if (data?.codigo) {
+            redeemed.push({ tipo: data.tipo || 'percentual', valor: data.valor || 0, codigo: data.codigo });
+          }
+        } catch {}
+      }
+    }
+    if (redeemed.length === 0) return;
 
-  const totalWithCupom = cupomApplied
-    ? (cupomApplied.tipo === 'percentual'
-      ? finalTotalWithShipping - Math.round(finalTotalWithShipping * cupomApplied.valor / 100)
-      : cupomApplied.tipo === 'frete_gratis'
-        ? finalTotalWithShipping
-        : Math.max(0, finalTotalWithShipping - cupomApplied.valor))
-    : finalTotal;
+    // Validate each redeemed coupon against the API
+    const validateAll = async () => {
+      const validated: AppliedCoupon[] = [];
+      for (const c of redeemed) {
+        try {
+          const r = await cuponsApi.validar(lojaId, c.codigo);
+          validated.push({ tipo: r.tipo, valor: r.valor, codigo: r.codigo });
+        } catch {
+          // Coupon invalid/expired — remove from localStorage
+          localStorage.removeItem(`cupom_resgatado_${c.codigo}`);
+        }
+      }
+      if (validated.length > 0) {
+        setCuponsApplied(prev => {
+          const existing = new Set(prev.map(p => p.codigo));
+          const newOnes = validated.filter(v => !existing.has(v.codigo));
+          return [...prev, ...newOnes];
+        });
+        setCupomSectionOpen(true);
+      }
+    };
+    validateAll();
+  }, [lojaId]);
+
+  // Compute totals with multiple coupons
+  const hasFreteGratisCupom = cuponsApplied.some(c => c.tipo === 'frete_gratis');
+  const effectiveShippingCost = hasFreteGratisCupom ? 0 : shippingCost;
+
+  const cupomDiscountAmount = useMemo(() => {
+    let discount = 0;
+    const baseForPercent = cartFinalPrice + effectiveShippingCost;
+    for (const c of cuponsApplied) {
+      if (c.tipo === 'percentual') {
+        discount += Math.round(baseForPercent * c.valor / 100);
+      } else if (c.tipo === 'fixo') {
+        discount += c.valor;
+      }
+      // frete_gratis doesn't add to discount amount — handled via effectiveShippingCost
+    }
+    return discount;
+  }, [cuponsApplied, cartFinalPrice, effectiveShippingCost]);
+
+  const finalTotal = Math.max(0, cartFinalPrice + effectiveShippingCost - cupomDiscountAmount);
 
   useEffect(() => {
     if (isLoggedIn && cliente) {
@@ -216,24 +255,16 @@ const LojaCheckout = () => {
           state: enderecoPadrao.estado || '',
         });
       }
-      if (currentStep === 'identification') {
-        setCurrentStep('customer');
-      }
+      if (currentStep === 'identification') setCurrentStep('customer');
     }
   }, [isLoggedIn, cliente, enderecoPadrao]);
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!exigirCadastro && currentStep === 'identification') {
-        setCurrentStep('customer');
-      }
-    }
+    if (!authLoading && !exigirCadastro && currentStep === 'identification') setCurrentStep('customer');
   }, [exigirCadastro, authLoading]);
 
   useEffect(() => {
-    if (items.length > 0) {
-      firePixelEvent('InitiateCheckout', { value: cartFinalPrice / 100, currency: 'BRL', num_items: items.reduce((s, i) => s + i.quantity, 0) });
-    }
+    if (items.length > 0) firePixelEvent('InitiateCheckout', { value: cartFinalPrice / 100, currency: 'BRL', num_items: items.reduce((s, i) => s + i.quantity, 0) });
   }, []);
 
   // Social proof
@@ -317,7 +348,7 @@ const LojaCheckout = () => {
     loja_id: lojaId,
     etapa,
     itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, quantity: i.quantity, price: i.product.price })),
-    total: totalWithCupom,
+    total: finalTotal,
     cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
     endereco: etapa !== 'customer' ? { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state } : null,
     utms: {},
@@ -339,24 +370,40 @@ const LojaCheckout = () => {
   };
 
   const applyCupom = async () => {
-    if (!cupomCode.trim()) return;
+    const code = cupomCode.trim().toUpperCase();
+    if (!code) return;
+    if (cuponsApplied.some(c => c.codigo === code)) {
+      toast.error('Cupom já aplicado');
+      return;
+    }
+    setCupomLoading(true);
     try {
-      const r = await cuponsApi.validar(lojaId, cupomCode.trim());
-      setCupomApplied({ tipo: r.tipo, valor: r.valor, codigo: r.codigo });
+      const r = await cuponsApi.validar(lojaId, code);
+      setCuponsApplied(prev => [...prev, { tipo: r.tipo, valor: r.valor, codigo: r.codigo }]);
+      setCupomCode('');
       toast.success(`Cupom ${r.codigo} aplicado!`);
     } catch (e: any) { toast.error(e.message || 'Cupom inválido'); }
+    finally { setCupomLoading(false); }
   };
+
+  const removeCupom = (codigo: string) => {
+    setCuponsApplied(prev => prev.filter(c => c.codigo !== codigo));
+    localStorage.removeItem(`cupom_resgatado_${codigo}`);
+  };
+
+  // Pick main coupon for order (first non-frete_gratis, or first one)
+  const mainCupom = cuponsApplied.find(c => c.tipo !== 'frete_gratis') || cuponsApplied[0] || null;
 
   const handleGeneratePix = async () => {
     setIsLoading(true);
-    firePixelEvent('AddPaymentInfo', { value: totalWithCupom / 100, currency: 'BRL', num_items: items.reduce((s, i) => s + i.quantity, 0) });
+    firePixelEvent('AddPaymentInfo', { value: finalTotal / 100, currency: 'BRL', num_items: items.reduce((s, i) => s + i.quantity, 0) });
     try {
       const desc = items.map(i => `${i.product.name} x${i.quantity}`).join(', ');
       const r = await fetch('/api/create-pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: totalWithCupom,
+          amount: finalTotal,
           description: desc,
           customer: { name: customerData.name, email: customerData.email, cellphone: customerData.cellphone, taxId: customerData.taxId },
           loja_id: lojaId,
@@ -371,11 +418,11 @@ const LojaCheckout = () => {
         loja_id: lojaId,
         itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
         subtotal: totalPrice,
-        desconto: discountAmount + (cupomApplied ? (cupomApplied.tipo === 'percentual' ? Math.round(finalTotalWithShipping * cupomApplied.valor / 100) : cupomApplied.tipo === 'frete_gratis' ? shippingCost : cupomApplied.valor) : 0),
+        desconto: discountAmount + cupomDiscountAmount + (hasFreteGratisCupom ? shippingCost : 0),
         frete: effectiveShippingCost,
         frete_nome: selectedFrete?.nome || null,
-        total: totalWithCupom,
-        cupom: cupomApplied ? { codigo: cupomApplied.codigo, tipo: cupomApplied.tipo, valor: cupomApplied.valor } : null,
+        total: finalTotal,
+        cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
         pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
         cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
         endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
@@ -383,6 +430,9 @@ const LojaCheckout = () => {
       }).catch(e => console.warn('[PEDIDO]', e));
 
       carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(() => {});
+
+      // Clean up redeemed coupons from localStorage after order
+      cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
     } catch (e: any) { toast.error(e.message || 'Erro ao gerar pagamento'); }
     finally { setIsLoading(false); }
   };
@@ -400,9 +450,7 @@ const LojaCheckout = () => {
       toast.success('Login realizado!');
     } catch (err: any) {
       toast.error(err.message || 'E-mail ou senha inválidos');
-    } finally {
-      setLoginLoading(false);
-    }
+    } finally { setLoginLoading(false); }
   };
 
   const visibleSteps = currentStep === 'identification'
@@ -411,13 +459,70 @@ const LojaCheckout = () => {
 
   const stepIdx = visibleSteps.findIndex(s => s.id === currentStep);
 
+  // ── Coupon Section JSX (reusable) ──
+  const couponSectionJSX = (
+    <div className="border border-dashed border-border rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setCupomSectionOpen(prev => !prev)}
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+      >
+        <Gift className="h-4 w-4" />
+        <span>Tem cupom? Resgate aqui!</span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${cupomSectionOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {cupomSectionOpen && (
+        <div className="px-4 pb-4 space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Código do cupom"
+              value={cupomCode}
+              onChange={e => setCupomCode(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === 'Enter' && applyCupom()}
+              className="flex-1"
+            />
+            <Button
+              onClick={applyCupom}
+              disabled={cupomLoading || !cupomCode.trim()}
+              className="rounded-lg font-bold text-xs px-4"
+            >
+              {cupomLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'APLICAR'}
+            </Button>
+          </div>
+
+          {cuponsApplied.map(c => (
+            <div key={c.codigo} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-bold text-foreground">{c.codigo}</span>
+                <button
+                  type="button"
+                  onClick={() => removeCupom(c.codigo)}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  remover
+                </button>
+              </div>
+              <span className={`text-sm font-semibold ${c.tipo === 'frete_gratis' ? 'text-primary' : 'text-primary'}`}>
+                {c.tipo === 'frete_gratis' ? 'Frete grátis' : c.tipo === 'percentual' ? `-${c.valor}%` : `-${formatPrice(c.valor)}`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   // ── Inline Order Summary JSX ──
-  const displayShippingCost = selectedFrete?.valor ?? null;
-  const displayTotal = totalWithCupom;
+  const displayTotal = finalTotal;
 
   const orderSummaryJSX = (
-    <div className="bg-secondary/80 rounded-3xl p-5 border border-border">
-      <h3 className="font-bold text-foreground mb-3">Resumo do Pedido</h3>
+    <div className="bg-secondary/80 rounded-3xl p-5 border border-border space-y-4">
+      {/* Coupon section inside order summary */}
+      {couponSectionJSX}
+
+      <h3 className="font-bold text-foreground">Resumo do Pedido</h3>
       <div className="space-y-3">
         {items.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
@@ -426,45 +531,32 @@ const LojaCheckout = () => {
               <p className="text-sm font-medium text-foreground line-clamp-2">{item.product.name}</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
-                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
+                  <button type="button" onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)} className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"><Minus className="h-3 w-3" /></button>
                   <span className="text-xs font-medium w-6 text-center">{item.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
-                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
+                  <button type="button" onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)} className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"><Plus className="h-3 w-3" /></button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
-                  className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                <button type="button" onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)} className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3 w-3" /></button>
               </div>
             </div>
             <span className="text-sm font-semibold text-foreground shrink-0">{formatPrice(item.product.price * item.quantity)}</span>
           </div>
         ))}
       </div>
-      <div className="border-t border-border mt-3 pt-3 space-y-1.5">
+      <div className="border-t border-border pt-3 space-y-1.5">
         <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal</span><span>{formatPrice(totalPrice)}</span></div>
         {discountPercent > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto ({discountPercent}%)</span><span>-{formatPrice(discountAmount)}</span></div>}
-        {cupomApplied && cupomApplied.tipo !== 'frete_gratis' && <div className="flex justify-between text-sm text-primary"><span>Cupom {cupomApplied.codigo}</span><span>-{cupomApplied.tipo === 'percentual' ? formatPrice(Math.round(finalTotalWithShipping * cupomApplied.valor / 100)) : formatPrice(cupomApplied.valor)}</span></div>}
+        {cuponsApplied.filter(c => c.tipo !== 'frete_gratis').map(c => (
+          <div key={c.codigo} className="flex justify-between text-sm text-primary">
+            <span>Cupom {c.codigo}</span>
+            <span>-{c.tipo === 'percentual' ? formatPrice(Math.round((cartFinalPrice + effectiveShippingCost) * c.valor / 100)) : formatPrice(c.valor)}</span>
+          </div>
+        ))}
         {selectedFrete !== null && (
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Frete ({selectedFrete.nome})</span>
             <span className={effectiveShippingCost === 0 ? 'text-primary font-semibold' : ''}>
               {effectiveShippingCost === 0 ? 'Grátis' : formatPrice(effectiveShippingCost)}
-              {cupomApplied?.tipo === 'frete_gratis' && selectedFrete.valor > 0 && (
+              {hasFreteGratisCupom && selectedFrete.valor > 0 && (
                 <span className="line-through text-muted-foreground ml-1 text-xs">{formatPrice(selectedFrete.valor)}</span>
               )}
             </span>
@@ -482,7 +574,7 @@ const LojaCheckout = () => {
     return <div className="container py-20 text-center"><h1 className="text-2xl font-bold">Seu carrinho está vazio</h1><Button asChild className="mt-6"><Link to="/">Ver Produtos</Link></Button></div>;
   }
 
-  // ── Step Progress Bar (inline) ──
+  // ── Step Progress Bar ──
   const stepBarJSX = (
     <div className="mb-8 flex items-center justify-center gap-0">
       {visibleSteps.map((s, i) => {
@@ -512,13 +604,9 @@ const LojaCheckout = () => {
 
       {stepBarJSX}
 
-      {/* Desktop: 2-column layout (form left, summary right) - responsive widths */}
       <div className="lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
-        {/* Form */}
         <div className="bg-card border border-border rounded-2xl p-6 lg:p-8">
-          {/* INLINE FORM CONTENT */}
           <div className="space-y-4">
-            {/* Payment confirmed transition */}
             {paymentConfirmed && (
               <div className="rounded-2xl border border-primary bg-primary/5 p-6 text-center space-y-4">
                 <Check className="mx-auto h-12 w-12 text-primary" />
@@ -580,7 +668,6 @@ const LojaCheckout = () => {
                     {errors[f.name] && <p className="text-xs text-destructive mt-1">{errors[f.name]}</p>}
                   </div>
                 ))}
-                {/* Mobile: show summary inline */}
                 <div className="lg:hidden">{orderSummaryJSX}</div>
                 <Button onClick={goNext} className="w-full rounded-full font-bold">Continuar <ChevronRight className="h-4 w-4 ml-1" /></Button>
               </div>
@@ -649,10 +736,7 @@ const LojaCheckout = () => {
                           className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-background hover:border-primary/50'}`}
                         >
                           <div className="flex items-center gap-3">
-                            {isSelected
-                              ? <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                              : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-                            }
+                            {isSelected ? <CheckCircle2 className="h-5 w-5 text-primary shrink-0" /> : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />}
                             <div className="text-left">
                               <p className="text-sm font-medium text-foreground">{freteName}</p>
                               <p className="text-xs text-muted-foreground">{deliveryText}</p>
@@ -667,7 +751,6 @@ const LojaCheckout = () => {
                   </div>
                 )}
 
-                {/* Mobile: show summary inline */}
                 <div className="lg:hidden">{orderSummaryJSX}</div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setCurrentStep('customer')} className="flex-1 rounded-full">Voltar</Button>
@@ -680,12 +763,6 @@ const LojaCheckout = () => {
             {!paymentConfirmed && currentStep === 'payment' && !pixData && (
               <div className="space-y-4">
                 <h2 className="text-xl font-bold">Pagamento via PIX</h2>
-
-                <div className="flex gap-2">
-                  <Input placeholder="Cupom de desconto" value={cupomCode} onChange={e => setCupomCode(e.target.value)} />
-                  <Button variant="outline" onClick={applyCupom} disabled={!!cupomApplied}>Aplicar</Button>
-                </div>
-                {cupomApplied && <p className="text-xs text-primary font-semibold">✅ Cupom {cupomApplied.codigo} aplicado ({cupomApplied.tipo === 'frete_gratis' ? 'Frete Grátis' : cupomApplied.tipo === 'percentual' ? `${cupomApplied.valor}%` : formatPrice(cupomApplied.valor)} de desconto)</p>}
 
                 {/* Mobile: show summary inline */}
                 <div className="lg:hidden">{orderSummaryJSX}</div>
