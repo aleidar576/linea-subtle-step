@@ -124,7 +124,7 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
   const footerBg = footer.cores?.fundo || undefined;
   const footerText = footer.cores?.texto || undefined;
   const redes = footer.redes_sociais || {};
-  const activeRedes = Object.entries(redes).filter(([, v]) => v?.ativo && v?.url && v.url !== '#' && v.url.trim() !== '');
+  const activeRedes = Object.entries(redes).filter(([, v]) => v?.ativo);
 
   const redeIcons: Record<string, any> = { instagram: Instagram, tiktok: Music2, facebook: Facebook, youtube: Youtube };
 
@@ -147,26 +147,30 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
   return (
     <footer className={isProductPage ? 'pb-20' : ''} style={{ backgroundColor: footerBg, color: footerText }}>
       {/* BLOCO 1 - Newsletter (design "FIQUE POR DENTRO") */}
-      {footer.newsletter && (
-        <div className="border-b border-border" style={footerBg ? { backgroundColor: footerBg, borderColor: footerText ? `${footerText}22` : undefined } : { backgroundColor: 'hsl(var(--card))' }}>
+      {footer.newsletter && (() => {
+        const nlCores = footer.newsletter_cores;
+        const nlBg = nlCores?.fundo || footerBg;
+        const nlText = nlCores?.texto || footerText;
+        return (
+        <div className="border-b border-border" style={nlBg ? { backgroundColor: nlBg, borderColor: nlText ? `${nlText}22` : undefined } : { backgroundColor: 'hsl(var(--card))' }}>
           <div className="container py-10 flex flex-col items-center text-center gap-4">
-            <h3 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: footerText }}>FIQUE POR DENTRO</h3>
-            <p className="text-sm opacity-70" style={{ color: footerText }}>Receba nossa newsletter com novidades e promoções!</p>
+            <h3 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: nlText }}>FIQUE POR DENTRO</h3>
+            <p className="text-sm opacity-70" style={{ color: nlText }}>Receba nossa newsletter com novidades e promoções!</p>
             <form onSubmit={handleNewsletterSubmit} className="w-full max-w-md mt-2">
-              <div className="relative border-b-2 border-current opacity-60 focus-within:opacity-100 transition-opacity" style={{ borderColor: footerText || 'currentColor' }}>
+              <div className="relative border-b-2 border-current opacity-60 focus-within:opacity-100 transition-opacity" style={{ borderColor: nlText || 'currentColor' }}>
                 <input
                   value={nlEmail}
                   onChange={e => setNlEmail(e.target.value)}
                   placeholder="E-MAIL"
                   type="email"
                   className="w-full bg-transparent py-3 pr-12 text-sm placeholder:tracking-widest placeholder:text-current/50 focus:outline-none"
-                  style={{ color: footerText }}
+                  style={{ color: nlText }}
                 />
                 <button
                   type="submit"
                   disabled={nlLoading}
                   className="absolute right-0 top-1/2 -translate-y-1/2 p-2 hover:opacity-80 transition-opacity"
-                  style={{ color: footerText }}
+                  style={{ color: nlText }}
                   aria-label="Inscrever"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -175,7 +179,8 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* BLOCO 2 - Grid de Navegação e Marca */}
       <div className={`border-t border-border ${!footer.newsletter ? '' : ''}`} style={{ backgroundColor: footerBg }}>
@@ -191,10 +196,13 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
                 <div className="flex items-center gap-4 mt-2">
                   {activeRedes.map(([key, val]) => {
                     const Icon = redeIcons[key] || MessageCircle;
-                    return (
+                    const hasLink = val.url && val.url !== '#' && val.url.trim() !== '';
+                    return hasLink ? (
                       <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity">
                         <Icon className="h-6 w-6" />
                       </a>
+                    ) : (
+                      <span key={key} className="opacity-70"><Icon className="h-6 w-6" /></span>
                     );
                   })}
                 </div>
@@ -233,10 +241,13 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
                 <div className="flex items-center gap-5 mt-1">
                   {activeRedes.map(([key, val]) => {
                     const Icon = redeIcons[key] || MessageCircle;
-                    return (
+                    const hasLink = val.url && val.url !== '#' && val.url.trim() !== '';
+                    return hasLink ? (
                       <a key={key} href={val.url} target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity">
                         <Icon className="h-7 w-7" />
                       </a>
+                    ) : (
+                      <span key={key} className="opacity-70"><Icon className="h-7 w-7" /></span>
                     );
                   })}
                 </div>
