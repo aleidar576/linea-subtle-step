@@ -903,7 +903,7 @@ const LojaTemas = () => {
                       {id && <ImageUploader lojaId={id} value={popup.imagem_url || ''} onChange={url => updatePopup({ imagem_url: url })} placeholder="Imagem do popup" />}
                     </div>
                   </div>
-                  {popup.tipo === 'CUPONS' && (
+                  {(popup.tipo || '').toUpperCase() === 'CUPONS' && (
                     <div className="border border-border rounded-lg p-4 space-y-3">
                       <Label className="text-sm font-medium">Selecione os Cupons</Label>
                       <p className="text-xs text-muted-foreground">Escolha quais cupons ativos serão exibidos no popup.</p>
