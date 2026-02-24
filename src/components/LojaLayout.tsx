@@ -403,7 +403,7 @@ function WelcomePopup({ config, lojaId }: { config: any; lojaId: string }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={handleClose}>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 p-4" onClick={handleClose}>
       <div
         className="rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0"
         style={{ backgroundColor: popupBg || 'hsl(var(--card))', color: popupText }}
