@@ -371,7 +371,7 @@ const LojaProduto = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background md:pb-0 pb-40">
+    <div className="min-h-screen bg-background md:pb-0 pb-24">
       {/* ===== MOBILE HEADER ===== */}
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between bg-background/95 px-3 py-3 backdrop-blur-lg md:hidden">
         <Link to="/" className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary"><ArrowLeft className="h-5 w-5" /></Link>

@@ -62,6 +62,13 @@ const LojaConfiguracoes = () => {
           },
         } as any,
       });
+      if (dominioCustomizado?.trim()) {
+        try {
+          await lojasApi.addDomain(id, dominioCustomizado.trim());
+        } catch {
+          // não bloqueia o save — domínio será registrado na próxima tentativa
+        }
+      }
       toast({ title: 'Configurações salvas!', description: 'As alterações foram aplicadas com sucesso.' });
     } catch (e: any) {
       toast({ title: 'Erro ao salvar', description: e.message, variant: 'destructive' });
@@ -74,10 +81,14 @@ const LojaConfiguracoes = () => {
     if (!dominioCustomizado.trim()) return;
     setIsCheckingDomain(true);
     try {
-      await lojasApi.checkDomain(dominioCustomizado.trim());
-      toast({ title: 'Domínio verificado!', description: 'Domínio verificado e propagado com sucesso!' });
+      const result = await lojasApi.checkDomain(dominioCustomizado.trim());
+      if (result.verified === true && !result.misconfigured) {
+        toast({ title: 'Domínio verificado!', description: 'Domínio verificado e propagado com sucesso!' });
+      } else {
+        toast({ title: 'Propagação pendente', description: 'Domínio ainda não propagou ou DNS incorreto. Verifique o apontamento CNAME e aguarde.', variant: 'destructive' });
+      }
     } catch {
-      toast({ title: 'Propagação pendente', description: 'Domínio ainda não propagou. Verifique o apontamento CNAME na sua hospedagem e aguarde.', variant: 'destructive' });
+      toast({ title: 'Erro na verificação', description: 'Não foi possível verificar o domínio. Tente novamente.', variant: 'destructive' });
     } finally {
       setIsCheckingDomain(false);
     }
