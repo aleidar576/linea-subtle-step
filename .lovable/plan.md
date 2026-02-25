@@ -1,51 +1,78 @@
 
 
-## Plano: Protecao contra Estornos (charge.refunded)
+## Plano: Correcao de 3 Bugs Criticos (UTMs, Pedidos, Carrinhos)
 
-### Contexto
+Apos varredura completa de ponta a ponta, identifiquei as causas raiz dos 3 problemas reportados.
 
-O webhook Stripe em `api/loja-extras.js` ja trata 5 eventos. Falta o tratamento de estornos/chargebacks para revogar acesso premium imediatamente.
+---
 
-### Alteracao
+### BUG 1: UTMs nao chegam no carrinho abandonado
 
-**Arquivo unico: `api/loja-extras.js`**
+**Causa raiz**: No `LojaPublicaApp` (App.tsx linha 184), NAO existe nenhum componente que chame `useUtmParams()` ao carregar a pagina. Diferente do `SaaSApp`, que tem `<TrackingProvider>`, a loja publica nunca captura os parametros UTM da URL de entrada.
 
-Adicionar um novo bloco `if` para o evento `charge.refunded` logo apos o bloco `customer.subscription.deleted` (apos linha 278), seguindo o mesmo padrao dos handlers existentes:
+O fluxo quebrado:
+1. Cliente chega em `loja.com.br/?utm_source=facebook&utm_campaign=promo`
+2. Nenhum componente chama `useUtmParams()` — UTMs NAO sao salvos no sessionStorage
+3. Cliente navega para `/produto/x`, depois `/checkout` — URL muda, UTMs somem
+4. No checkout, `getSavedUtmParams()` e chamado, mas `window.location.search` esta vazio e sessionStorage esta vazio
+5. Resultado: `utms: {}` no carrinho e no pedido
 
+**Correcao**: Adicionar captura de UTMs no `LojaLayout.tsx`. Inserir um `useEffect` que chama `getSavedUtmParams()` na montagem do componente, garantindo que UTMs da URL de entrada sejam salvos no sessionStorage antes de qualquer navegacao.
+
+**Arquivo**: `src/components/LojaLayout.tsx`
+- Importar `getSavedUtmParams` de `@/hooks/useUtmParams`
+- Adicionar useEffect no componente `LojaLayout` que chama `getSavedUtmParams()` no mount
+
+---
+
+### BUG 2: Pedidos com pagamento pendente NAO sao criados
+
+**Causa raiz**: Dois problemas combinados:
+
+**Problema A — Backend sem try-catch**: O handler `POST scope=pedido` em `api/pedidos.js` (linhas 43-91) NAO tem try-catch. Se `Cliente.create()` ou `Pedido.create()` lancar qualquer erro (ex: erro de validacao MongoDB, timeout, ObjectId invalido), o Vercel retorna 500 sem mensagem util.
+
+**Problema B — Frontend engole erros silenciosamente**: Em `LojaCheckout.tsx` linha 461, o pedido e criado com `.catch(e => console.warn('[PEDIDO]', e))`. O erro e apenas logado no console — nenhum toast, nenhum feedback ao usuario, nenhuma retentativa.
+
+**Problema C — Interceptor 401 perigoso**: A funcao `request()` em `saas-api.ts` linhas 27-30 intercepta QUALQUER resposta 401 e redireciona para `/login` com `window.location.href`. Se por qualquer motivo o backend retornar 401 no endpoint publico, o checkout quebra silenciosamente (a Promise nunca resolve, a pagina redireciona).
+
+**Correcao**:
+
+1. **Backend** (`api/pedidos.js`): Envolver o bloco `POST scope=pedido` em try-catch, retornando `res.status(500).json({ error: 'Erro ao criar pedido' })` em caso de falha.
+
+2. **Frontend** (`src/pages/loja/LojaCheckout.tsx`): Trocar a chamada fire-and-forget por um `await` dentro do try existente. Se falhar, mostrar `toast.error('Erro ao registrar pedido')` mas NAO impedir o usuario de ver o PIX (o PIX ja foi gerado).
+
+3. **Frontend** (`src/services/saas-api.ts`): Criar uma funcao `publicPostRequest()` para chamadas publicas POST que NAO tenha o interceptor 401 (sem redirect para `/login`). Usar esta funcao nos metodos `pedidosApi.create` e `carrinhosApi.save`.
+
+---
+
+### BUG 3: Se tem carrinho com PIX, deveria ter pedido pendente
+
+**Causa raiz**: Consequencia direta do Bug 2. O PIX e gerado via `fetch('/api/create-pix')` (chamada direta, sem o wrapper `request()`). O carrinho e salvo via `carrinhosApi.save()`. Mas o pedido e criado via `pedidosApi.create()` que usa o wrapper `request()` com o interceptor 401.
+
+A sequencia no codigo (LojaCheckout linhas 445-463):
 ```text
-// === charge.refunded ===
-if (event.type === 'charge.refunded') {
-  const charge = event.data.object;
-  const customerId = charge.customer;
-  console.log(`[STRIPE-WEBHOOK] charge.refunded — customerId=${customerId}`);
-  const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
-  if (lojista) {
-    lojista.subscription_status = 'canceled';
-    lojista.plano = 'free';
-    lojista.plano_id = null;
-    lojista.stripe_subscription_id = null;
-    lojista.data_vencimento = null;
-    lojista.cancel_at_period_end = false;
-    lojista.cancel_at = null;
-    await lojista.save();
-    console.log(`[STRIPE-WEBHOOK] Estorno processado. Acesso premium revogado para customer: ${customerId} (${lojista.email})`);
-  } else {
-    console.warn(`[STRIPE-WEBHOOK] Nenhum lojista com stripe_customer_id=${customerId}`);
-  }
-}
+setPixData(data);              // PIX exibido ao usuario
+pedidosApi.create({...})       // FALHA SILENCIOSA -> sem pedido
+carrinhosApi.save({...})       // SUCESSO -> carrinho com pix_code salvo
 ```
 
-### Detalhes Tecnicos
+**Correcao**: Ja coberta pelo Bug 2. Ao corrigir o `pedidosApi.create`, os pedidos serao criados normalmente com status "pendente".
 
-- O bloco segue o padrao identico ao `customer.subscription.deleted`: busca por `stripe_customer_id`, reseta todos os campos de assinatura para o estado "free" e limpa campos de cancelamento programado.
-- Nenhum arquivo novo sera criado (continua nos 12 existentes).
-- O `bodyParser` desativado e a funcao `parseBody` permanecem intactos.
-- `vite.config.mts` nao sera alterado.
-- A logica de reset e 100% derivada do banco (zero hardcode de IDs).
+---
 
-### Resumo
+### Resumo de Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `api/loja-extras.js` | +1 handler `charge.refunded` (inserido apos linha 278) |
+| `src/components/LojaLayout.tsx` | Adicionar captura de UTMs no mount (useEffect + getSavedUtmParams) |
+| `api/pedidos.js` | Envolver POST scope=pedido em try-catch |
+| `src/pages/loja/LojaCheckout.tsx` | Await na criacao do pedido + toast de erro + usar publicPostRequest |
+| `src/services/saas-api.ts` | Criar `publicPostRequest()` sem interceptor 401 e usar em pedidosApi.create e carrinhosApi.save |
+
+### Regras Respeitadas
+
+- `vite.config.mts` NAO sera alterado
+- Nenhum arquivo novo criado
+- Limite de 12 Serverless Functions mantido
+- Zero dados sensiveis expostos
 
