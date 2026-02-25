@@ -50,7 +50,7 @@ const PainelInicio = () => {
 
   const checklist = [
     { label: 'Crie a sua primeira loja', done: hasLojas },
-    { label: 'Complete seus dados pessoais (CPF e Telefone)', done: hasDadosPessoais, link: '/painel/perfil' },
+    { label: 'Complete o seu cadastro', done: hasDadosPessoais, link: '/painel/perfil' },
     { label: 'Configure um domínio', done: hasDomain },
     { label: 'Cadastre o seu primeiro produto', done: hasProduto },
     { label: 'Integre com um gateway de pagamento', done: hasGateway },
