@@ -1,23 +1,20 @@
-## Fase 13: Faturamento Duplo + Auditoria de Eventos — ✅ CONCLUÍDO
+## Fase 14: Smart Retry + Regularização Manual de Taxas — ✅ CONCLUÍDO
 
 ### Arquivos Alterados
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `models/Lojista.js` | +3 campos: `taxas_acumuladas`, `data_vencimento_taxas`, `historico_assinatura` |
-| `models/Plano.js` | +3 campos: `taxa_transacao_percentual`, `taxa_transacao_trial`, `taxa_transacao_fixa` |
-| `api/loja-extras.js` | +escopo `cron-taxas` (cobrança semanal via Stripe Invoice) + push auditoria em todos os eventos webhook |
-| `api/pedidos.js` | +acúmulo de taxa quando pedido marcado como pago |
-| `vercel.json` | +bloco `crons` para execução diária às 3h UTC |
-| `src/services/saas-api.ts` | +campos em `Plano` e `LojistaProfile` |
-| `src/services/api.ts` | +campos em `AdminLojista` |
-| `src/pages/AdminPlanos.tsx` | +inputs para taxa percentual, taxa trial e taxa fixa |
-| `src/pages/painel/LojaAssinatura.tsx` | Separação visual: Mensalidade vs Taxas Acumuladas + badge trial |
-| `src/pages/AdminLojistas.tsx` | Histórico real de eventos + taxas acumuladas no Raio-X |
-| `README.md` | Documentação completa da arquitetura de faturamento duplo |
+| `vercel.json` | Schedule do cron alterado para `0 12 * * *` (12h UTC = 09h BRT) |
+| `models/Lojista.js` | +2 campos: `tentativas_taxas` (Number), `status_taxas` (enum ok/falha/bloqueado) |
+| `api/loja-extras.js` | Smart retry no `cron-taxas` (3 tentativas, +24h, bloqueio) + novo escopo `pagar-taxas-manual` |
+| `src/services/saas-api.ts` | +2 campos em `LojistaProfile` + método `pagarTaxasManual` em `stripeApi` |
+| `src/pages/painel/LojaAssinatura.tsx` | Banners condicionais (amarelo/vermelho) + botão "Regularizar Pagamento Agora" |
+| `README.md` | Documentação completa do Smart Retry, endpoint manual e campos de retry |
 
-### Variável de Ambiente Necessária
+### Regras de Negócio
 
-| Variável | Descrição |
-|----------|-----------|
-| `CRON_SECRET` | Segredo para autenticar o Cron de cobrança semanal |
+- Cron roda às 09h BRT (12h UTC) — horário comercial
+- Máximo 3 tentativas automáticas com intervalo de 24h
+- `status_taxas`: `ok` → `falha` → `bloqueado` (após 3 falhas)
+- Lojistas `bloqueado` são ignorados pelo Cron — só pagam via botão manual
+- `taxas_acumuladas` NUNCA é zerado em caso de falha

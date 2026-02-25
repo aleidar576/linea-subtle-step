@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ const LojaAssinatura = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [refreshing, setRefreshing] = useState(false);
+  const [payManualLoading, setPayManualLoading] = useState(false);
 
   const fetchData = useCallback(() => {
     return Promise.all([planosApi.list(), lojistaApi.perfil()])
@@ -86,6 +87,17 @@ const LojaAssinatura = () => {
     await fetchData();
     setRefreshing(false);
     toast({ title: 'Atualizado', description: 'Dados da assinatura atualizados.' });
+  };
+
+  const handlePayManual = async () => {
+    setPayManualLoading(true);
+    try {
+      const result = await stripeApi.pagarTaxasManual();
+      toast({ title: '✅ Pagamento realizado!', description: result.message });
+      await fetchData();
+    } catch (err: any) {
+      toast({ title: 'Pagamento recusado', description: err?.message || 'Cartão recusado. Tente novamente.', variant: 'destructive' });
+    } finally { setPayManualLoading(false); }
   };
 
   if (loading) {
@@ -211,6 +223,39 @@ const LojaAssinatura = () => {
                 <span className="font-medium">
                   {taxaVigente}%{(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${currentPlano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
                 </span>
+              </div>
+            )}
+
+            {/* Banner: Falha na cobrança */}
+            {profile.status_taxas === 'falha' && taxasAcumuladas > 0 && (
+              <div className="rounded-lg bg-orange-500/10 p-4 border border-orange-300 space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
+                  <p className="text-sm text-orange-700 font-medium">
+                    Atenção: Não conseguimos debitar as taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} do seu cartão.
+                    {dataVencimentoTaxas && <> O sistema tentará novamente em <strong>{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</strong>.</>}
+                  </p>
+                </div>
+                <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2 border-orange-400 text-orange-700 hover:bg-orange-500/10">
+                  {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Regularizar Pagamento Agora
+                </Button>
+              </div>
+            )}
+
+            {/* Banner: Bloqueado — limite de tentativas */}
+            {profile.status_taxas === 'bloqueado' && taxasAcumuladas > 0 && (
+              <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive font-medium">
+                    Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} estão pendentes. Regularize imediatamente para evitar a suspensão da sua loja.
+                  </p>
+                </div>
+                <Button onClick={handlePayManual} disabled={payManualLoading} variant="destructive" className="w-full gap-2">
+                  {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Regularizar Pagamento Agora
+                </Button>
               </div>
             )}
           </div>

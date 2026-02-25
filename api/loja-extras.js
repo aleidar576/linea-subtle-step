@@ -91,6 +91,7 @@ module.exports = async function handler(req, res) {
         taxas_acumuladas: { $gt: 0 },
         data_vencimento_taxas: { $lte: now },
         stripe_customer_id: { $ne: null },
+        status_taxas: { $ne: 'bloqueado' },
       });
 
       console.log(`[CRON-TAXAS] Processando ${lojistas.length} lojistas com taxas pendentes`);
@@ -119,6 +120,8 @@ module.exports = async function handler(req, res) {
           // Success: reset and advance cycle
           const valorCobrado = lojista.taxas_acumuladas;
           lojista.taxas_acumuladas = 0;
+          lojista.tentativas_taxas = 0;
+          lojista.status_taxas = 'ok';
           lojista.data_vencimento_taxas = new Date(lojista.data_vencimento_taxas.getTime() + 7 * 24 * 60 * 60 * 1000);
           lojista.historico_assinatura.push({
             evento: 'cobranca_taxas_sucesso',
@@ -129,14 +132,28 @@ module.exports = async function handler(req, res) {
           sucesso++;
           console.log(`[CRON-TAXAS] ✅ Cobrado R$ ${valorCobrado.toFixed(2)} de ${lojista.email}`);
         } catch (err) {
-          lojista.historico_assinatura.push({
-            evento: 'cobranca_taxas_falha',
-            data: new Date(),
-            detalhes: `Falha na cobrança semanal de taxas: R$ ${lojista.taxas_acumuladas.toFixed(2)} — ${err.message}`,
-          });
+          lojista.tentativas_taxas = (lojista.tentativas_taxas || 0) + 1;
+
+          if (lojista.tentativas_taxas >= 3) {
+            lojista.status_taxas = 'bloqueado';
+            lojista.historico_assinatura.push({
+              evento: 'cobranca_taxas_falha',
+              data: new Date(),
+              detalhes: `Falha na cobrança de R$ ${lojista.taxas_acumuladas.toFixed(2)}. Limite de tentativas atingido. Aguardando pagamento manual.`,
+            });
+          } else {
+            lojista.status_taxas = 'falha';
+            lojista.data_vencimento_taxas = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            lojista.historico_assinatura.push({
+              evento: 'cobranca_taxas_falha',
+              data: new Date(),
+              detalhes: `Falha na cobrança de R$ ${lojista.taxas_acumuladas.toFixed(2)}. Tentativa ${lojista.tentativas_taxas}/3. Nova tentativa agendada para amanhã.`,
+            });
+          }
+
           await lojista.save();
           falha++;
-          console.error(`[CRON-TAXAS] ❌ Falha para ${lojista.email}:`, err.message);
+          console.error(`[CRON-TAXAS] ❌ Falha para ${lojista.email} (tentativa ${lojista.tentativas_taxas}/3):`, err.message);
         }
       }
 
@@ -144,6 +161,55 @@ module.exports = async function handler(req, res) {
     } catch (err) {
       console.error('[CRON-TAXAS] Erro geral:', err);
       return res.status(500).json({ error: 'Erro ao processar cron de taxas' });
+    }
+  }
+
+  // === PAGAMENTO MANUAL DE TAXAS ===
+  if (scope === 'pagar-taxas-manual' && method === 'POST') {
+    const user = verifyLojista(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    try {
+      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
+      const stripe = require('stripe')(STRIPE_SECRET_KEY);
+
+      const lojista = await Lojista.findById(user.lojista_id);
+      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
+      if (!lojista.stripe_customer_id) return res.status(400).json({ error: 'Sem cliente Stripe vinculado' });
+      if (lojista.taxas_acumuladas <= 0) return res.status(400).json({ error: 'Nenhuma taxa pendente' });
+
+      const amountCents = Math.round(lojista.taxas_acumuladas * 100);
+
+      await stripe.invoiceItems.create({
+        customer: lojista.stripe_customer_id,
+        amount: amountCents,
+        currency: 'brl',
+        description: `Regularização manual de taxas — R$ ${lojista.taxas_acumuladas.toFixed(2)}`,
+      });
+
+      const invoice = await stripe.invoices.create({
+        customer: lojista.stripe_customer_id,
+        auto_advance: true,
+      });
+      await stripe.invoices.pay(invoice.id);
+
+      const valorCobrado = lojista.taxas_acumuladas;
+      lojista.taxas_acumuladas = 0;
+      lojista.tentativas_taxas = 0;
+      lojista.status_taxas = 'ok';
+      lojista.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      lojista.historico_assinatura.push({
+        evento: 'cobranca_taxas_manual_sucesso',
+        data: new Date(),
+        detalhes: `Pagamento manual de taxas realizado com sucesso: R$ ${valorCobrado.toFixed(2)}`,
+      });
+      await lojista.save();
+
+      return res.json({ success: true, message: `Pagamento de R$ ${valorCobrado.toFixed(2)} processado com sucesso` });
+    } catch (err) {
+      console.error('[PAGAR-TAXAS-MANUAL] ❌ Falha:', err.message);
+      return res.status(400).json({ error: 'Cartão recusado. Atualize seu método de pagamento no portal Stripe e tente novamente.' });
     }
   }
 
