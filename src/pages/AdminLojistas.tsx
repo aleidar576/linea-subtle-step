@@ -18,9 +18,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
 
 type ViewMode = 'list' | 'editor';
 
@@ -50,14 +47,6 @@ const AdminLojistas = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-lojistas'] });
       toast({ title: 'Status atualizado' });
-    },
-  });
-
-  const alterarPlano = useMutation({
-    mutationFn: ({ id, plano }: { id: string; plano: string }) => adminsApi.alterarPlano(id, plano),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-lojistas'] });
-      toast({ title: 'Plano alterado com sucesso' });
     },
   });
 
@@ -198,22 +187,18 @@ const AdminLojistas = () => {
             {/* Gestão de Plano */}
             <div className="bg-card border border-border rounded-xl p-6 space-y-4">
               <h2 className="font-semibold">Gestão de Plano</h2>
-              <div>
-                <Label className="mb-2 block">Plano Atual</Label>
-                <Select
-                  value={selectedLojista.plano}
-                  onValueChange={(plano) => {
-                    alterarPlano.mutate({ id: selectedLojista._id, plano });
-                    setSelectedLojista({ ...selectedLojista, plano });
-                  }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="plus">Plus</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Plano Atual:</span>
+                <span className="font-medium capitalize">{selectedLojista.plano}</span>
               </div>
+              {selectedLojista.subscription_status && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Status Assinatura:</span>
+                  <Badge className={selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' : selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' : 'bg-destructive/10 text-destructive'}>
+                    {selectedLojista.subscription_status}
+                  </Badge>
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div>
@@ -415,21 +400,12 @@ const AdminLojistas = () => {
                             <><Ban className="h-4 w-4" /> Bloquear</>
                           )}
                         </DropdownMenuItem>
-                        {l.plano === 'free' ? (
-                          <DropdownMenuItem
-                            onClick={() => alterarPlano.mutate({ id: l._id, plano: 'plus' })}
-                            className="gap-2"
-                          >
-                            <Crown className="h-4 w-4" /> Promover para Plus
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onClick={() => alterarPlano.mutate({ id: l._id, plano: 'free' })}
-                            className="gap-2"
-                          >
-                            <ArrowDown className="h-4 w-4" /> Rebaixar para Free
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem
+                          onClick={() => openDetails(l)}
+                          className="gap-2"
+                        >
+                          <Eye className="h-4 w-4" /> Ver Detalhes
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
