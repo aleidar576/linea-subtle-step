@@ -43,6 +43,22 @@ function isLightColor(hex: string): boolean {
 // Pixel init
 const initializedPixels = new Set<string>();
 
+interface LojaPixelConfig {
+  platform: 'facebook' | 'tiktok' | 'google_ads' | 'gtm';
+  pixel_id: string;
+  access_token?: string;
+  conversion_label?: string;
+  events?: string[];
+  trigger_pages?: string[];
+  is_active: boolean;
+}
+
+let _activePixels: LojaPixelConfig[] = [];
+
+function setActivePixels(pixels: LojaPixelConfig[]) {
+  _activePixels = pixels;
+}
+
 function initFBPixel(pixelId: string) {
   const key = `fb_${pixelId}`;
   if (initializedPixels.has(key)) return;
@@ -76,10 +92,82 @@ function initTTPixel(pixelId: string) {
   }
 }
 
+function initGoogleAds(conversionId: string) {
+  const key = `gads_${conversionId}`;
+  if (initializedPixels.has(key)) return;
+  initializedPixels.add(key);
+  const w = window as any;
+  w.dataLayer = w.dataLayer || [];
+  if (!w.gtag) {
+    w.gtag = function () { w.dataLayer.push(arguments); };
+    w.gtag('js', new Date());
+    const s = document.createElement('script'); s.async = true;
+    s.src = `https://www.googletagmanager.com/gtag/js?id=${conversionId}`;
+    document.head.appendChild(s);
+  }
+  w.gtag('config', conversionId);
+}
+
+function initGTM(containerId: string) {
+  const key = `gtm_${containerId}`;
+  if (initializedPixels.has(key)) return;
+  initializedPixels.add(key);
+  const w = window as any;
+  w.dataLayer = w.dataLayer || [];
+  (function (w2: any, d: Document, s: string, l: string, i: string) {
+    w2[l] = w2[l] || [];
+    w2[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    const f = d.getElementsByTagName(s)[0];
+    const j = d.createElement(s) as HTMLScriptElement;
+    const dl = l !== 'dataLayer' ? '&l=' + l : '';
+    j.async = true;
+    j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+    f?.parentNode?.insertBefore(j, f);
+  })(window, document, 'script', 'dataLayer', containerId);
+}
+
+// Map current pathname to a page type for trigger_pages filtering
+function getCurrentPageType(pathname: string): string {
+  if (pathname === '/' || pathname === '') return 'homepage';
+  if (pathname.startsWith('/categoria')) return 'categorias';
+  if (pathname.startsWith('/produto')) return 'produtos';
+  if (pathname.startsWith('/checkout')) return 'checkout';
+  if (pathname.startsWith('/carrinho') || pathname.startsWith('/cart')) return 'checkout';
+  if (pathname.startsWith('/sucesso')) return 'checkout';
+  return 'other';
+}
+
 function firePixelEvent(event: string, data?: Record<string, any>) {
   const w = window as any;
-  if (w.fbq) { data ? w.fbq('track', event, data) : w.fbq('track', event); }
-  if (w.ttq) { data ? w.ttq.track(event, data) : w.ttq.track(event); }
+  const pathname = window.location.pathname;
+  const currentPage = getCurrentPageType(pathname);
+
+  for (const pixel of _activePixels) {
+    // Check events filter: if pixel has specific events, only fire if event is in list
+    if (pixel.events && pixel.events.length > 0 && !pixel.events.includes(event)) continue;
+
+    // Check trigger_pages filter: if pixel has specific pages, check current page
+    if (pixel.trigger_pages && pixel.trigger_pages.length > 0 && !pixel.trigger_pages.includes('all')) {
+      if (!pixel.trigger_pages.includes(currentPage)) continue;
+    }
+
+    if (pixel.platform === 'facebook' && w.fbq) {
+      data ? w.fbq('track', event, data) : w.fbq('track', event);
+    } else if (pixel.platform === 'tiktok' && w.ttq) {
+      data ? w.ttq.track(event, data) : w.ttq.track(event);
+    } else if (pixel.platform === 'google_ads' && w.gtag) {
+      const gadsEventMap: Record<string, string> = { PageView: 'page_view', ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddPaymentInfo: 'add_payment_info', Purchase: 'purchase' };
+      const gEvent = gadsEventMap[event] || event;
+      if (event === 'Purchase' && pixel.conversion_label) {
+        w.gtag('event', 'conversion', { send_to: `${pixel.pixel_id}/${pixel.conversion_label}`, value: data?.value || 0, currency: data?.currency || 'BRL', transaction_id: data?.content_id || '' });
+      } else {
+        w.gtag('event', gEvent, { currency: data?.currency || 'BRL', value: data?.value || 0, ...(data?.contents ? { items: data.contents } : {}) });
+      }
+    } else if (pixel.platform === 'gtm' && w.dataLayer) {
+      const gtmEventMap: Record<string, string> = { PageView: 'page_view', ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddPaymentInfo: 'add_payment_info', Purchase: 'purchase' };
+      w.dataLayer.push({ event: gtmEventMap[event] || event, ecommerce: data || {} });
+    }
+  }
 }
 
 const GENERIC_BAG_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z'/%3E%3Cline x1='3' y1='6' x2='21' y2='6'/%3E%3Cpath d='M16 10a4 4 0 0 1-8 0'/%3E%3C/svg%3E";
@@ -575,12 +663,15 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Init pixels
+  // Init pixels (all 4 platforms)
   useEffect(() => {
     if (!loja?.pixels) return;
-    loja.pixels.forEach(p => {
+    setActivePixels(loja.pixels as LojaPixelConfig[]);
+    loja.pixels.forEach((p: any) => {
       if (p.platform === 'facebook') initFBPixel(p.pixel_id);
       else if (p.platform === 'tiktok') initTTPixel(p.pixel_id);
+      else if (p.platform === 'google_ads') initGoogleAds(p.pixel_id);
+      else if (p.platform === 'gtm') initGTM(p.pixel_id);
     });
   }, [loja?.pixels]);
 

@@ -34,6 +34,31 @@ module.exports = async function handler(req, res) {
         );
         if (result) {
           console.log(`[WEBHOOK] Pedido ${result._id} marcado como pago (txid: ${txid})`);
+
+          // Dispatch CAPI Purchase via tracking-webhook
+          try {
+            const baseUrl = process.env.VERCEL_URL
+              ? `https://${process.env.VERCEL_URL}`
+              : (req.headers['x-forwarded-proto'] || 'https') + '://' + req.headers.host;
+            await fetch(`${baseUrl}/api/tracking-webhook`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                evento: 'Purchase',
+                txid,
+                status: 'paid',
+                valor: result.total || 0,
+                nome: result.cliente?.nome || '',
+                email: result.cliente?.email || '',
+                telefone: result.cliente?.telefone || '',
+                cpf: result.cliente?.cpf || '',
+                loja_id: result.loja_id?.toString() || '',
+              }),
+            });
+            console.log(`[WEBHOOK] CAPI Purchase dispatched for pedido ${result._id}`);
+          } catch (capiErr) {
+            console.error('[WEBHOOK] Erro ao disparar CAPI Purchase:', capiErr.message);
+          }
         } else {
           console.warn(`[WEBHOOK] Pedido não encontrado para txid: ${txid}`);
         }

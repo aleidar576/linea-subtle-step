@@ -1,9 +1,32 @@
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, PartyPopper, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { firePixelEvent } from '@/components/LojaLayout';
 
 const LojaSucesso = () => {
+  const firedRef = useRef(false);
+
+  // Fallback: fire Purchase from sessionStorage if not already fired
+  useEffect(() => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    try {
+      const raw = sessionStorage.getItem('last_purchase');
+      if (raw) {
+        const data = JSON.parse(raw);
+        firePixelEvent('Purchase', {
+          value: data.value,
+          currency: data.currency || 'BRL',
+          content_id: data.txid,
+          num_items: data.num_items,
+        });
+        sessionStorage.removeItem('last_purchase');
+      }
+    } catch {}
+  }, []);
+
   return (
     <div className="container py-16">
       <motion.div

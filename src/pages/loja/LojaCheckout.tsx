@@ -287,6 +287,23 @@ const LojaCheckout = () => {
           clearInterval(intervalRef.current!);
           setPaymentConfirmed(true);
           toast.success('✅ Pagamento confirmado!');
+          // Fire Purchase pixel event
+          firePixelEvent('Purchase', {
+            value: finalTotal / 100,
+            currency: 'BRL',
+            content_id: pixData.txid,
+            num_items: items.reduce((s, i) => s + i.quantity, 0),
+            contents: items.map(i => ({ id: i.product.id, quantity: i.quantity, price: i.product.price / 100 })),
+          });
+          // Save purchase data for LojaSucesso fallback
+          try {
+            sessionStorage.setItem('last_purchase', JSON.stringify({
+              value: finalTotal / 100,
+              currency: 'BRL',
+              txid: pixData.txid,
+              num_items: items.reduce((s, i) => s + i.quantity, 0),
+            }));
+          } catch {}
           const start = Date.now();
           const pi = setInterval(() => {
             const p = Math.min(((Date.now() - start) / 10000) * 100, 100);
