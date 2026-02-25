@@ -1,78 +1,41 @@
 
 
-## Plano: Correcao de 3 Bugs Criticos (UTMs, Pedidos, Carrinhos)
+## Plano: Correcao do Filtro de Fretes no Checkout
 
-Apos varredura completa de ponta a ponta, identifiquei as causas raiz dos 3 problemas reportados.
+### Causa Raiz
 
----
+Na pagina do produto (`LojaProduto.tsx` linha 213-214), o produto e adicionado ao carrinho com o campo `id: product.product_id`.
 
-### BUG 1: UTMs nao chegam no carrinho abandonado
+No checkout (`LojaCheckout.tsx` linha 133), o codigo tenta ler `item.product.product_id` ou `item.product._id` — mas nenhum desses campos existe no objeto do carrinho. O campo correto e `item.product.id`.
 
-**Causa raiz**: No `LojaPublicaApp` (App.tsx linha 184), NAO existe nenhum componente que chame `useUtmParams()` ao carregar a pagina. Diferente do `SaaSApp`, que tem `<TrackingProvider>`, a loja publica nunca captura os parametros UTM da URL de entrada.
+**Resultado**: `cartProductIds` fica vazio, `cartProducts` fica vazio, `hasVinculados` e sempre `false`, e o fallback mostra TODOS os fretes ativos da loja inteira.
 
-O fluxo quebrado:
-1. Cliente chega em `loja.com.br/?utm_source=facebook&utm_campaign=promo`
-2. Nenhum componente chama `useUtmParams()` — UTMs NAO sao salvos no sessionStorage
-3. Cliente navega para `/produto/x`, depois `/checkout` — URL muda, UTMs somem
-4. No checkout, `getSavedUtmParams()` e chamado, mas `window.location.search` esta vazio e sessionStorage esta vazio
-5. Resultado: `utms: {}` no carrinho e no pedido
+A pagina do produto funciona corretamente porque usa os dados direto da API (`useLojaPublicaFretes` + `product.fretes_vinculados`), sem depender do carrinho.
 
-**Correcao**: Adicionar captura de UTMs no `LojaLayout.tsx`. Inserir um `useEffect` que chama `getSavedUtmParams()` na montagem do componente, garantindo que UTMs da URL de entrada sejam salvos no sessionStorage antes de qualquer navegacao.
+### Correcao
 
-**Arquivo**: `src/components/LojaLayout.tsx`
-- Importar `getSavedUtmParams` de `@/hooks/useUtmParams`
-- Adicionar useEffect no componente `LojaLayout` que chama `getSavedUtmParams()` no mount
+**Arquivo unico: `src/pages/loja/LojaCheckout.tsx`**
 
----
+Alterar a linha 133 para incluir `item.product.id` na lista de IDs buscados:
 
-### BUG 2: Pedidos com pagamento pendente NAO sao criados
+```
+// ANTES (bugado):
+const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id).filter(Boolean);
 
-**Causa raiz**: Dois problemas combinados:
-
-**Problema A — Backend sem try-catch**: O handler `POST scope=pedido` em `api/pedidos.js` (linhas 43-91) NAO tem try-catch. Se `Cliente.create()` ou `Pedido.create()` lancar qualquer erro (ex: erro de validacao MongoDB, timeout, ObjectId invalido), o Vercel retorna 500 sem mensagem util.
-
-**Problema B — Frontend engole erros silenciosamente**: Em `LojaCheckout.tsx` linha 461, o pedido e criado com `.catch(e => console.warn('[PEDIDO]', e))`. O erro e apenas logado no console — nenhum toast, nenhum feedback ao usuario, nenhuma retentativa.
-
-**Problema C — Interceptor 401 perigoso**: A funcao `request()` em `saas-api.ts` linhas 27-30 intercepta QUALQUER resposta 401 e redireciona para `/login` com `window.location.href`. Se por qualquer motivo o backend retornar 401 no endpoint publico, o checkout quebra silenciosamente (a Promise nunca resolve, a pagina redireciona).
-
-**Correcao**:
-
-1. **Backend** (`api/pedidos.js`): Envolver o bloco `POST scope=pedido` em try-catch, retornando `res.status(500).json({ error: 'Erro ao criar pedido' })` em caso de falha.
-
-2. **Frontend** (`src/pages/loja/LojaCheckout.tsx`): Trocar a chamada fire-and-forget por um `await` dentro do try existente. Se falhar, mostrar `toast.error('Erro ao registrar pedido')` mas NAO impedir o usuario de ver o PIX (o PIX ja foi gerado).
-
-3. **Frontend** (`src/services/saas-api.ts`): Criar uma funcao `publicPostRequest()` para chamadas publicas POST que NAO tenha o interceptor 401 (sem redirect para `/login`). Usar esta funcao nos metodos `pedidosApi.create` e `carrinhosApi.save`.
-
----
-
-### BUG 3: Se tem carrinho com PIX, deveria ter pedido pendente
-
-**Causa raiz**: Consequencia direta do Bug 2. O PIX e gerado via `fetch('/api/create-pix')` (chamada direta, sem o wrapper `request()`). O carrinho e salvo via `carrinhosApi.save()`. Mas o pedido e criado via `pedidosApi.create()` que usa o wrapper `request()` com o interceptor 401.
-
-A sequencia no codigo (LojaCheckout linhas 445-463):
-```text
-setPixData(data);              // PIX exibido ao usuario
-pedidosApi.create({...})       // FALHA SILENCIOSA -> sem pedido
-carrinhosApi.save({...})       // SUCESSO -> carrinho com pix_code salvo
+// DEPOIS (corrigido):
+const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id || item.product?.id).filter(Boolean);
 ```
 
-**Correcao**: Ja coberta pelo Bug 2. Ao corrigir o `pedidosApi.create`, os pedidos serao criados normalmente com status "pendente".
+Isso garante que o `id` do carrinho (que contem o `product_id` do MongoDB) seja usado para cruzar com `allCheckoutProducts`, permitindo que `fretes_vinculados` seja encontrado e o filtro funcione corretamente.
 
----
-
-### Resumo de Arquivos Modificados
+### Resumo
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/LojaLayout.tsx` | Adicionar captura de UTMs no mount (useEffect + getSavedUtmParams) |
-| `api/pedidos.js` | Envolver POST scope=pedido em try-catch |
-| `src/pages/loja/LojaCheckout.tsx` | Await na criacao do pedido + toast de erro + usar publicPostRequest |
-| `src/services/saas-api.ts` | Criar `publicPostRequest()` sem interceptor 401 e usar em pedidosApi.create e carrinhosApi.save |
+| `src/pages/loja/LojaCheckout.tsx` | Linha 133: adicionar `item.product?.id` como fallback no mapeamento de IDs |
 
 ### Regras Respeitadas
 
 - `vite.config.mts` NAO sera alterado
 - Nenhum arquivo novo criado
 - Limite de 12 Serverless Functions mantido
-- Zero dados sensiveis expostos
-
