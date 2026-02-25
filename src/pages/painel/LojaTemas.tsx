@@ -591,6 +591,14 @@ const LojaTemas = () => {
                       <SelectItem value="grande">Grande (3:4)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {(() => {
+                      const v = (hp as any).banner_altura_mobile || 'medio';
+                      if (v === 'pequeno') return '📐 Recomendado: 768 × 432px (16:9)';
+                      if (v === 'grande') return '📐 Recomendado: 768 × 1024px (3:4)';
+                      return '📐 Recomendado: 768 × 768px (1:1)';
+                    })()}
+                  </p>
                 </div>
               </div>
 
