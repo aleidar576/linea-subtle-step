@@ -1,74 +1,114 @@
 
-## Plano: Varredura Completa do Sistema de Pixels
+
+## Plano: README.md Completo com Tutoriais Resend e Bunny.net
+
+Arquivo unico a modificar: `README.md` (reescrita completa)
 
 ---
 
-### Auditoria - Problemas Encontrados
+### Estrutura do Novo README
 
-| # | Local | Problema | Gravidade |
-|---|-------|----------|-----------|
-| 1 | `LojaLayout.tsx` - `firePixelEvent()` (linha 79-83) | So dispara Facebook e TikTok. **Google Ads e GTM sao completamente ignorados** em todas as paginas da loja (ViewContent, AddToCart, InitiateCheckout, AddPaymentInfo) | CRITICO |
-| 2 | `LojaLayout.tsx` - init pixels (linhas 578-584) | So inicializa Facebook e TikTok. **Google Ads e GTM nunca sao carregados** nas lojas dos lojistas | CRITICO |
-| 3 | `LojaLayout.tsx` - `firePixelEvent()` | Nao respeita `events` do pixel (o lojista seleciona quais eventos disparar, mas todos sao disparados sempre) | MEDIO |
-| 4 | `LojaLayout.tsx` - `firePixelEvent()` | Nao respeita `trigger_pages` do pixel (homepage, categorias, checkout, produtos) - dispara em todas as paginas | MEDIO |
-| 5 | `api/create-pix.js` webhook (linha 22-44) | Quando PIX e pago, marca pedido como "pago" mas **NAO chama o tracking-webhook** para disparar Purchase via CAPI (Facebook/TikTok/Google Ads server-side) | CRITICO |
-| 6 | `api/tracking-webhook.js` (linhas 197-200) | Busca pixels sem filtro de `loja_id` - dispara Purchase para TODOS os pixels de TODAS as lojas, nao apenas da loja do pedido | CRITICO |
-| 7 | `LojaSucesso.tsx` | Pagina de sucesso nao dispara evento Purchase no client-side | MEDIO |
-| 8 | `LojaCheckout.tsx` | Nao dispara Purchase apos confirmacao de pagamento do PIX (polling detecta pagamento mas nao dispara evento) | MEDIO |
-| 9 | `models/WebhookLog.js` | Falta `loja_id` no log do webhook (campo existe no schema mas nunca e preenchido no handler) | BAIXO |
+O README sera reescrito por completo com as seguintes secoes, nesta ordem:
 
----
-
-### Correcoes Planejadas
-
-**Arquivo 1: `src/components/LojaLayout.tsx`**
-
-A) Adicionar funcoes `initGoogleAds(conversionId)` e `initGTM(containerId)` (copiar logica do useTracking.tsx que ja tem implementacao completa).
-
-B) Atualizar o `useEffect` de init (linha 578-584) para inicializar os 4 tipos de pixel: facebook, tiktok, google_ads, gtm.
-
-C) Reescrever `firePixelEvent()` para:
-   - Aceitar a lista de pixels como parametro (via contexto ou variavel de modulo)
-   - Disparar para as 4 plataformas (FB, TT, GAds, GTM)
-   - Respeitar os `events` configurados por pixel (so disparar se o evento esta na lista do pixel)
-   - Respeitar os `trigger_pages` configurados (mapear rota atual para tipo de pagina)
-
-D) Exportar funcao auxiliar `setActivePixels(pixels)` para que o LojaLayout injete os pixels no modulo apos carregar.
-
-**Arquivo 2: `api/create-pix.js`**
-
-A) Quando o webhook recebe status `paid` e marca o pedido como pago, buscar o `loja_id` do pedido e disparar o tracking-webhook internamente (chamar as funcoes de dispatch do Facebook CAPI, TikTok Events API e Google Ads, filtradas pelo `loja_id`).
-
-B) Importar `TrackingPixel` e as funcoes de dispatch, ou fazer um fetch interno para `/api/tracking-webhook` com os dados do pedido.
-
-**Arquivo 3: `api/tracking-webhook.js`**
-
-A) Adicionar filtro por `loja_id` na busca de pixels ativos (linha 197). O body do webhook deve incluir `loja_id` para filtrar corretamente.
-
-B) Preencher `loja_id` no WebhookLog.
-
-**Arquivo 4: `src/pages/loja/LojaCheckout.tsx`**
-
-A) Quando o polling detecta pagamento confirmado (antes do redirect para `/sucesso`), disparar `firePixelEvent('Purchase', {...})` com os dados da compra.
-
-**Arquivo 5: `src/pages/loja/LojaSucesso.tsx`**
-
-A) Ler dados da compra do `sessionStorage` (se disponivel) e disparar `firePixelEvent('Purchase', {...})` como fallback.
+1. **Titulo e Descricao** — Atualizado para mencionar Stripe, pixels multi-plataforma, UTMs
+2. **Alerta Serverless Functions** — Mantido, tabela dos 12 arquivos atualizada com descricoes precisas
+3. **Branding Dinamico** — Mantido como esta
+4. **Arquitetura Host-Based Routing** — Mantido com diagrama ASCII
+5. **Sistema de Assinaturas (Stripe)** — NOVO: fluxo completo, eventos webhook, cancelamento programado, campos no model, UX do badge laranja e ocultacao de "Proxima cobranca"
+6. **Sistema de Pixels e Rastreamento** — NOVO: 4 plataformas, eventos suportados, filtros events/trigger_pages, fluxo client-side e server-side CAPI
+7. **UTMs e Atribuicao de Marketing** — NOVO: hook useUtmParams, parametros capturados, onde sao salvos
+8. **Configuracao de DNS na Vercel** — Mantido
+9. **Como configurar o Resend (E-mails Transacionais)** — NOVO TUTORIAL COMPLETO
+10. **Como configurar a Bunny.net (CDN e Imagens)** — NOVO TUTORIAL COMPLETO
+11. **Variaveis de Ambiente** — Atualizada com STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, EMAIL_FROM_ADDRESS, BUNNY_STORAGE_ZONE, BUNNY_API_KEY, BUNNY_PULL_ZONE
+12. **Aviso sobre Supabase** — Mantido
+13. **Estrutura de Pastas** — Atualizada com LojaLayout.tsx e hooks novos
+14. **Stack Tecnologica** — Atualizada com Stripe, Resend, Bunny.net, 2FA
+15. **Desenvolvimento Local** — Mantido
+16. **Historico de Fases** — Adicionadas fases 10, 11 e 12
 
 ---
 
-### Resumo de Impacto
+### Detalhes das Secoes Novas
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/LojaLayout.tsx` | Adicionar Google Ads + GTM, respeitar events/trigger_pages |
-| `api/create-pix.js` | Disparar CAPI Purchase ao confirmar pagamento |
-| `api/tracking-webhook.js` | Filtrar por loja_id |
-| `src/pages/loja/LojaCheckout.tsx` | Disparar Purchase client-side ao confirmar pagamento |
-| `src/pages/loja/LojaSucesso.tsx` | Disparar Purchase como fallback |
+**Tutorial Resend**:
+- Criar conta no resend.com
+- Adicionar e verificar dominio oficial (registros DNS: SPF, DKIM, DMARC)
+- Criar API Key e adicionar em `RESEND_API_KEY`
+- Definir `EMAIL_FROM_ADDRESS` com endereco aprovado
+- Testar via Admin > Integracoes > Sandbox
+- Tabela de todos os templates de email enviados pelo sistema
+- Aviso: nunca colocar chaves reais no codigo-fonte
 
-### O que NAO sera alterado
-- `vite.config.mts`
+**Tutorial Bunny.net**:
+- Criar conta no bunny.net
+- Criar Storage Zone (nome e regiao)
+- Copiar Password/API Key da zona em FTP & API Access
+- Criar Pull Zone vinculada a Storage Zone
+- Adicionar `BUNNY_STORAGE_ZONE`, `BUNNY_API_KEY`, `BUNNY_PULL_ZONE` na Vercel
+- Testar via Admin > Integracoes > Testar Conexao Bunny.net
+- Tabela: onde o upload e usado (admin vs lojista)
+- Diagrama do fluxo tecnico de upload
+
+**Secao Stripe**:
+- Diagrama ASCII do fluxo completo (trial > pagamento > cancelamento)
+- Tabela dos 5 eventos webhook tratados
+- Documentacao do cancelamento programado (badge, aviso, ocultacao, retomada, auto-refresh)
+- Tabela dos campos no model Lojista
+
+**Secao Pixels**:
+- Tabela das 4 plataformas (client + server-side)
+- Tabela dos 6 eventos e onde sao disparados
+- Filtros por pixel (events, trigger_pages, conversion_label)
+- Fluxo client-side (firePixelEvent) e server-side (CAPI via tracking-webhook)
+
+**Secao UTMs**:
+- Parametros capturados (tabela)
+- Onde sao salvos (pedidos, carrinhos, PIX, cookies)
+- Visualizacao no painel do lojista
+
+---
+
+### Tabela dos 12 Arquivos (Descricoes Atualizadas)
+
+| # | Arquivo | Nova Descricao |
+|---|---|---|
+| 4 | `api/create-pix.js` | + "disparo CAPI Purchase ao confirmar pagamento" |
+| 5 | `api/loja-extras.js` | "Stripe Checkout/Portal/Webhooks + Cupons + Fretes + Midias + Temas + Pixels + Paginas + Leads + Upload Bunny.net" |
+| 9 | `api/pixels.ts` | "Facebook, TikTok, Google Ads, GTM" |
+| 11 | `api/settings.js` | + "teste Resend + upload admin Bunny.net" |
+| 12 | `api/tracking-webhook.js` | + "filtrado por loja_id" |
+
+---
+
+### Variaveis de Ambiente (Novas)
+
+| Variavel | Categoria | Descricao |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Stripe | Chave secreta (sk_live ou sk_test) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe | Segredo do webhook (whsec_...) |
+| `RESEND_API_KEY` | Resend | Chave de API para emails transacionais |
+| `EMAIL_FROM_ADDRESS` | Resend | Endereco de remetente aprovado |
+| `BUNNY_STORAGE_ZONE` | Bunny.net | Nome da Storage Zone |
+| `BUNNY_API_KEY` | Bunny.net | Senha/API Key da Storage Zone |
+| `BUNNY_PULL_ZONE` | Bunny.net | Hostname da Pull Zone CDN |
+
+---
+
+### Historico de Fases (Novas)
+
+| Fase | Descricao |
+|---|---|
+| 10 | Sistema de Assinaturas Stripe (Checkout, Portal, Webhooks, Trial 7 dias) |
+| 11 | Pixels multi-plataforma (FB, TikTok, GAds, GTM) + CAPI server-side + filtro por loja_id |
+| 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net |
+
+---
+
+### Regras Respeitadas
+
+- `vite.config.mts` NAO sera alterado
 - Nenhum arquivo novo na pasta `api/`
-- `useTracking.tsx` (usado apenas no checkout demo, nao nas lojas dos lojistas)
-- Painel do lojista (`LojaPixels.tsx`) - CRUD de pixels funciona corretamente
+- Zero dados sensiveis (chaves reais) no README
+- Arquivo unico modificado: `README.md`
+
