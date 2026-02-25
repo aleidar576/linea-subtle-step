@@ -47,6 +47,19 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+// Desabilitar bodyParser da Vercel para receber raw body (necessário para webhook Stripe)
+module.exports.config = { api: { bodyParser: false } };
+
+// Helper: lê o raw body como string a partir dos chunks da request
+function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -59,6 +72,21 @@ module.exports = async function handler(req, res) {
 
   const { scope, id, loja_id, codigo } = req.query;
   const method = req.method;
+
+  // Ler raw body uma única vez
+  const rawBody = method !== 'GET' && method !== 'DELETE' && method !== 'OPTIONS'
+    ? await getRawBody(req)
+    : null;
+
+  // Para o webhook, NÃO fazemos parse — usamos o rawBody bruto
+  // Para todos os outros scopes, parseamos o body normalmente
+  if (scope !== 'stripe-webhook' && rawBody) {
+    try {
+      req.body = JSON.parse(rawBody);
+    } catch {
+      req.body = {};
+    }
+  }
 
   // === STRIPE CHECKOUT (público-auth: lojista autenticado) ===
   if (scope === 'stripe-checkout' && method === 'POST') {
@@ -111,6 +139,7 @@ module.exports = async function handler(req, res) {
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
     const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
     if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) {
+      console.error('[STRIPE-WEBHOOK] FATAL: STRIPE_SECRET_KEY ou STRIPE_WEBHOOK_SECRET não configurados.');
       return res.status(500).json({ error: 'Stripe não configurado' });
     }
 
@@ -120,45 +149,58 @@ module.exports = async function handler(req, res) {
     let event;
     try {
       const sig = req.headers['stripe-signature'];
-      const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      // rawBody já foi lido como string bruta (sem JSON.parse) — exatamente o que o Stripe exige
       event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
+      console.log(`[STRIPE-WEBHOOK] ✅ Evento recebido: ${event.type} (id: ${event.id})`);
     } catch (err) {
-      console.error('[STRIPE-WEBHOOK] Signature verification failed:', err.message);
+      console.error('[STRIPE-WEBHOOK] ❌ Falha na verificação de assinatura:', err.message);
       return res.status(400).json({ error: 'Webhook signature verification failed' });
     }
 
     try {
+      // === checkout.session.completed ===
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         const lojistaId = session.client_reference_id;
         const subscriptionId = session.subscription;
         const customerId = session.customer;
+        console.log(`[STRIPE-WEBHOOK] 📋 checkout.session.completed — lojistaId=${lojistaId}, customerId=${customerId}, subscriptionId=${subscriptionId}`);
 
         const lojista = await Lojista.findById(lojistaId);
-        if (lojista) {
+        if (!lojista) {
+          console.error(`[STRIPE-WEBHOOK] ❌ Lojista não encontrado: ${lojistaId}`);
+        } else {
+          console.log(`[STRIPE-WEBHOOK] ✅ Lojista encontrado: ${lojista.email} (id: ${lojista._id})`);
+
           lojista.stripe_customer_id = customerId;
           lojista.stripe_subscription_id = subscriptionId;
           lojista.subscription_status = 'trialing';
 
-          // Find plano by price_id from subscription
+          // Buscar plano pelo price_id da subscription
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           const priceId = sub.items?.data?.[0]?.price?.id;
+          console.log(`[STRIPE-WEBHOOK] 🔍 Price ID da subscription: ${priceId}`);
+
           if (priceId) {
             const plano = await Plano.findOne({ stripe_price_id: priceId });
             if (plano) {
               lojista.plano_id = plano._id;
               lojista.plano = plano.nome.toLowerCase();
+              console.log(`[STRIPE-WEBHOOK] ✅ Plano encontrado: ${plano.nome} (id: ${plano._id})`);
+            } else {
+              console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum plano encontrado com stripe_price_id=${priceId}`);
             }
           }
 
-          // Set data_vencimento to trial end
+          // Data de vencimento = fim do trial
           if (sub.trial_end) {
             lojista.data_vencimento = new Date(sub.trial_end * 1000);
           }
 
           await lojista.save();
+          console.log(`[STRIPE-WEBHOOK] ✅ Lojista atualizado no banco: status=${lojista.subscription_status}, plano=${lojista.plano}`);
 
-          // Send trial welcome email
+          // Email de boas-vindas ao trial
           const branding = await getBranding();
           const dataCobranca = lojista.data_vencimento
             ? new Date(lojista.data_vencimento).toLocaleDateString('pt-BR')
@@ -171,12 +213,15 @@ module.exports = async function handler(req, res) {
             subject: `🎉 Bem-vindo ao plano ${planoNome}! | ${branding.brandName}`,
             html: emailAssinaturaTrialHtml({ nome: lojista.nome, plano_nome: planoNome, data_cobranca: dataCobranca, branding }),
           });
+          console.log(`[STRIPE-WEBHOOK] ✅ Email de trial enviado para ${lojista.email}`);
         }
       }
 
+      // === invoice.payment_succeeded ===
       if (event.type === 'invoice.payment_succeeded') {
         const invoice = event.data.object;
         const customerId = invoice.customer;
+        console.log(`[STRIPE-WEBHOOK] 📋 invoice.payment_succeeded — customerId=${customerId}`);
         const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
         if (lojista) {
           lojista.subscription_status = 'active';
@@ -184,16 +229,22 @@ module.exports = async function handler(req, res) {
             lojista.data_vencimento = new Date(invoice.lines.data[0].period.end * 1000);
           }
           await lojista.save();
+          console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para active`);
+        } else {
+          console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum lojista com stripe_customer_id=${customerId}`);
         }
       }
 
+      // === invoice.payment_failed ===
       if (event.type === 'invoice.payment_failed') {
         const invoice = event.data.object;
         const customerId = invoice.customer;
+        console.log(`[STRIPE-WEBHOOK] 📋 invoice.payment_failed — customerId=${customerId}`);
         const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
         if (lojista) {
           lojista.subscription_status = 'past_due';
           await lojista.save();
+          console.log(`[STRIPE-WEBHOOK] ⚠️ Lojista ${lojista.email} marcado como past_due`);
 
           const branding = await getBranding();
           const baseUrl = getBaseUrl();
@@ -203,12 +254,16 @@ module.exports = async function handler(req, res) {
             subject: `⚠️ Falha no pagamento | ${branding.brandName}`,
             html: emailFalhaPagamentoHtml({ nome: lojista.nome, branding, painelUrl: baseUrl + '/painel/assinatura' }),
           });
+        } else {
+          console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum lojista com stripe_customer_id=${customerId}`);
         }
       }
 
+      // === customer.subscription.deleted ===
       if (event.type === 'customer.subscription.deleted') {
         const sub = event.data.object;
         const customerId = sub.customer;
+        console.log(`[STRIPE-WEBHOOK] 📋 customer.subscription.deleted — customerId=${customerId}`);
         const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
         if (lojista) {
           lojista.subscription_status = 'canceled';
@@ -216,12 +271,15 @@ module.exports = async function handler(req, res) {
           lojista.plano_id = null;
           lojista.stripe_subscription_id = null;
           await lojista.save();
+          console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} cancelado, revertido para free`);
         }
       }
 
+      // === customer.subscription.updated ===
       if (event.type === 'customer.subscription.updated') {
         const sub = event.data.object;
         const customerId = sub.customer;
+        console.log(`[STRIPE-WEBHOOK] 📋 customer.subscription.updated — customerId=${customerId}, status=${sub.status}`);
         const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
         if (lojista) {
           lojista.subscription_status = sub.status;
@@ -229,10 +287,11 @@ module.exports = async function handler(req, res) {
             lojista.data_vencimento = new Date(sub.current_period_end * 1000);
           }
           await lojista.save();
+          console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para ${sub.status}`);
         }
       }
     } catch (err) {
-      console.error('[STRIPE-WEBHOOK] Error processing event:', err);
+      console.error(`[STRIPE-WEBHOOK] ❌ Erro ao processar evento ${event.type}:`, err);
     }
 
     return res.json({ received: true });
