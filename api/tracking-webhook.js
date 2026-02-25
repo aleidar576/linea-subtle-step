@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
   // ===== POST: processar webhook =====
   if (req.method === 'POST') {
     const body = req.body || {};
-    const { evento, txid, valor, nome, email, telefone, cpf, status, data } = body;
+    const { evento, txid, valor, nome, email, telefone, cpf, status, data, loja_id } = body;
 
     console.log('📊 Webhook received:', JSON.stringify(body, null, 2));
 
@@ -176,6 +176,7 @@ module.exports = async function handler(req, res) {
     try {
       log = await WebhookLog.create({
         txid: txid || '',
+        loja_id: loja_id || null,
         evento: evento || '',
         status: status || '',
         valor: valor || 0,
@@ -194,10 +195,12 @@ module.exports = async function handler(req, res) {
     const dispatches = [];
     if (status === 'paid') {
       try {
-        const activePixels = await TrackingPixel.find({
+        const pixelFilter = {
           is_active: true,
           access_token: { $nin: [null, ''] },
-        }).lean();
+        };
+        if (loja_id) pixelFilter.loja_id = loja_id;
+        const activePixels = await TrackingPixel.find(pixelFilter).lean();
 
         for (const pixel of activePixels) {
           let result;

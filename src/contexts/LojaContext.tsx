@@ -3,9 +3,12 @@ import type { FooterConfig, HomepageConfig, LogoConfig } from '@/services/saas-a
 
 interface LojaPixel {
   _id: string;
-  platform: 'facebook' | 'tiktok';
+  platform: 'facebook' | 'tiktok' | 'google_ads' | 'gtm';
   pixel_id: string;
   access_token: string;
+  conversion_label?: string;
+  events?: string[];
+  trigger_pages?: string[];
   is_active: boolean;
 }
 
