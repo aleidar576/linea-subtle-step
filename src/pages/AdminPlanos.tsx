@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminsApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,9 @@ interface PlanoForm {
   preco_original: number;
   preco_promocional: number;
   taxa_transacao: number;
+  taxa_transacao_percentual: number;
+  taxa_transacao_trial: number;
+  taxa_transacao_fixa: number;
   stripe_price_id: string;
   vantagens: string[];
   destaque: boolean;
@@ -27,6 +30,7 @@ interface PlanoForm {
 
 const emptyForm: PlanoForm = {
   nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
+  taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
   stripe_price_id: '', vantagens: [], destaque: false, ordem: 0,
 };
 
@@ -42,7 +46,12 @@ const AdminPlanos = () => {
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setShowForm(true); };
   const openEdit = (p: any) => {
-    setForm({ nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional, taxa_transacao: p.taxa_transacao, stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], destaque: p.destaque, ordem: p.ordem });
+    setForm({
+      nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
+      taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
+      taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
+      stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], destaque: p.destaque, ordem: p.ordem,
+    });
     setEditId(p._id);
     setShowForm(true);
   };
@@ -122,6 +131,8 @@ const AdminPlanos = () => {
                 <TableHead>Preço Original</TableHead>
                 <TableHead>Preço Promocional</TableHead>
                 <TableHead>Taxa %</TableHead>
+                <TableHead>Taxa Trial %</TableHead>
+                <TableHead>Taxa Fixa</TableHead>
                 <TableHead>Stripe Price ID</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead>Vantagens</TableHead>
@@ -134,8 +145,10 @@ const AdminPlanos = () => {
                   <TableCell className="font-medium">{p.nome}</TableCell>
                   <TableCell>R$ {(p.preco_original || 0).toFixed(2)}</TableCell>
                   <TableCell>R$ {(p.preco_promocional || 0).toFixed(2)}</TableCell>
-                  <TableCell>{p.taxa_transacao}%</TableCell>
-                  <TableCell className="text-xs text-muted-foreground font-mono max-w-[200px] truncate">{p.stripe_price_id}</TableCell>
+                  <TableCell>{p.taxa_transacao_percentual ?? p.taxa_transacao}%</TableCell>
+                  <TableCell>{p.taxa_transacao_trial ?? 2.0}%</TableCell>
+                  <TableCell>R$ {(p.taxa_transacao_fixa || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
                   <TableCell>{(p.vantagens || []).length}</TableCell>
                   <TableCell className="text-right">
@@ -172,11 +185,21 @@ const AdminPlanos = () => {
                 <Input type="number" step="0.01" value={form.preco_promocional} onChange={e => setForm(f => ({ ...f, preco_promocional: Number(e.target.value) }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label>Taxa de Transação (%)</Label>
-                <Input type="number" step="0.1" value={form.taxa_transacao} onChange={e => setForm(f => ({ ...f, taxa_transacao: Number(e.target.value) }))} />
+                <Label>Taxa Percentual (%)</Label>
+                <Input type="number" step="0.1" value={form.taxa_transacao_percentual} onChange={e => setForm(f => ({ ...f, taxa_transacao_percentual: Number(e.target.value), taxa_transacao: Number(e.target.value) }))} />
               </div>
+              <div>
+                <Label>Taxa Trial (%)</Label>
+                <Input type="number" step="0.1" value={form.taxa_transacao_trial} onChange={e => setForm(f => ({ ...f, taxa_transacao_trial: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <Label>Taxa Fixa (R$)</Label>
+                <Input type="number" step="0.01" value={form.taxa_transacao_fixa} onChange={e => setForm(f => ({ ...f, taxa_transacao_fixa: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Ordem</Label>
                 <Input type="number" value={form.ordem} onChange={e => setForm(f => ({ ...f, ordem: Number(e.target.value) }))} />

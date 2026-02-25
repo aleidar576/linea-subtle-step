@@ -328,6 +328,9 @@ export interface LojistaProfile {
   data_vencimento?: string | null;
   cancel_at_period_end?: boolean;
   cancel_at?: string | null;
+  taxas_acumuladas?: number;
+  data_vencimento_taxas?: string | null;
+  historico_assinatura?: Array<{ evento: string; data: string; detalhes: string }>;
 }
 
 // === Product types (lojista) ===
@@ -561,6 +564,9 @@ export interface Plano {
   preco_original: number;
   preco_promocional: number;
   taxa_transacao: number;
+  taxa_transacao_percentual: number;
+  taxa_transacao_trial: number;
+  taxa_transacao_fixa: number;
   stripe_price_id: string;
   vantagens: string[];
   destaque: boolean;

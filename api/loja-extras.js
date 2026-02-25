@@ -73,6 +73,80 @@ module.exports = async function handler(req, res) {
   const { scope, id, loja_id, codigo } = req.query;
   const method = req.method;
 
+  // === CRON: Cobrança Semanal de Taxas ===
+  if (scope === 'cron-taxas' && method === 'GET') {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
+    if (cronSecret && (!authHeader || authHeader !== `Bearer ${cronSecret}`)) {
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+
+    try {
+      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
+      const stripe = require('stripe')(STRIPE_SECRET_KEY);
+
+      const now = new Date();
+      const lojistas = await Lojista.find({
+        taxas_acumuladas: { $gt: 0 },
+        data_vencimento_taxas: { $lte: now },
+        stripe_customer_id: { $ne: null },
+      });
+
+      console.log(`[CRON-TAXAS] Processando ${lojistas.length} lojistas com taxas pendentes`);
+
+      let sucesso = 0, falha = 0;
+      for (const lojista of lojistas) {
+        try {
+          const amountCents = Math.round(lojista.taxas_acumuladas * 100);
+          if (amountCents <= 0) continue;
+
+          // Create InvoiceItem
+          await stripe.invoiceItems.create({
+            customer: lojista.stripe_customer_id,
+            amount: amountCents,
+            currency: 'brl',
+            description: `Taxas de transação acumuladas — R$ ${lojista.taxas_acumuladas.toFixed(2)}`,
+          });
+
+          // Create and pay invoice
+          const invoice = await stripe.invoices.create({
+            customer: lojista.stripe_customer_id,
+            auto_advance: true,
+          });
+          await stripe.invoices.pay(invoice.id);
+
+          // Success: reset and advance cycle
+          const valorCobrado = lojista.taxas_acumuladas;
+          lojista.taxas_acumuladas = 0;
+          lojista.data_vencimento_taxas = new Date(lojista.data_vencimento_taxas.getTime() + 7 * 24 * 60 * 60 * 1000);
+          lojista.historico_assinatura.push({
+            evento: 'cobranca_taxas_sucesso',
+            data: new Date(),
+            detalhes: `Cobrança semanal de taxas processada e paga: R$ ${valorCobrado.toFixed(2)}`,
+          });
+          await lojista.save();
+          sucesso++;
+          console.log(`[CRON-TAXAS] ✅ Cobrado R$ ${valorCobrado.toFixed(2)} de ${lojista.email}`);
+        } catch (err) {
+          lojista.historico_assinatura.push({
+            evento: 'cobranca_taxas_falha',
+            data: new Date(),
+            detalhes: `Falha na cobrança semanal de taxas: R$ ${lojista.taxas_acumuladas.toFixed(2)} — ${err.message}`,
+          });
+          await lojista.save();
+          falha++;
+          console.error(`[CRON-TAXAS] ❌ Falha para ${lojista.email}:`, err.message);
+        }
+      }
+
+      return res.json({ processados: lojistas.length, sucesso, falha });
+    } catch (err) {
+      console.error('[CRON-TAXAS] Erro geral:', err);
+      return res.status(500).json({ error: 'Erro ao processar cron de taxas' });
+    }
+  }
+
   // Ler raw body uma única vez
   const rawBody = method !== 'GET' && method !== 'DELETE' && method !== 'OPTIONS'
     ? await getRawBody(req)
@@ -197,6 +271,18 @@ module.exports = async function handler(req, res) {
             lojista.data_vencimento = new Date(sub.trial_end * 1000);
           }
 
+          // Inicializar ciclo de taxas semanais
+          if (!lojista.data_vencimento_taxas) {
+            lojista.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          }
+
+          // Auditoria
+          lojista.historico_assinatura.push({
+            evento: 'checkout.session.completed',
+            data: new Date(),
+            detalhes: 'Assinatura ativada (Checkout concluído).',
+          });
+
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista atualizado no banco: status=${lojista.subscription_status}, plano=${lojista.plano}`);
 
@@ -228,6 +314,11 @@ module.exports = async function handler(req, res) {
           if (invoice.lines?.data?.[0]?.period?.end) {
             lojista.data_vencimento = new Date(invoice.lines.data[0].period.end * 1000);
           }
+          lojista.historico_assinatura.push({
+            evento: 'invoice.payment_succeeded',
+            data: new Date(),
+            detalhes: 'Mensalidade do plano renovada com sucesso.',
+          });
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para active`);
         } else {
@@ -243,6 +334,11 @@ module.exports = async function handler(req, res) {
         const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
         if (lojista) {
           lojista.subscription_status = 'past_due';
+          lojista.historico_assinatura.push({
+            evento: 'invoice.payment_failed',
+            data: new Date(),
+            detalhes: 'Falha no pagamento da fatura (Mensalidade ou Taxas).',
+          });
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ⚠️ Lojista ${lojista.email} marcado como past_due`);
 
@@ -272,6 +368,11 @@ module.exports = async function handler(req, res) {
           lojista.stripe_subscription_id = null;
           lojista.cancel_at_period_end = false;
           lojista.cancel_at = null;
+          lojista.historico_assinatura.push({
+            evento: 'customer.subscription.deleted',
+            data: new Date(),
+            detalhes: 'Assinatura cancelada definitivamente.',
+          });
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} cancelado, revertido para free`);
         }
@@ -291,6 +392,11 @@ module.exports = async function handler(req, res) {
           lojista.data_vencimento = null;
           lojista.cancel_at_period_end = false;
           lojista.cancel_at = null;
+          lojista.historico_assinatura.push({
+            evento: 'charge.refunded',
+            data: new Date(),
+            detalhes: 'Estorno processado. Acesso premium revogado imediatamente.',
+          });
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Estorno processado. Acesso premium revogado para customer: ${customerId} (${lojista.email})`);
         } else {
@@ -328,6 +434,13 @@ module.exports = async function handler(req, res) {
           lojista.cancel_at_period_end = sub.cancel_at_period_end || false;
           lojista.cancel_at = sub.cancel_at ? new Date(sub.cancel_at * 1000) : null;
           console.log(`[STRIPE-WEBHOOK] 📋 cancel_at_period_end=${lojista.cancel_at_period_end}, cancel_at=${lojista.cancel_at}`);
+
+          // Auditoria
+          lojista.historico_assinatura.push({
+            evento: 'customer.subscription.updated',
+            data: new Date(),
+            detalhes: `Assinatura atualizada (Alteração de plano ou status). Status: ${sub.status}`,
+          });
 
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para ${sub.status}`);

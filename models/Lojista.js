@@ -44,6 +44,13 @@ const LojistaSchema = new mongoose.Schema({
   cancel_at_period_end: { type: Boolean, default: false },
   cancel_at: { type: Date, default: null },
   security_token: { type: String, default: null },
+  taxas_acumuladas: { type: Number, default: 0 },
+  data_vencimento_taxas: { type: Date, default: null },
+  historico_assinatura: [{
+    evento: { type: String, required: true },
+    data: { type: Date, default: Date.now },
+    detalhes: { type: String, default: '' },
+  }],
   criado_em: { type: Date, default: () => nowGMT3() },
 });
 
