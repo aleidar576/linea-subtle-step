@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -23,12 +23,29 @@ const LojaAssinatura = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    Promise.all([planosApi.list(), lojistaApi.perfil()])
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchData = useCallback(() => {
+    return Promise.all([planosApi.list(), lojistaApi.perfil()])
       .then(([p, prof]) => { setPlanos(p); setProfile(prof); })
-      .catch(() => toast({ title: 'Erro', description: 'Falha ao carregar dados', variant: 'destructive' }))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => toast({ title: 'Erro', description: 'Falha ao carregar dados', variant: 'destructive' }));
+  }, [toast]);
+
+  useEffect(() => {
+    fetchData().finally(() => setLoading(false));
+  }, [fetchData]);
+
+  // Auto-refresh when user returns to this tab (e.g. after Stripe Portal)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !loading) {
+        setRefreshing(true);
+        fetchData().finally(() => setRefreshing(false));
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchData, loading]);
 
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
@@ -72,12 +89,19 @@ const LojaAssinatura = () => {
     setPortalLoading(true);
     try {
       const { url } = await stripeApi.createPortal();
-      window.location.href = url;
+      window.open(url, '_blank');
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setPortalLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+    toast({ title: 'Atualizado', description: 'Dados da assinatura atualizados.' });
   };
 
   if (loading) {
@@ -147,10 +171,15 @@ const LojaAssinatura = () => {
             </div>
           )}
 
-          <Button onClick={handlePortal} disabled={portalLoading} className="w-full gap-2">
-            {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-            Gerenciar Assinatura
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handlePortal} disabled={portalLoading} className="flex-1 gap-2">
+              {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+              Gerenciar Assinatura
+            </Button>
+            <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
       </div>
     );
