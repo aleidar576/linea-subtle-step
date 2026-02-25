@@ -330,6 +330,8 @@ export interface LojistaProfile {
   cancel_at?: string | null;
   taxas_acumuladas?: number;
   data_vencimento_taxas?: string | null;
+  tentativas_taxas?: number;
+  status_taxas?: string;
   historico_assinatura?: Array<{ evento: string; data: string; detalhes: string }>;
 }
 
@@ -588,6 +590,8 @@ export const stripeApi = {
     }),
   createPortal: () =>
     request<{ url: string }>('/loja-extras?scope=stripe-portal', { method: 'POST' }),
+  pagarTaxasManual: () =>
+    request<{ success: boolean; message: string }>('/loja-extras?scope=pagar-taxas-manual', { method: 'POST' }),
 };
 
 export const lojaProductsApi = {

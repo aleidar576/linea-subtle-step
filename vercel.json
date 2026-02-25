@@ -17,7 +17,7 @@
   "crons": [
     {
       "path": "/api/loja-extras?scope=cron-taxas",
-      "schedule": "0 3 * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }

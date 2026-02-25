@@ -135,15 +135,76 @@ Configurado em `vercel.json`:
 {
   "crons": [{
     "path": "/api/loja-extras?scope=cron-taxas",
-    "schedule": "0 3 * * *"
+    "schedule": "0 12 * * *"
   }]
 }
 ```
 
-- Roda diariamente às 3h UTC
-- Só processa lojistas onde `taxas_acumuladas > 0` E `data_vencimento_taxas <= agora`
+- Roda diariamente às **12h UTC (09h BRT)** — horário comercial brasileiro para maximizar chance de saldo no cartão
+- Só processa lojistas onde `taxas_acumuladas > 0` E `data_vencimento_taxas <= agora` E `status_taxas !== 'bloqueado'`
 - Protegido por `CRON_SECRET` (variável de ambiente)
-- Em caso de falha, o valor NÃO é zerado (retenta no próximo ciclo)
+
+### Smart Retry (Retentativas Inteligentes)
+
+Quando o cartão do lojista é **recusado** na cobrança automática, o sistema entra em modo de retentativa:
+
+```
+┌──────────────────┐
+│  Cron tenta      │
+│  cobrar Invoice  │
+└────────┬─────────┘
+         │
+    ┌────▼────┐
+    │ Sucesso?│
+    └────┬────┘
+    SIM  │  NÃO
+    ┌────┘  └────────────────────────────────────┐
+    │                                            │
+    ▼                                            ▼
+┌──────────────┐                    ┌─────────────────────────┐
+│ Zera taxas,  │                    │ tentativas_taxas += 1   │
+│ status = ok, │                    │                         │
+│ +7 dias ciclo│                    │ tentativas < 3?         │
+└──────────────┘                    └──────┬──────────────────┘
+                                    SIM    │    NÃO
+                                    ┌──────┘    └──────────┐
+                                    ▼                      ▼
+                           ┌────────────────┐    ┌──────────────────┐
+                           │ status = falha │    │ status = bloqueado│
+                           │ +24h no ciclo  │    │ Só paga manual   │
+                           │ (tenta amanhã) │    │ via botão no UI  │
+                           └────────────────┘    └──────────────────┘
+```
+
+| Estado | Significado | Ação do Cron |
+|---|---|---|
+| `ok` | Pagamento em dia | Cobra normalmente |
+| `falha` | Cartão recusado (< 3 tentativas) | Reagenda +24h e tenta novamente |
+| `bloqueado` | 3 falhas consecutivas | Ignorado pelo Cron — só regulariza manualmente |
+
+### Endpoint de Regularização Manual
+
+Escopo: `?scope=pagar-taxas-manual` (POST autenticado)
+
+Permite que o lojista pague as taxas pendentes a qualquer momento, independentemente do status:
+
+1. Valida autenticação JWT e verifica `taxas_acumuladas > 0`
+2. Cria `InvoiceItem` + `Invoice.pay()` via Stripe (mesma lógica do Cron)
+3. **Sucesso**: Zera taxas, reseta tentativas, volta `status_taxas` para `ok`, agenda +7 dias
+4. **Falha**: Retorna erro 400 informando que o cartão foi recusado
+
+O UI exibe banners condicionais:
+- **Amarelo** (`status_taxas === 'falha'`): Aviso de falha com data da próxima tentativa automática
+- **Vermelho** (`status_taxas === 'bloqueado'`): Aviso urgente com botão "Regularizar Pagamento Agora"
+
+### Campos de Retry no Model Lojista
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `tentativas_taxas` | Number | Contador de falhas consecutivas (0-3) |
+| `status_taxas` | String | Estado da cobrança: `ok`, `falha`, `bloqueado` |
+
+> **Regra de ouro**: O valor em `taxas_acumuladas` **NUNCA** é zerado em caso de falha — apenas em caso de sucesso.
 
 ### Auditoria de Eventos (historico_assinatura)
 
@@ -611,3 +672,4 @@ O servidor iniciará em `http://localhost:8080`. Como `localhost` é reconhecido
 | 11 | Pixels multi-plataforma (FB, TikTok, GAds, GTM) + CAPI server-side + filtro por loja_id | ✅ Concluído |
 | 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net | ✅ Concluído |
 | 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira nos Painéis | ✅ Concluído |
+| 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas, Cron ajustado para 09h BRT | ✅ Concluído |

@@ -46,6 +46,8 @@ const LojistaSchema = new mongoose.Schema({
   security_token: { type: String, default: null },
   taxas_acumuladas: { type: Number, default: 0 },
   data_vencimento_taxas: { type: Date, default: null },
+  tentativas_taxas: { type: Number, default: 0 },
+  status_taxas: { type: String, enum: ['ok', 'falha', 'bloqueado'], default: 'ok' },
   historico_assinatura: [{
     evento: { type: String, required: true },
     data: { type: Date, default: Date.now },
