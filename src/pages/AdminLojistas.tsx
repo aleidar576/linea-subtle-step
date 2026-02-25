@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminsApi, type AdminLojista } from '@/services/api';
-import { platformApi } from '@/services/saas-api';
+import { platformApi, planosApi, type Plano } from '@/services/saas-api';
 import { useToast } from '@/hooks/use-toast';
 import {
   Store, Loader2, Ban, CheckCircle2, Crown, Eye,
@@ -38,9 +38,11 @@ const AdminLojistas = () => {
   const [impersonating, setImpersonating] = useState(false);
   const [activatingManual, setActivatingManual] = useState(false);
   const [platformDomain, setPlatformDomain] = useState('');
+  const [planosList, setPlanosList] = useState<Plano[]>([]);
 
   useEffect(() => {
     platformApi.getDomain().then(r => setPlatformDomain(r.domain)).catch(() => setPlatformDomain('dusking.com.br'));
+    planosApi.list().then(setPlanosList).catch(() => {});
   }, []);
 
   const toggleBloqueio = useMutation({
@@ -124,12 +126,19 @@ const AdminLojistas = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
   };
 
-  const planoBadge = (plano: string) => {
-    const colors: Record<string, string> = {
-      free: 'bg-muted text-muted-foreground',
-      plus: 'bg-primary/10 text-primary',
-    };
-    return <Badge className={colors[plano] || 'bg-muted text-muted-foreground'}>{plano.toUpperCase()}</Badge>;
+  const resolvePlanoName = (lojista: AdminLojista) => {
+    if (lojista.plano_id) {
+      const found = planosList.find(p => p._id === lojista.plano_id);
+      if (found) return found.nome;
+    }
+    return 'Free';
+  };
+
+  const planoBadge = (lojista: AdminLojista) => {
+    const nome = resolvePlanoName(lojista);
+    const hasActive = lojista.subscription_status && ['trialing', 'active'].includes(lojista.subscription_status);
+    const cls = hasActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground';
+    return <Badge className={cls}>{nome}</Badge>;
   };
 
   if (isLoading) {
@@ -148,7 +157,7 @@ const AdminLojistas = () => {
         <div className="flex items-center gap-3 mb-6">
           <Button variant="ghost" size="icon" onClick={goBack}><ArrowLeft className="h-5 w-5" /></Button>
           <h1 className="text-xl font-bold">{selectedLojista.nome || selectedLojista.email}</h1>
-          {planoBadge(selectedLojista.plano)}
+          {planoBadge(selectedLojista)}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -190,7 +199,7 @@ const AdminLojistas = () => {
               <h2 className="font-semibold">Gestão de Plano</h2>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Plano Atual:</span>
-                <span className="font-medium capitalize">{selectedLojista.plano}</span>
+                <span className="font-medium">{resolvePlanoName(selectedLojista)}</span>
               </div>
               {selectedLojista.subscription_status && (
                 <div className="flex justify-between text-sm">
@@ -295,7 +304,7 @@ const AdminLojistas = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Plano Atual:</span>
-                  <span className="font-medium capitalize">{selectedLojista.plano || 'free'}</span>
+                  <span className="font-medium">{resolvePlanoName(selectedLojista)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status na Stripe:</span>
@@ -411,7 +420,7 @@ const AdminLojistas = () => {
                     </button>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{l.email}</TableCell>
-                  <TableCell>{planoBadge(l.plano)}</TableCell>
+                  <TableCell>{planoBadge(l)}</TableCell>
                   <TableCell>{l.qtd_lojas}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
