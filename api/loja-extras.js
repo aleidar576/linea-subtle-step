@@ -277,6 +277,27 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      // === charge.refunded ===
+      if (event.type === 'charge.refunded') {
+        const charge = event.data.object;
+        const customerId = charge.customer;
+        console.log(`[STRIPE-WEBHOOK] 📋 charge.refunded — customerId=${customerId}`);
+        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
+        if (lojista) {
+          lojista.subscription_status = 'canceled';
+          lojista.plano = 'free';
+          lojista.plano_id = null;
+          lojista.stripe_subscription_id = null;
+          lojista.data_vencimento = null;
+          lojista.cancel_at_period_end = false;
+          lojista.cancel_at = null;
+          await lojista.save();
+          console.log(`[STRIPE-WEBHOOK] ✅ Estorno processado. Acesso premium revogado para customer: ${customerId} (${lojista.email})`);
+        } else {
+          console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum lojista com stripe_customer_id=${customerId}`);
+        }
+      }
+
       // === customer.subscription.updated (UPGRADES / DOWNGRADES / STATUS) ===
       if (event.type === 'customer.subscription.updated') {
         const sub = event.data.object;
