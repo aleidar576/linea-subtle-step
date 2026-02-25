@@ -620,6 +620,17 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     );
   }
 
+  // White-label blocking: if store owner is delinquent/blocked, show blank page
+  if ((loja as any).is_blocked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-foreground text-lg font-medium text-center px-4">
+          Regularize seu plano para continuar a vender.
+        </p>
+      </div>
+    );
+  }
+
   const config = loja.configuracoes || {} as any;
   const customCss = config.custom_css || '';
   const produtoConfig = config.produto_config;
