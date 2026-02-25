@@ -480,13 +480,12 @@ const LojaCheckout = () => {
               value={cupomCode}
               onChange={e => setCupomCode(e.target.value.toUpperCase())}
               onKeyDown={e => e.key === 'Enter' && applyCupom()}
-              className="flex-1"
+              className="flex-1 bg-white text-black border-input focus-visible:ring-primary"
             />
             <Button
-              variant="outline"
               onClick={applyCupom}
               disabled={cupomLoading || !cupomCode.trim()}
-              className="shrink-0 px-4 text-xs font-semibold"
+              className="shrink-0 px-4 text-xs font-bold"
             >
               {cupomLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'APLICAR'}
             </Button>
