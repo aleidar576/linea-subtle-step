@@ -130,7 +130,7 @@ const LojaCheckout = () => {
 
   // Compute freights based on cart items' fretes_vinculados (majoritarian rule: most expensive)
   const computedFretes = useMemo(() => {
-    const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id).filter(Boolean);
+    const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id || item.product?.id).filter(Boolean);
     const cartProducts = allCheckoutProducts.filter((p: any) => cartProductIds.includes(p.product_id) || cartProductIds.includes(p._id));
     const hasVinculados = cartProducts.some((p: any) => p.fretes_vinculados && p.fretes_vinculados.length > 0);
 
