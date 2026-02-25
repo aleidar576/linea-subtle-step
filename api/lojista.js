@@ -66,11 +66,12 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Senha alterada com sucesso' });
     }
 
-    // Atualizar perfil (nome, telefone, avatar_url, config_emails)
-    const { nome, telefone, avatar_url, config_emails } = req.body;
+    // Atualizar perfil (nome, telefone, cpf_cnpj, avatar_url, config_emails)
+    const { nome, telefone, cpf_cnpj, avatar_url, config_emails } = req.body;
     const update = {};
     if (nome !== undefined) update.nome = nome;
     if (telefone !== undefined) update.telefone = telefone;
+    if (cpf_cnpj !== undefined) update.cpf_cnpj = cpf_cnpj;
     if (avatar_url !== undefined) update.avatar_url = avatar_url;
     if (config_emails !== undefined) {
       update.config_emails = {

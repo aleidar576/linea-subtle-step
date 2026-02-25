@@ -62,6 +62,7 @@ import AdminAvisos from "./pages/AdminAvisos";
 import AdminTickets from "./pages/AdminTickets";
 import AdminPacotesComentarios from "./pages/AdminPacotesComentarios";
 import AdminIntegracoes from "./pages/AdminIntegracoes";
+import AdminPlanos from "./pages/AdminPlanos";
 import SegurancaConfirmacao from "./pages/SegurancaConfirmacao";
 
 // Loja Pública (Host-Based)
@@ -157,7 +158,8 @@ const SaaSApp = () => (
                   {/* Admin panel */}
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<Navigate to="/admin/lojistas" replace />} />
-                    <Route path="lojistas" element={<AdminLojistas />} />
+                  <Route path="lojistas" element={<AdminLojistas />} />
+                    <Route path="planos" element={<AdminPlanos />} />
                     <Route path="equipe" element={<AdminTeam />} />
                     <Route path="avisos" element={<AdminAvisos />} />
                     <Route path="tickets" element={<AdminTickets />} />

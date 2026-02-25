@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLojas } from '@/hooks/useLojas';
 import { Store, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { lojaProductsApi, pedidosApi, type Loja } from '@/services/saas-api';
+import { lojaProductsApi, pedidosApi, lojistaApi, type Loja } from '@/services/saas-api';
 
 const PainelInicio = () => {
   const { data: lojas, isLoading } = useLojas();
@@ -13,7 +13,9 @@ const PainelInicio = () => {
   const [hasProduto, setHasProduto] = useState(false);
   const [hasGateway, setHasGateway] = useState(false);
   const [hasVenda, setHasVenda] = useState(false);
+  const [hasDadosPessoais, setHasDadosPessoais] = useState(false);
   const [checked, setChecked] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!activeLojas.length) { setChecked(true); return; }
@@ -34,6 +36,12 @@ const PainelInicio = () => {
         );
         const allPedidos = await Promise.all(pedidosPromises);
         setHasVenda(allPedidos.some(r => r.total > 0));
+
+        // Check personal data
+        try {
+          const profile = await lojistaApi.perfil();
+          setHasDadosPessoais(!!(profile.cpf_cnpj && profile.telefone));
+        } catch { setHasDadosPessoais(false); }
       } catch { /* ignore */ }
       setChecked(true);
     };
@@ -42,6 +50,7 @@ const PainelInicio = () => {
 
   const checklist = [
     { label: 'Crie a sua primeira loja', done: hasLojas },
+    { label: 'Complete seus dados pessoais (CPF e Telefone)', done: hasDadosPessoais, link: '/painel/perfil' },
     { label: 'Configure um domínio', done: hasDomain },
     { label: 'Cadastre o seu primeiro produto', done: hasProduto },
     { label: 'Integre com um gateway de pagamento', done: hasGateway },
@@ -84,9 +93,13 @@ const PainelInicio = () => {
         <h3 className="font-semibold mb-4">Primeiros Passos</h3>
         <div className="space-y-3">
           {checklist.map((item, i) => (
-            <div key={i} className="flex items-center gap-3">
+            <div
+              key={i}
+              className={`flex items-center gap-3 ${item.link && !item.done ? 'cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1 -mx-2' : ''}`}
+              onClick={() => { if (item.link && !item.done) navigate(item.link); }}
+            >
               {item.done ? (
-                <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
               )}

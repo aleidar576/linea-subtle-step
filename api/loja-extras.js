@@ -16,6 +16,8 @@ const TrackingPixel = require('../models/TrackingPixel.js');
 const Pagina = require('../models/Pagina.js');
 const Setting = require('../models/Setting.js');
 const Lead = require('../models/Lead.js');
+const Lojista = require('../models/Lojista.js');
+const Plano = require('../models/Plano.js');
 
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -57,6 +59,215 @@ module.exports = async function handler(req, res) {
 
   const { scope, id, loja_id, codigo } = req.query;
   const method = req.method;
+
+  // === STRIPE CHECKOUT (público-auth: lojista autenticado) ===
+  if (scope === 'stripe-checkout' && method === 'POST') {
+    const user = verifyLojista(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    const { plano_id } = req.body;
+    if (!plano_id) return res.status(400).json({ error: 'plano_id é obrigatório' });
+
+    try {
+      const plano = await Plano.findById(plano_id);
+      if (!plano) return res.status(404).json({ error: 'Plano não encontrado' });
+
+      const lojista = await Lojista.findById(user.lojista_id);
+      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
+
+      if (!lojista.cpf_cnpj || !lojista.telefone) {
+        return res.status(400).json({ error: 'Complete seus dados pessoais (CPF/CNPJ e Telefone) antes de assinar.' });
+      }
+
+      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
+
+      const stripe = require('stripe')(STRIPE_SECRET_KEY);
+
+      const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173';
+
+      const sessionParams = {
+        mode: 'subscription',
+        line_items: [{ price: plano.stripe_price_id, quantity: 1 }],
+        subscription_data: { trial_period_days: 7 },
+        client_reference_id: lojista._id.toString(),
+        customer_email: lojista.email,
+        success_url: `${baseUrl}/painel/assinatura?success=true`,
+        cancel_url: `${baseUrl}/painel/assinatura?canceled=true`,
+      };
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
+      return res.json({ url: session.url });
+    } catch (error) {
+      console.error('[STRIPE-CHECKOUT]', error);
+      return res.status(500).json({ error: 'Erro ao criar sessão de checkout', details: error.message });
+    }
+  }
+
+  // === STRIPE WEBHOOK ===
+  if (scope === 'stripe-webhook' && method === 'POST') {
+    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+    const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) {
+      return res.status(500).json({ error: 'Stripe não configurado' });
+    }
+
+    const stripe = require('stripe')(STRIPE_SECRET_KEY);
+    const { sendEmail, getBranding, getBaseUrl } = require('../lib/email.js');
+
+    let event;
+    try {
+      const sig = req.headers['stripe-signature'];
+      const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error('[STRIPE-WEBHOOK] Signature verification failed:', err.message);
+      return res.status(400).json({ error: 'Webhook signature verification failed' });
+    }
+
+    try {
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const lojistaId = session.client_reference_id;
+        const subscriptionId = session.subscription;
+        const customerId = session.customer;
+
+        const lojista = await Lojista.findById(lojistaId);
+        if (lojista) {
+          lojista.stripe_customer_id = customerId;
+          lojista.stripe_subscription_id = subscriptionId;
+          lojista.subscription_status = 'trialing';
+
+          // Find plano by price_id from subscription
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const priceId = sub.items?.data?.[0]?.price?.id;
+          if (priceId) {
+            const plano = await Plano.findOne({ stripe_price_id: priceId });
+            if (plano) {
+              lojista.plano_id = plano._id;
+              lojista.plano = plano.nome.toLowerCase();
+            }
+          }
+
+          // Set data_vencimento to trial end
+          if (sub.trial_end) {
+            lojista.data_vencimento = new Date(sub.trial_end * 1000);
+          }
+
+          await lojista.save();
+
+          // Send trial welcome email
+          const branding = await getBranding();
+          const dataCobranca = lojista.data_vencimento
+            ? new Date(lojista.data_vencimento).toLocaleDateString('pt-BR')
+            : '7 dias';
+          const planoNome = lojista.plano_id ? (await Plano.findById(lojista.plano_id))?.nome || 'Seu plano' : 'Seu plano';
+
+          const { emailAssinaturaTrialHtml } = require('../lib/email.js');
+          await sendEmail({
+            to: lojista.email,
+            subject: `🎉 Bem-vindo ao plano ${planoNome}! | ${branding.brandName}`,
+            html: emailAssinaturaTrialHtml({ nome: lojista.nome, plano_nome: planoNome, data_cobranca: dataCobranca, branding }),
+          });
+        }
+      }
+
+      if (event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
+        if (lojista) {
+          lojista.subscription_status = 'active';
+          if (invoice.lines?.data?.[0]?.period?.end) {
+            lojista.data_vencimento = new Date(invoice.lines.data[0].period.end * 1000);
+          }
+          await lojista.save();
+        }
+      }
+
+      if (event.type === 'invoice.payment_failed') {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
+        if (lojista) {
+          lojista.subscription_status = 'past_due';
+          await lojista.save();
+
+          const branding = await getBranding();
+          const baseUrl = getBaseUrl();
+          const { emailFalhaPagamentoHtml } = require('../lib/email.js');
+          await sendEmail({
+            to: lojista.email,
+            subject: `⚠️ Falha no pagamento | ${branding.brandName}`,
+            html: emailFalhaPagamentoHtml({ nome: lojista.nome, branding, painelUrl: baseUrl + '/painel/assinatura' }),
+          });
+        }
+      }
+
+      if (event.type === 'customer.subscription.deleted') {
+        const sub = event.data.object;
+        const customerId = sub.customer;
+        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
+        if (lojista) {
+          lojista.subscription_status = 'canceled';
+          lojista.plano = 'free';
+          lojista.plano_id = null;
+          lojista.stripe_subscription_id = null;
+          await lojista.save();
+        }
+      }
+
+      if (event.type === 'customer.subscription.updated') {
+        const sub = event.data.object;
+        const customerId = sub.customer;
+        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
+        if (lojista) {
+          lojista.subscription_status = sub.status;
+          if (sub.current_period_end) {
+            lojista.data_vencimento = new Date(sub.current_period_end * 1000);
+          }
+          await lojista.save();
+        }
+      }
+    } catch (err) {
+      console.error('[STRIPE-WEBHOOK] Error processing event:', err);
+    }
+
+    return res.json({ received: true });
+  }
+
+  // === STRIPE PORTAL (lojista autenticado) ===
+  if (scope === 'stripe-portal' && method === 'POST') {
+    const user = verifyLojista(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    try {
+      const lojista = await Lojista.findById(user.lojista_id);
+      if (!lojista || !lojista.stripe_customer_id) {
+        return res.status(400).json({ error: 'Nenhuma assinatura ativa encontrada' });
+      }
+
+      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
+
+      const stripe = require('stripe')(STRIPE_SECRET_KEY);
+      const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173';
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: lojista.stripe_customer_id,
+        return_url: `${baseUrl}/painel/assinatura`,
+      });
+
+      return res.json({ url: portalSession.url });
+    } catch (error) {
+      console.error('[STRIPE-PORTAL]', error);
+      return res.status(500).json({ error: 'Erro ao criar sessão do portal', details: error.message });
+    }
+  }
 
   // === PUBLIC: Validar cupom (checkout) ===
   if (scope === 'cupom-publico' && method === 'GET') {

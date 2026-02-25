@@ -142,6 +142,12 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true, bloqueado: lojista.bloqueado });
       }
 
+      if (action === 'bloquear-acesso') {
+        lojista.acesso_bloqueado = !lojista.acesso_bloqueado;
+        await lojista.save();
+        return res.status(200).json({ success: true, acesso_bloqueado: lojista.acesso_bloqueado });
+      }
+
       if (action === 'plano' && plano) {
         if (!['free', 'plus'].includes(plano)) {
           return res.status(400).json({ error: 'Plano inválido' });
@@ -157,16 +163,6 @@ module.exports = async function handler(req, res) {
         if (tolerancia_extra_dias !== undefined) lojista.tolerancia_extra_dias = Number(tolerancia_extra_dias) || 0;
         await lojista.save();
         return res.status(200).json({ success: true, modo_amigo: lojista.modo_amigo, tolerancia_extra_dias: lojista.tolerancia_extra_dias });
-      }
-
-      if (action === 'ativar-loja-manual') {
-        const lojas = await Loja.find({ lojista_id: id });
-        for (const l of lojas) {
-          l.is_active = true;
-          l.ativada_por_admin = true;
-          await l.save();
-        }
-        return res.status(200).json({ success: true, message: 'Lojas ativadas manualmente' });
       }
 
       if (action === 'toggle-ver-subdominio') {

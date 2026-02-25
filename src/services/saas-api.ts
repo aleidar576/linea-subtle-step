@@ -294,6 +294,7 @@ export interface LojistaProfile {
   email: string;
   nome: string;
   telefone: string;
+  cpf_cnpj: string;
   plano: string;
   bloqueado: boolean;
   email_verificado: boolean;
@@ -302,6 +303,12 @@ export interface LojistaProfile {
   avatar_url?: string | null;
   modo_amigo?: boolean;
   criado_em: string;
+  subscription_status?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_customer_id?: string | null;
+  acesso_bloqueado?: boolean;
+  plano_id?: string | null;
+  data_vencimento?: string | null;
 }
 
 // === Product types (lojista) ===
@@ -515,7 +522,7 @@ export const lojasApi = {
 
 export const lojistaApi = {
   perfil: () => request<LojistaProfile>('/lojista'),
-  atualizar: (data: { nome?: string; telefone?: string; avatar_url?: string }) =>
+  atualizar: (data: { nome?: string; telefone?: string; cpf_cnpj?: string; avatar_url?: string; config_emails?: any }) =>
     request<LojistaProfile>('/lojista', { method: 'PUT', body: JSON.stringify(data) }),
   alterarSenha: (data: { senha_atual: string; nova_senha: string }) =>
     request<{ success: boolean }>('/lojista?action=senha', { method: 'PUT', body: JSON.stringify(data) }),
@@ -525,6 +532,37 @@ export const lojistaApi = {
     request<{ success: boolean }>('/lojista?action=enable-2fa', { method: 'POST', body: JSON.stringify({ token }) }),
   disable2FA: (senha_atual: string) =>
     request<{ success: boolean }>('/lojista?action=disable-2fa', { method: 'POST', body: JSON.stringify({ senha_atual }) }),
+};
+
+// === Planos API ===
+
+export interface Plano {
+  _id: string;
+  nome: string;
+  preco_original: number;
+  preco_promocional: number;
+  taxa_transacao: number;
+  stripe_price_id: string;
+  vantagens: string[];
+  destaque: boolean;
+  ordem: number;
+  is_active: boolean;
+}
+
+export const planosApi = {
+  list: () => request<Plano[]>('/settings?scope=planos'),
+  seed: () => request<{ success: boolean; results: any[] }>('/settings?scope=planos-seed', { method: 'POST' }),
+};
+
+// === Stripe API (lojista) ===
+
+export const stripeApi = {
+  createCheckout: (plano_id: string) =>
+    request<{ url: string }>('/loja-extras?scope=stripe-checkout', {
+      method: 'POST', body: JSON.stringify({ plano_id }),
+    }),
+  createPortal: () =>
+    request<{ url: string }>('/loja-extras?scope=stripe-portal', { method: 'POST' }),
 };
 
 export const lojaProductsApi = {

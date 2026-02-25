@@ -5,6 +5,7 @@
 const connectDB = require('../lib/mongodb');
 const Setting = require('../models/Setting.js');
 const TrackingPixel = require('../models/TrackingPixel.js');
+const Plano = require('../models/Plano.js');
 const { requireAdmin } = require('../lib/auth.js');
 
 module.exports = async function handler(req, res) {
@@ -17,6 +18,78 @@ module.exports = async function handler(req, res) {
 
   await connectDB();
   const { scope } = req.query;
+
+  // ── scope=planos: Listar planos (público) ──────────────
+  if (scope === 'planos' && req.method === 'GET') {
+    const planos = await Plano.find({ is_active: true }).sort({ ordem: 1 }).lean();
+    return res.status(200).json(planos);
+  }
+
+  // ── scope=plano: CRUD individual (admin) ──────────────
+  if (scope === 'plano') {
+    if (req.method === 'GET' && req.query.id) {
+      const plano = await Plano.findById(req.query.id).lean();
+      if (!plano) return res.status(404).json({ error: 'Plano não encontrado' });
+      return res.status(200).json(plano);
+    }
+
+    const admin = requireAdmin(req);
+    if (!admin) return res.status(401).json({ error: 'Não autorizado' });
+
+    if (req.method === 'POST') {
+      try {
+        const plano = await Plano.create(req.body);
+        return res.status(201).json(plano);
+      } catch (error) {
+        return res.status(500).json({ error: 'Erro ao criar plano' });
+      }
+    }
+
+    if (req.method === 'PUT' && req.query.id) {
+      try {
+        const plano = await Plano.findByIdAndUpdate(req.query.id, req.body, { new: true }).lean();
+        if (!plano) return res.status(404).json({ error: 'Plano não encontrado' });
+        return res.status(200).json(plano);
+      } catch (error) {
+        return res.status(500).json({ error: 'Erro ao atualizar plano' });
+      }
+    }
+
+    if (req.method === 'DELETE' && req.query.id) {
+      try {
+        await Plano.findByIdAndDelete(req.query.id);
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        return res.status(500).json({ error: 'Erro ao deletar plano' });
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // ── scope=planos-seed: Seed inicial (admin, idempotente) ──
+  if (scope === 'planos-seed' && req.method === 'POST') {
+    const admin = requireAdmin(req);
+    if (!admin) return res.status(401).json({ error: 'Não autorizado' });
+
+    const seedPlanos = [
+      { nome: 'Starter', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5, stripe_price_id: 'price_1T4WY1Fp1n9NwetZpst9MoW0', vantagens: [], destaque: false, ordem: 0 },
+      { nome: 'Pro', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.2, stripe_price_id: 'price_1T4WZGFp1n9NwetZOAsuV30x', vantagens: [], destaque: true, ordem: 1 },
+      { nome: 'Scale', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.0, stripe_price_id: 'price_1T4WZrFp1n9NwetZEAw3WVOu', vantagens: [], destaque: false, ordem: 2 },
+    ];
+
+    const results = [];
+    for (const seed of seedPlanos) {
+      const existing = await Plano.findOne({ stripe_price_id: seed.stripe_price_id });
+      if (!existing) {
+        const created = await Plano.create(seed);
+        results.push({ nome: seed.nome, action: 'created', _id: created._id });
+      } else {
+        results.push({ nome: seed.nome, action: 'already_exists', _id: existing._id });
+      }
+    }
+    return res.status(200).json({ success: true, results });
+  }
 
   // ── scope=pixels: CRUD de TrackingPixel ────────────────
   if (scope === 'pixels') {
