@@ -1,53 +1,74 @@
 
-
-## Plano: Correcao UTM no Checkout de Loja + Exibicao nos Pedidos
+## Plano: Varredura Completa do Sistema de Pixels
 
 ---
 
-### Problemas Encontrados
+### Auditoria - Problemas Encontrados
 
-| Local | Problema | Gravidade |
-|-------|----------|-----------|
-| `LojaCheckout.tsx` - `buildCartData()` (linha 354) | `utms: {}` hardcoded vazio - UTMs NUNCA sao salvos no carrinho abandonado | CRITICO |
-| `LojaCheckout.tsx` - `pedidosApi.create()` (linha 429) | `utms: {}` hardcoded vazio - UTMs NUNCA sao salvos no pedido | CRITICO |
-| `LojaCheckout.tsx` - `handleGeneratePix()` (linha 402) | Chamada ao `/api/create-pix` nao envia `tracking` (utm, src, fbp, fbc) para a SealPay | CRITICO |
-| `LojaPedidos.tsx` - Sheet de detalhes do pedido (linhas 438-460) | Nao exibe UTMs nos detalhes do pedido | MEDIO |
-| `LojaPedidos.tsx` - Sheet de carrinho abandonado (linhas 551-561) | Ja exibe UTMs corretamente | OK |
-| `CheckoutPage.tsx` (checkout demo/principal) | Ja envia UTMs corretamente em tudo | OK |
-| Pedido criado ao gerar PIX com status `pendente` | Ja implementado em ambos checkouts | OK |
+| # | Local | Problema | Gravidade |
+|---|-------|----------|-----------|
+| 1 | `LojaLayout.tsx` - `firePixelEvent()` (linha 79-83) | So dispara Facebook e TikTok. **Google Ads e GTM sao completamente ignorados** em todas as paginas da loja (ViewContent, AddToCart, InitiateCheckout, AddPaymentInfo) | CRITICO |
+| 2 | `LojaLayout.tsx` - init pixels (linhas 578-584) | So inicializa Facebook e TikTok. **Google Ads e GTM nunca sao carregados** nas lojas dos lojistas | CRITICO |
+| 3 | `LojaLayout.tsx` - `firePixelEvent()` | Nao respeita `events` do pixel (o lojista seleciona quais eventos disparar, mas todos sao disparados sempre) | MEDIO |
+| 4 | `LojaLayout.tsx` - `firePixelEvent()` | Nao respeita `trigger_pages` do pixel (homepage, categorias, checkout, produtos) - dispara em todas as paginas | MEDIO |
+| 5 | `api/create-pix.js` webhook (linha 22-44) | Quando PIX e pago, marca pedido como "pago" mas **NAO chama o tracking-webhook** para disparar Purchase via CAPI (Facebook/TikTok/Google Ads server-side) | CRITICO |
+| 6 | `api/tracking-webhook.js` (linhas 197-200) | Busca pixels sem filtro de `loja_id` - dispara Purchase para TODOS os pixels de TODAS as lojas, nao apenas da loja do pedido | CRITICO |
+| 7 | `LojaSucesso.tsx` | Pagina de sucesso nao dispara evento Purchase no client-side | MEDIO |
+| 8 | `LojaCheckout.tsx` | Nao dispara Purchase apos confirmacao de pagamento do PIX (polling detecta pagamento mas nao dispara evento) | MEDIO |
+| 9 | `models/WebhookLog.js` | Falta `loja_id` no log do webhook (campo existe no schema mas nunca e preenchido no handler) | BAIXO |
 
 ---
 
 ### Correcoes Planejadas
 
-**Arquivo 1: `src/pages/loja/LojaCheckout.tsx`**
+**Arquivo 1: `src/components/LojaLayout.tsx`**
 
-A) Importar `getSavedUtmParams` de `@/hooks/useUtmParams` (nao precisa do hook inteiro, apenas a funcao pura que le do sessionStorage).
+A) Adicionar funcoes `initGoogleAds(conversionId)` e `initGTM(containerId)` (copiar logica do useTracking.tsx que ja tem implementacao completa).
 
-B) Em `buildCartData()` (linha 354): trocar `utms: {}` por `utms: getSavedUtmParams()`.
+B) Atualizar o `useEffect` de init (linha 578-584) para inicializar os 4 tipos de pixel: facebook, tiktok, google_ads, gtm.
 
-C) Em `pedidosApi.create()` (linha 429): trocar `utms: {}` por `utms: getSavedUtmParams()`.
+C) Reescrever `firePixelEvent()` para:
+   - Aceitar a lista de pixels como parametro (via contexto ou variavel de modulo)
+   - Disparar para as 4 plataformas (FB, TT, GAds, GTM)
+   - Respeitar os `events` configurados por pixel (so disparar se o evento esta na lista do pixel)
+   - Respeitar os `trigger_pages` configurados (mapear rota atual para tipo de pagina)
 
-D) Em `handleGeneratePix()` (linhas 402-411): adicionar campos `tracking`, `fbp`, `fbc`, `user_agent` no body do fetch para `/api/create-pix`, usando `getSavedUtmParams()` e cookies do Facebook.
+D) Exportar funcao auxiliar `setActivePixels(pixels)` para que o LojaLayout injete os pixels no modulo apos carregar.
 
-**Arquivo 2: `src/pages/painel/LojaPedidos.tsx`**
+**Arquivo 2: `api/create-pix.js`**
 
-A) Na Sheet de detalhes do pedido (apos a secao "Observacoes Internas", antes do fechamento `</div>`), adicionar uma secao "UTMs" identica a que ja existe no carrinho abandonado. Exibira todas as chaves UTM do pedido (padrao e personalizadas) de forma dinamica.
+A) Quando o webhook recebe status `paid` e marca o pedido como pago, buscar o `loja_id` do pedido e disparar o tracking-webhook internamente (chamar as funcoes de dispatch do Facebook CAPI, TikTok Events API e Google Ads, filtradas pelo `loja_id`).
+
+B) Importar `TrackingPixel` e as funcoes de dispatch, ou fazer um fetch interno para `/api/tracking-webhook` com os dados do pedido.
+
+**Arquivo 3: `api/tracking-webhook.js`**
+
+A) Adicionar filtro por `loja_id` na busca de pixels ativos (linha 197). O body do webhook deve incluir `loja_id` para filtrar corretamente.
+
+B) Preencher `loja_id` no WebhookLog.
+
+**Arquivo 4: `src/pages/loja/LojaCheckout.tsx`**
+
+A) Quando o polling detecta pagamento confirmado (antes do redirect para `/sucesso`), disparar `firePixelEvent('Purchase', {...})` com os dados da compra.
+
+**Arquivo 5: `src/pages/loja/LojaSucesso.tsx`**
+
+A) Ler dados da compra do `sessionStorage` (se disponivel) e disparar `firePixelEvent('Purchase', {...})` como fallback.
 
 ---
 
-### O que NAO sera alterado
+### Resumo de Impacto
 
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/components/LojaLayout.tsx` | Adicionar Google Ads + GTM, respeitar events/trigger_pages |
+| `api/create-pix.js` | Disparar CAPI Purchase ao confirmar pagamento |
+| `api/tracking-webhook.js` | Filtrar por loja_id |
+| `src/pages/loja/LojaCheckout.tsx` | Disparar Purchase client-side ao confirmar pagamento |
+| `src/pages/loja/LojaSucesso.tsx` | Disparar Purchase como fallback |
+
+### O que NAO sera alterado
 - `vite.config.mts`
 - Nenhum arquivo novo na pasta `api/`
-- Logica do backend (`api/pedidos.js`) ja salva `utms` corretamente do body recebido
-- `CheckoutPage.tsx` ja funciona corretamente
-- Carrinho abandonado no painel ja exibe UTMs
-
-### Resultado esperado
-
-- UTMs (Meta, TikTok, personalizadas) serao capturadas e salvas em pedidos e carrinhos abandonados da loja
-- UTMs serao enviadas para a SealPay ao gerar PIX
-- Lojista podera ver UTMs nos detalhes de cada pedido e de cada carrinho abandonado
-- UTMs personalizadas (qualquer `utm_*`) serao exibidas junto com as padrao
-
+- `useTracking.tsx` (usado apenas no checkout demo, nao nas lojas dos lojistas)
+- Painel do lojista (`LojaPixels.tsx`) - CRUD de pixels funciona corretamente
