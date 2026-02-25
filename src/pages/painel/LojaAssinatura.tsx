@@ -35,11 +35,11 @@ const LojaAssinatura = () => {
     if (!profile?.cpf_cnpj || !profile?.telefone) {
       toast({
         title: 'Dados incompletos',
-        description: 'Complete seus dados pessoais (CPF/CNPJ e Telefone) para liberar a assinatura.',
+        description: 'Complete seus dados pessoais clicando aqui para liberar a assinatura',
         variant: 'destructive',
         action: (
           <Button variant="outline" size="sm" onClick={() => navigate('/painel/perfil')}>
-            Ir para Perfil
+            Completar dados
           </Button>
         ),
       });
