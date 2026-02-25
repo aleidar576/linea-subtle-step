@@ -901,8 +901,19 @@ async function publicRequest<T>(path: string): Promise<T> {
 }
 
 export const lojaPublicaApi = {
-  getByDomain: (hostname: string) =>
-    publicRequest<Loja>(`/lojas?scope=public&domain=${encodeURIComponent(hostname)}`),
+  getByDomain: async (hostname: string) => {
+    const res = await fetch(`${API_BASE_PUB}/lojas?scope=public&domain=${encodeURIComponent(hostname)}`);
+    if (res.status === 403) {
+      const body = await res.json().catch(() => ({}));
+      if (body.is_blocked) return { is_blocked: true } as any;
+      if (body.offline) return { offline: true } as any;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error || `Request failed: ${res.status}`);
+    }
+    return res.json() as Promise<Loja>;
+  },
   getProducts: (lojaId: string) =>
     publicRequest<LojaProduct[]>(`/products?scope=loja-publica&loja_id=${lojaId}`),
   getProduct: (lojaId: string, productSlug: string) =>
