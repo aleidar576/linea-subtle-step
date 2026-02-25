@@ -824,7 +824,7 @@ const LojaProduto = () => {
         {/* Chat Panel */}
         {chatbotEnabled && <LojaChatBot open={chatOpen} onOpenChange={setChatOpen} />}
 
-        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} shouldScaleBackground={false}>
+        <Drawer open={drawerOpen} onOpenChange={(open) => { if (lightboxOpen) return; setDrawerOpen(open); }} shouldScaleBackground={false}>
           <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between w-full p-2 gap-2 bg-background border-t border-border">
             <Link to="/" className="flex flex-col items-center text-[10px] text-muted-foreground px-2">
               <Home className="h-5 w-5" /><span>Loja</span>
