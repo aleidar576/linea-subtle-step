@@ -363,22 +363,39 @@ function WelcomePopup({ config, lojaId }: { config: any; lojaId: string }) {
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [cuponsLoaded, setCuponsLoaded] = useState<Array<{ _id: string; codigo: string; tipo: string; valor: number }>>([]);
+  const [cuponsReady, setCuponsReady] = useState(false);
   const location = useLocation();
 
+  // For CUPONS type: fetch coupons FIRST, then show popup only after data is loaded
+  // For other types: show popup directly after the delay
   useEffect(() => {
     if (!config?.ativo) return;
     const seen = sessionStorage.getItem('popup_seen');
-    if (!seen) {
-      const timer = setTimeout(() => setVisible(true), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [config?.ativo]);
+    if (seen) return;
 
-  // Fetch coupons when type is CUPONS and popup becomes visible
+    const isCuponsType = config?.tipo === 'CUPONS' && config?.cupons_ids?.length > 0;
+
+    if (isCuponsType) {
+      // Fetch coupons first, then show after delay
+      cuponsPopupApi.getBulk(lojaId, config.cupons_ids)
+        .then(data => {
+          setCuponsLoaded(data);
+          setCuponsReady(true);
+        })
+        .catch(() => setCuponsReady(true));
+    } else {
+      setCuponsReady(true);
+    }
+  }, [config?.ativo, config?.tipo, config?.cupons_ids, lojaId]);
+
+  // Show popup only after cupons are ready (or immediately for non-coupon types)
   useEffect(() => {
-    if (!visible || config?.tipo !== 'CUPONS' || !config?.cupons_ids?.length) return;
-    cuponsPopupApi.getBulk(lojaId, config.cupons_ids).then(setCuponsLoaded).catch(() => {});
-  }, [visible, config?.tipo, config?.cupons_ids, lojaId]);
+    if (!config?.ativo || !cuponsReady) return;
+    const seen = sessionStorage.getItem('popup_seen');
+    if (seen) return;
+    const timer = setTimeout(() => setVisible(true), 2500);
+    return () => clearTimeout(timer);
+  }, [config?.ativo, cuponsReady]);
 
   if (!visible) return null;
 
