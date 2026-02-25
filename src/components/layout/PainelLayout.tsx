@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
+import { lojistaApi, type LojistaProfile } from '@/services/saas-api';
+import { useLojistaAuth } from '@/hooks/useLojistaAuth';
 import { useLojas, useCreateLoja } from '@/hooks/useLojas';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
@@ -16,7 +18,7 @@ import {
   Store, Home, Plus, LogOut, User, CreditCard, ChevronDown, ChevronRight,
   Loader2, BarChart3, Package, Settings, ShoppingCart, Layers, Boxes, Truck,
   Users, Image, Tag, Palette, CreditCard as PayIcon, Sun, Moon, Monitor,
-  Code, FileText, Bell, TrendingUp, Star, Mail
+  Code, FileText, Bell, TrendingUp, Star, Mail, AlertTriangle
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -59,8 +61,14 @@ const PainelLayout = () => {
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [emailPrefs, setEmailPrefs] = useState({ pedidos_pendentes: false, pedidos_pagos: false });
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [lojistaProfile, setLojistaProfile] = useState<LojistaProfile | null>(null);
   const { toast } = useToast();
   useFaviconUpdater();
+
+  // Fetch profile for subscription banners
+  useEffect(() => {
+    lojistaApi.perfil().then(setLojistaProfile).catch(() => {});
+  }, []);
 
   // Dynamic title: {nomeLoja} · {menu} · {brandName} or Painel · {brandName}
   useEffect(() => {
@@ -218,7 +226,7 @@ const PainelLayout = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/perfil')}><User className="h-4 w-4" /> Perfil</DropdownMenuItem>
-              <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/assinatura')}><CreditCard className="h-4 w-4" /> Assinatura</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/assinatura')}><CreditCard className="h-4 w-4" /> Planos</DropdownMenuItem>
               <DropdownMenuItem className="gap-2" onClick={() => setShowNotifPrefs(true)}><Bell className="h-4 w-4" /> Notificações</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="gap-2 text-destructive" onClick={() => { logout(); navigate('/login'); }}>
@@ -231,6 +239,37 @@ const PainelLayout = () => {
 
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
+        {/* Subscription Banners */}
+        {lojistaProfile?.subscription_status === 'past_due' && (() => {
+          const toleranciaGlobal = 7;
+          const toleranciaExtra = (lojistaProfile as any)?.tolerancia_extra_dias || 0;
+          const totalTolerancia = toleranciaGlobal + toleranciaExtra;
+          const vencimento = lojistaProfile.data_vencimento ? new Date(lojistaProfile.data_vencimento) : null;
+          const agora = new Date();
+          const diffDias = vencimento ? Math.floor((agora.getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+          const bloqueado = diffDias > totalTolerancia;
+
+          if (bloqueado) {
+            return (
+              <div
+                className="mb-4 rounded-lg bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold"
+                onClick={() => navigate('/painel/assinatura')}
+              >
+                <AlertTriangle className="h-5 w-5 inline mr-2" />
+                SUA LOJA FOI BLOQUEADA, REGULARIZE AGORA CLICANDO AQUI
+              </div>
+            );
+          }
+          return (
+            <div className="mb-4 rounded-lg bg-yellow-500/15 border border-yellow-500/30 p-4 text-center">
+              <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
+              <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
+                Seu pagamento está pendente. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
+              </span>
+            </div>
+          );
+        })()}
+
         <ContentTransition>
           <Outlet />
         </ContentTransition>

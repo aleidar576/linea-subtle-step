@@ -111,13 +111,14 @@ const AdminLojistas = () => {
     }
   };
 
-  const handleAtivarLojaManual = async () => {
+  const handleToggleBloqueioAcesso = async () => {
     if (!selectedLojista) return;
     setActivatingManual(true);
     try {
-      await adminsApi.ativarLojaManual(selectedLojista._id);
+      const result = await adminsApi.toggleBloqueioAcesso(selectedLojista._id);
+      setSelectedLojista({ ...selectedLojista, acesso_bloqueado: result.acesso_bloqueado });
       qc.invalidateQueries({ queryKey: ['admin-lojistas'] });
-      toast({ title: 'Lojas ativadas manualmente!' });
+      toast({ title: result.acesso_bloqueado ? 'Acesso bloqueado' : 'Acesso liberado' });
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
@@ -226,15 +227,15 @@ const AdminLojistas = () => {
               </div>
 
               <Button
-                onClick={handleAtivarLojaManual}
+                onClick={handleToggleBloqueioAcesso}
                 disabled={activatingManual}
-                variant="outline"
+                variant={selectedLojista.acesso_bloqueado ? 'outline' : 'destructive'}
                 className="w-full gap-2"
               >
-                {activatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />}
-                Ativar Loja Manual
+                {activatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+                {selectedLojista.acesso_bloqueado ? 'Liberar Acesso do Lojista' : 'Bloquear Acesso do Lojista'}
               </Button>
-              <p className="text-xs text-muted-foreground">Força a ativação de todas as lojas deste lojista, mesmo no plano Free.</p>
+              <p className="text-xs text-muted-foreground">Impede o login do lojista. Ele verá uma mensagem para contatar o suporte.</p>
 
               <div className="flex items-center justify-between">
                 <div>

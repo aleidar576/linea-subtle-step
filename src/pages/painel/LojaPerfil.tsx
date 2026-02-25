@@ -23,6 +23,7 @@ const LojaPerfil = () => {
   // Profile fields
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [cpfCnpj, setCpfCnpj] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Avatar
@@ -55,6 +56,7 @@ const LojaPerfil = () => {
         setProfile(p);
         setNome(p.nome);
         setTelefone(p.telefone || '');
+        setCpfCnpj(p.cpf_cnpj || '');
         setAvatarUrl(p.avatar_url || '');
         setTwoFAEnabled(p.two_factor_enabled || false);
       })
@@ -65,10 +67,14 @@ const LojaPerfil = () => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
+    const wasMissingData = !profile?.cpf_cnpj || !profile?.telefone;
     try {
-      const updated = await lojistaApi.atualizar({ nome, telefone });
+      const updated = await lojistaApi.atualizar({ nome, telefone, cpf_cnpj: cpfCnpj });
       setProfile(updated);
       toast({ title: 'Perfil atualizado!' });
+      if (wasMissingData && updated.cpf_cnpj && updated.telefone) {
+        toast({ title: '✅ Acesso ao free trial liberado!', description: 'Clique para assinar um plano.', action: <a href="/painel/assinatura" className="text-primary underline text-sm">Ver Planos</a> });
+      }
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally { setSavingProfile(false); }
@@ -225,6 +231,7 @@ const LojaPerfil = () => {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div><label className="text-sm font-medium mb-1 block">Nome</label><Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required /></div>
               <div><label className="text-sm font-medium mb-1 block">Email</label><Input value={profile?.email || ''} readOnly className="bg-muted cursor-not-allowed" /><p className="text-xs text-muted-foreground mt-1">O email não pode ser alterado</p></div>
+              <div><label className="text-sm font-medium mb-1 block">CPF/CNPJ</label><Input value={cpfCnpj} onChange={e => setCpfCnpj(e.target.value)} placeholder="000.000.000-00" /></div>
               <div><label className="text-sm font-medium mb-1 block">Telefone</label><Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" /></div>
               <Button type="submit" disabled={savingProfile}>{savingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Salvar</Button>
             </form>

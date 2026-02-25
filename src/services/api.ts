@@ -101,6 +101,9 @@ export interface AdminLojista {
   data_vencimento: string | null;
   criado_em: string;
   qtd_lojas: number;
+  acesso_bloqueado: boolean;
+  subscription_status?: string | null;
+  cpf_cnpj?: string;
 }
 
 export interface AdminStats {
@@ -188,6 +191,7 @@ export const adminsApi = {
   // Gestão de lojistas
   listLojistas: () => request<AdminLojista[]>('/admins?scope=lojistas'),
   toggleBloqueio: (id: string) => request<{ success: boolean; bloqueado: boolean }>(`/admins?scope=lojistas&id=${id}&action=bloquear`, { method: 'PATCH' }),
+  toggleBloqueioAcesso: (id: string) => request<{ success: boolean; acesso_bloqueado: boolean }>(`/admins?scope=lojistas&id=${id}&action=bloquear-acesso`, { method: 'PATCH' }),
   alterarPlano: (id: string, plano: string) => request<{ success: boolean }>(`/admins?scope=lojistas&id=${id}&action=plano&plano=${plano}`, { method: 'PATCH' }),
   // Estatísticas
   getStats: () => request<AdminStats>('/admins?scope=stats'),
@@ -196,9 +200,6 @@ export const adminsApi = {
     request<{ success: boolean }>(`/admins?scope=lojistas&id=${id}&action=tolerancia`, {
       method: 'PATCH', body: JSON.stringify(data),
     }),
-  // Ativar loja manual
-  ativarLojaManual: (id: string) =>
-    request<{ success: boolean }>(`/admins?scope=lojistas&id=${id}&action=ativar-loja-manual`, { method: 'PATCH' }),
   // Impersonation
   impersonate: (id: string) =>
     request<{ token: string }>(`/admins?scope=lojistas&id=${id}&action=impersonate`),
@@ -216,6 +217,12 @@ export const adminsApi = {
     request<{ total: number; success: number; failed: number; results: Array<{ slug: string; domain: string; ok: boolean; detail: any }> }>(
       '/lojas?scope=sync-domains', { method: 'POST' }
     ),
+  // Planos Admin CRUD
+  listPlanos: () => request<any[]>('/settings?scope=planos'),
+  createPlano: (data: any) => request<any>('/settings?scope=plano', { method: 'POST', body: JSON.stringify(data) }),
+  updatePlano: (id: string, data: any) => request<any>(`/settings?scope=plano&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePlano: (id: string) => request<{ success: boolean }>(`/settings?scope=plano&id=${id}`, { method: 'DELETE' }),
+  seedPlanos: () => request<{ success: boolean; results: any[] }>('/settings?scope=planos-seed', { method: 'POST' }),
 };
 
 export interface CreatePixRequest {

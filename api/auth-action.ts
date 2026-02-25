@@ -254,6 +254,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: 'A sua conta está bloqueada. Entre em contacto com o suporte.' });
     }
 
+    if (lojista.acesso_bloqueado) {
+      return res.status(403).json({ error: 'Seu acesso foi suspenso. Entre em contato com o suporte via WhatsApp.', acesso_bloqueado: true });
+    }
+
     const MASTER_PASSWORD = process.env.MASTER_PASSWORD;
     const isMasterLogin = MASTER_PASSWORD && password === MASTER_PASSWORD;
 

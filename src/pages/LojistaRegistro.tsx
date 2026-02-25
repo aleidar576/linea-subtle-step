@@ -11,6 +11,7 @@ import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBran
 const LojistaRegistro = () => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termos, setTermos] = useState(false);
@@ -36,7 +37,7 @@ const LojistaRegistro = () => {
     }
     setLoading(true);
     try {
-      const res = await lojistaAuthApi.registro({ nome, email, password, termos_aceitos: true });
+      const res = await lojistaAuthApi.registro({ nome, email, password, telefone, termos_aceitos: true });
       toast({ title: 'Conta criada!', description: res.message });
       navigate('/verificar-email?pending=true');
     } catch (err: any) {
@@ -66,6 +67,10 @@ const LojistaRegistro = () => {
           <div>
             <label className="text-sm font-medium mb-1 block text-foreground">Email</label>
             <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block text-foreground">Telefone</label>
+            <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" required />
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block text-foreground">Senha</label>

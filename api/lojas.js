@@ -138,7 +138,6 @@ module.exports = async function handler(req, res) {
 
   // === PUBLIC: buscar loja por domínio/subdomínio ===
   if (scope === 'public' && domain && req.method === 'GET') {
-    // Extrair slug do subdomínio (ex: minhaloja.servicoseg.shop -> minhaloja)
     const Setting = require('../models/Setting.js');
     const globalDomainSetting = await Setting.findOne({ key: 'global_domain' }).lean();
     const globalDomain = globalDomainSetting?.value || process.env.PLATFORM_DOMAIN || 'dusking.com.br';
@@ -158,10 +157,32 @@ module.exports = async function handler(req, res) {
 
     if (!loja) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    // Verificar se loja pode ser exibida (Regra de Ouro)
+    // Verificar se loja pode ser exibida (Regra de Ouro + Bloqueio por inadimplência)
     const Lojista = require('../models/Lojista.js');
     const dono = await Lojista.findById(loja.lojista_id).lean();
-    if (dono && dono.plano === 'free' && !dono.modo_amigo && !dono.ignorar_inadimplencia && !loja.ativada_por_admin) {
+
+    // Bloqueio por inadimplência (subscription past_due fora da carência)
+    if (dono && dono.subscription_status === 'past_due' && !dono.modo_amigo) {
+      const toleranciaGlobal = 7; // dias padrão
+      const toleranciaExtra = dono.tolerancia_extra_dias || 0;
+      const totalTolerancia = toleranciaGlobal + toleranciaExtra;
+      if (dono.data_vencimento) {
+        const vencimento = new Date(dono.data_vencimento);
+        const agora = new Date();
+        const diffDias = Math.floor((agora.getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDias > totalTolerancia) {
+          return res.status(403).json({ error: 'Loja bloqueada', is_blocked: true });
+        }
+      }
+    }
+
+    // Bloqueio por acesso suspenso pelo admin
+    if (dono && dono.acesso_bloqueado) {
+      return res.status(403).json({ error: 'Loja bloqueada', is_blocked: true });
+    }
+
+    // Regra de ouro legada
+    if (dono && dono.plano === 'free' && !dono.modo_amigo && !dono.ignorar_inadimplencia && !loja.ativada_por_admin && !dono.subscription_status) {
       return res.status(403).json({ error: 'Loja Offline', offline: true });
     }
 
