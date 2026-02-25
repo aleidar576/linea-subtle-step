@@ -131,6 +131,7 @@ const LojaProduto = () => {
   }, [product?.product_id, lojaId]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setCurrentImage(0); setQuantity(1); setSelectedSize(undefined); setSelectedColor(undefined); setVariationError('');
     if (product) {
       firePixelEvent('ViewContent', { content_id: product.product_id, content_name: product.name, value: product.price / 100, currency: 'BRL' });
