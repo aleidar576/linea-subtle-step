@@ -167,7 +167,7 @@ const LojaAssinatura = () => {
           )}
 
           {/* Next billing date */}
-          {profile.data_vencimento && (
+          {!isCancelScheduled && profile.data_vencimento && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
                 {profile.subscription_status === 'trialing' ? 'Primeira cobrança em:' : 'Próxima cobrança:'}
