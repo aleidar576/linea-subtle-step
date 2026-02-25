@@ -83,9 +83,86 @@ O roteamento é decidido no `src/App.tsx` com base no **hostname** da requisiç�
 
 ---
 
-## 💳 Sistema de Assinaturas (Stripe)
+## 💳 Sistema de Assinaturas (Stripe) + Faturamento Duplo
 
-### Fluxo Completo
+### Arquitetura de Faturamento Duplo
+
+O sistema utiliza **dois ciclos de cobrança independentes**:
+
+| Ciclo | Frequência | Mecanismo | Campo no Lojista |
+|---|---|---|---|
+| **Mensalidade** | Mensal | Stripe Subscription (automático) | `data_vencimento` |
+| **Taxas de Transação** | Semanal (7 dias) | Cron Vercel + Stripe Invoice avulsa | `data_vencimento_taxas`, `taxas_acumuladas` |
+
+### Fluxo de Taxas de Transação
+
+```
+┌──────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│  Pedido pago │────▶│ Calcula taxa %   │────▶│ Acumula em          │
+│  (PATCH)     │     │ + fixa do plano  │     │ taxas_acumuladas    │
+└──────────────┘     └──────────────────┘     └────────┬────────────┘
+                                                       │ (a cada 7 dias)
+                                              ┌────────▼────────────┐
+                                              │ Cron Vercel (3h UTC)│
+                                              │ scope=cron-taxas    │
+                                              └────────┬────────────┘
+                                                       │
+                                              ┌────────▼────────────┐
+                                              │ Stripe InvoiceItem  │
+                                              │ + Invoice.pay()     │
+                                              └────────┬────────────┘
+                                                       │
+                                              ┌────────▼────────────┐
+                                              │ Zera acumulado,     │
+                                              │ +7 dias no ciclo    │
+                                              └─────────────────────┘
+```
+
+### Campos de Taxa no Model Plano
+
+| Campo | Tipo | Descrição | Default |
+|---|---|---|---|
+| `taxa_transacao_percentual` | Number | Taxa % aplicada a lojistas `active` | 1.5 |
+| `taxa_transacao_trial` | Number | Taxa % aplicada durante o trial | 2.0 |
+| `taxa_transacao_fixa` | Number | Valor fixo (R$) somado por transação | 0 |
+
+> **Zero hardcode**: Todos os valores de taxa são configuráveis pelo Admin na tela de Gestão de Planos.
+
+### Cron de Cobrança Semanal
+
+Configurado em `vercel.json`:
+```json
+{
+  "crons": [{
+    "path": "/api/loja-extras?scope=cron-taxas",
+    "schedule": "0 3 * * *"
+  }]
+}
+```
+
+- Roda diariamente às 3h UTC
+- Só processa lojistas onde `taxas_acumuladas > 0` E `data_vencimento_taxas <= agora`
+- Protegido por `CRON_SECRET` (variável de ambiente)
+- Em caso de falha, o valor NÃO é zerado (retenta no próximo ciclo)
+
+### Auditoria de Eventos (historico_assinatura)
+
+Todos os eventos relevantes do Stripe são registrados no array `historico_assinatura` do Lojista:
+
+| Evento Stripe | Log Registrado |
+|---|---|
+| `checkout.session.completed` | Assinatura ativada (Checkout concluído). |
+| `invoice.payment_succeeded` | Mensalidade do plano renovada com sucesso. |
+| `invoice.payment_failed` | Falha no pagamento da fatura (Mensalidade ou Taxas). |
+| `customer.subscription.updated` | Assinatura atualizada (Alteração de plano ou status). |
+| `customer.subscription.deleted` | Assinatura cancelada definitivamente. |
+| `charge.refunded` | Estorno processado. Acesso premium revogado imediatamente. |
+| `cobranca_taxas_sucesso` | Cobrança semanal de taxas processada e paga: R$ X,XX |
+| `cobranca_taxas_falha` | Falha na cobrança semanal de taxas: R$ X,XX |
+
+O histórico é visível no painel Admin (Lojistas > Detalhes > Raio-X da Assinatura).
+
+### Fluxo Completo de Assinatura
 
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐
@@ -120,11 +197,12 @@ O roteamento é decidido no `src/App.tsx` com base no **hostname** da requisiç�
 
 | Evento Stripe | Ação no Sistema |
 |---|---|
-| `checkout.session.completed` | Cria assinatura, salva `stripe_customer_id`, `stripe_subscription_id`, define status `trialing` |
-| `customer.subscription.updated` | Atualiza `subscription_status`, `cancel_at_period_end`, `cancel_at`, `current_period_end` |
-| `customer.subscription.deleted` | Define `subscription_status: "canceled"`, limpa campos Stripe |
-| `invoice.payment_succeeded` | Atualiza `subscription_status: "active"`, registra `data_vencimento` |
-| `invoice.payment_failed` | Define `subscription_status: "past_due"`, envia e-mail de falha via Resend |
+| `checkout.session.completed` | Cria assinatura, salva IDs Stripe, define status `trialing`, inicializa ciclo de taxas |
+| `customer.subscription.updated` | Atualiza status, cancel_at_period_end, current_period_end + log auditoria |
+| `customer.subscription.deleted` | Define `canceled`, limpa campos Stripe + log auditoria |
+| `invoice.payment_succeeded` | Atualiza para `active`, registra `data_vencimento` + log auditoria |
+| `invoice.payment_failed` | Define `past_due`, envia e-mail de falha + log auditoria |
+| `charge.refunded` | Revoga acesso premium imediatamente, reset para free + log auditoria |
 
 ### Cancelamento Programado
 
@@ -149,9 +227,10 @@ Quando o lojista solicita cancelamento pelo Stripe Portal, o sistema recebe `can
 | `subscription_status` | String | `trialing`, `active`, `past_due`, `canceled`, `incomplete` |
 | `cancel_at_period_end` | Boolean | Se o cancelamento está agendado |
 | `cancel_at` | Date | Data em que a assinatura será encerrada |
-| `current_period_end` | Date | Fim do período atual de cobrança |
-| `data_vencimento` | Date | Data da próxima cobrança |
-| `taxa_transacao` | Number | Taxa de transação (%) — 2.0 durante trial |
+| `data_vencimento` | Date | Data da próxima cobrança mensal |
+| `taxas_acumuladas` | Number | Valor em R$ acumulado de taxas de transação |
+| `data_vencimento_taxas` | Date | Próximo débito do ciclo semanal de taxas |
+| `historico_assinatura` | Array | Log de eventos de assinatura `[{ evento, data, detalhes }]` |
 
 ---
 
@@ -394,6 +473,7 @@ Configure **todas** as variáveis abaixo no painel da Vercel (**Settings → Env
 |---|---|
 | `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_live_...` ou `sk_test_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Segredo do webhook Stripe (`whsec_...`) |
+| `CRON_SECRET` | Segredo para autenticar o Cron de cobrança semanal de taxas |
 
 ### Resend (E-mails)
 
@@ -530,3 +610,4 @@ O servidor iniciará em `http://localhost:8080`. Como `localhost` é reconhecido
 | 10 | Sistema de Assinaturas Stripe (Checkout, Portal, Webhooks, Trial 7 dias) | ✅ Concluído |
 | 11 | Pixels multi-plataforma (FB, TikTok, GAds, GTM) + CAPI server-side + filtro por loja_id | ✅ Concluído |
 | 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net | ✅ Concluído |
+| 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira nos Painéis | ✅ Concluído |

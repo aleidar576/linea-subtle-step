@@ -346,14 +346,43 @@ const AdminLojistas = () => {
                   <span className="text-muted-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Vencimento:</span>
                   <span className="font-medium">{selectedLojista.data_vencimento ? formatDate(selectedLojista.data_vencimento) : '—'}</span>
                 </div>
+
+                {/* Taxas Acumuladas */}
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="text-muted-foreground flex items-center gap-1"><DollarSign className="h-3 w-3" /> Taxas Acumuladas:</span>
+                  <span className="font-bold text-foreground">
+                    {formatCurrency((selectedLojista.taxas_acumuladas || 0) / 1)}
+                  </span>
+                </div>
+                {selectedLojista.data_vencimento_taxas && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Próximo débito taxas:</span>
+                    <span className="font-medium">{formatDate(selectedLojista.data_vencimento_taxas)}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Histórico de Eventos (placeholder) */}
+              {/* Histórico de Eventos Real */}
               <div className="mt-4 pt-3 border-t border-border">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
                   <Clock className="h-3 w-3" /> Histórico de Eventos
                 </h3>
-                <p className="text-xs text-muted-foreground italic">Em breve — os eventos da Stripe serão listados aqui.</p>
+                {selectedLojista.historico_assinatura && selectedLojista.historico_assinatura.length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {[...selectedLojista.historico_assinatura]
+                      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+                      .map((ev, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs">
+                          <span className="text-muted-foreground whitespace-nowrap shrink-0">
+                            {new Date(ev.data).toLocaleDateString('pt-BR')} {new Date(ev.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="text-foreground">{ev.detalhes}</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Nenhum evento registrado.</p>
+                )}
               </div>
             </div>
 

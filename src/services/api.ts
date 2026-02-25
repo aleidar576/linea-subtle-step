@@ -109,6 +109,9 @@ export interface AdminLojista {
   cpf_cnpj?: string;
   cancel_at_period_end?: boolean;
   cancel_at?: string | null;
+  taxas_acumuladas?: number;
+  data_vencimento_taxas?: string | null;
+  historico_assinatura?: Array<{ evento: string; data: string; detalhes: string }>;
 }
 
 export interface AdminStats {

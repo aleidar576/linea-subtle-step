@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +22,6 @@ const LojaAssinatura = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(() => {
@@ -31,11 +30,8 @@ const LojaAssinatura = () => {
       .catch(() => toast({ title: 'Erro', description: 'Falha ao carregar dados', variant: 'destructive' }));
   }, [toast]);
 
-  useEffect(() => {
-    fetchData().finally(() => setLoading(false));
-  }, [fetchData]);
+  useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
 
-  // Auto-refresh when user returns to this tab (e.g. after Stripe Portal)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && !loading) {
@@ -54,8 +50,6 @@ const LojaAssinatura = () => {
   }, [searchParams]);
 
   const hasSubscription = profile?.subscription_status && ['trialing', 'active', 'past_due'].includes(profile.subscription_status);
-
-  // Resolve the full plan object from the loaded plans list
   const currentPlano = planos.find(p => p._id === profile?.plano_id) || null;
 
   const handleCheckout = async (planoId: string) => {
@@ -64,25 +58,17 @@ const LojaAssinatura = () => {
         title: 'Dados incompletos',
         description: 'Complete seus dados pessoais clicando aqui para liberar a assinatura',
         variant: 'destructive',
-        action: (
-          <Button variant="outline" size="sm" onClick={() => navigate('/painel/perfil')}>
-            Completar dados
-          </Button>
-        ),
+        action: <Button variant="outline" size="sm" onClick={() => navigate('/painel/perfil')}>Completar dados</Button>,
       });
       return;
     }
-
     setCheckoutLoading(planoId);
     try {
       const { url } = await stripeApi.createCheckout(planoId);
       window.location.href = url;
     } catch (err: any) {
-      const details = err?.details || err?.message || 'Erro desconhecido';
-      toast({ title: 'Erro no checkout', description: details, variant: 'destructive' });
-    } finally {
-      setCheckoutLoading(null);
-    }
+      toast({ title: 'Erro no checkout', description: err?.details || err?.message || 'Erro desconhecido', variant: 'destructive' });
+    } finally { setCheckoutLoading(null); }
   };
 
   const handlePortal = async () => {
@@ -92,9 +78,7 @@ const LojaAssinatura = () => {
       window.open(url, '_blank');
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
-    } finally {
-      setPortalLoading(false);
-    }
+    } finally { setPortalLoading(false); }
   };
 
   const handleRefresh = async () => {
@@ -117,6 +101,12 @@ const LojaAssinatura = () => {
     const planoNome = currentPlano?.nome || profile.plano || 'Free';
     const precoPromocional = currentPlano?.preco_promocional ?? null;
     const cancelDate = profile.cancel_at || profile.data_vencimento;
+    const taxasAcumuladas = profile.taxas_acumuladas || 0;
+    const dataVencimentoTaxas = profile.data_vencimento_taxas;
+    const isTrial = profile.subscription_status === 'trialing';
+    const taxaVigente = isTrial
+      ? (currentPlano?.taxa_transacao_trial ?? 2.0)
+      : (currentPlano?.taxa_transacao_percentual ?? currentPlano?.taxa_transacao ?? 1.5);
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -125,75 +115,104 @@ const LojaAssinatura = () => {
           <h1 className="text-3xl font-bold mb-2">Sua Assinatura</h1>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-8 space-y-6">
-          {/* Plan name + status */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Plano Atual</p>
-              <p className="text-2xl font-bold">{planoNome}</p>
+        <div className="space-y-6">
+          {/* BLOCO 1: Mensalidade do Plano */}
+          <div className="bg-card border border-border rounded-xl p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Mensalidade do Plano</p>
+                <p className="text-2xl font-bold">{planoNome}</p>
+              </div>
+              <Badge className={status.className}>{status.label}</Badge>
             </div>
-            <Badge className={status.className}>{status.label}</Badge>
+
+            {precoPromocional !== null && (
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold text-foreground">
+                  R$ {precoPromocional.toFixed(2).replace('.', ',')}
+                </span>
+                <span className="text-sm text-muted-foreground">/ mês</span>
+              </div>
+            )}
+
+            {isCancelScheduled && cancelDate && (
+              <div className="flex items-center gap-3 rounded-lg bg-orange-500/10 p-4 border border-orange-300">
+                <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
+                <p className="text-sm text-orange-700 font-medium">
+                  Sua assinatura foi cancelada, mas você tem acesso garantido até{' '}
+                  <strong>{new Date(cancelDate).toLocaleDateString('pt-BR')}</strong>.
+                </p>
+              </div>
+            )}
+
+            {!isCancelScheduled && profile.subscription_status === 'past_due' && (
+              <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-4">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                <p className="text-sm text-destructive font-medium">
+                  Seu pagamento falhou. Regularize para evitar o bloqueio da sua loja.
+                </p>
+              </div>
+            )}
+
+            {!isCancelScheduled && profile.data_vencimento && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {isTrial ? 'Primeira cobrança em:' : 'Próxima renovação:'}
+                </span>
+                <span className="font-medium">{new Date(profile.data_vencimento).toLocaleDateString('pt-BR')}</span>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button onClick={handlePortal} disabled={portalLoading} className="flex-1 gap-2">
+                {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                Gerenciar Assinatura
+              </Button>
+              <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
 
-          {/* Price */}
-          {precoPromocional !== null && (
+          {/* BLOCO 2: Taxas de Transação Acumuladas */}
+          <div className="bg-card border border-border rounded-xl p-8 space-y-4">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Taxas de Transação Acumuladas</p>
+            </div>
+
+            {isTrial && (
+              <div className="flex items-center gap-2 rounded-lg bg-blue-500/10 p-3 border border-blue-300">
+                <Info className="h-4 w-4 text-blue-600 shrink-0" />
+                <p className="text-xs text-blue-700 font-medium">
+                  Taxa vigente durante o trial: <strong>{taxaVigente}%</strong> por transação.
+                </p>
+              </div>
+            )}
+
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-extrabold text-foreground">
-                R$ {precoPromocional.toFixed(2).replace('.', ',')}
-              </span>
-              <span className="text-sm text-muted-foreground">/ mês</span>
-            </div>
-          )}
-
-          {/* Scheduled cancellation warning */}
-          {isCancelScheduled && cancelDate && (
-            <div className="flex items-center gap-3 rounded-lg bg-orange-500/10 p-4 border border-orange-300">
-              <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
-              <p className="text-sm text-orange-700 font-medium">
-                Sua assinatura foi cancelada, mas você tem acesso garantido até{' '}
-                <strong>{new Date(cancelDate).toLocaleDateString('pt-BR')}</strong>.
-              </p>
-            </div>
-          )}
-
-          {/* Past due warning */}
-          {!isCancelScheduled && profile.subscription_status === 'past_due' && (
-            <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-4">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
-              <p className="text-sm text-destructive font-medium">
-                Seu pagamento falhou. Regularize para evitar o bloqueio da sua loja.
-              </p>
-            </div>
-          )}
-
-          {/* Next billing date */}
-          {!isCancelScheduled && profile.data_vencimento && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {profile.subscription_status === 'trialing' ? 'Primeira cobrança em:' : 'Próxima cobrança:'}
-              </span>
-              <span className="font-medium">{new Date(profile.data_vencimento).toLocaleDateString('pt-BR')}</span>
-            </div>
-          )}
-
-          {/* Transaction fee info */}
-          {currentPlano && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Taxa de transação:</span>
-              <span className="font-medium">
-                {profile.subscription_status === 'trialing' ? '2.0%' : `${currentPlano.taxa_transacao}%`}
+              <span className="text-2xl font-extrabold text-foreground">
+                R$ {taxasAcumuladas.toFixed(2).replace('.', ',')}
               </span>
             </div>
-          )}
 
-          <div className="flex gap-2">
-            <Button onClick={handlePortal} disabled={portalLoading} className="flex-1 gap-2">
-              {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-              Gerenciar Assinatura
-            </Button>
-            <Button variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </Button>
+            {taxasAcumuladas > 0 && dataVencimentoTaxas ? (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Será debitado do seu cartão em:</span>
+                <span className="font-medium">{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma taxa acumulada no momento.</p>
+            )}
+
+            {!isTrial && currentPlano && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Taxa por transação:</span>
+                <span className="font-medium">
+                  {taxaVigente}%{(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${currentPlano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -233,7 +252,10 @@ const LojaAssinatura = () => {
                   {plano.destaque && <Zap className="h-5 w-5 text-primary" />}
                   {plano.nome}
                 </h2>
-                <p className="text-xs text-muted-foreground mt-1">Taxa de transação: {plano.taxa_transacao}%</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Taxa de transação: {plano.taxa_transacao_percentual ?? plano.taxa_transacao}%
+                  {(plano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${plano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
+                </p>
               </div>
 
               <div>
@@ -268,11 +290,7 @@ const LojaAssinatura = () => {
                 onClick={() => handleCheckout(plano._id)}
                 disabled={checkoutLoading === plano._id}
               >
-                {checkoutLoading === plano._id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Crown className="h-4 w-4" />
-                )}
+                {checkoutLoading === plano._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
                 Começar 7 Dias Grátis
               </Button>
             </div>

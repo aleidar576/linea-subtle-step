@@ -13,5 +13,11 @@
     { "source": "/api/loja-extras", "destination": "/api/loja-extras.js" },
     { "source": "/api/cliente-auth", "destination": "/api/cliente-auth.js" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/loja-extras?scope=cron-taxas",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

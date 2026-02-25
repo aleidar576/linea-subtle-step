@@ -10,6 +10,7 @@ const Loja = require('../models/Loja.js');
 const authPkg = require('../lib/auth.js');
 const { sendEmail, getBranding, emailRastreioHtml, sendReportEmail, emailRelatorioHtml, generateReportFiles } = require('../lib/email.js');
 const Lojista = require('../models/Lojista.js');
+const Plano = require('../models/Plano.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
@@ -240,6 +241,36 @@ module.exports = async function handler(req, res) {
       pedido.status = novoStatus;
       if (novoStatus === 'pago') pedido.pagamento = { ...pedido.pagamento, pago_em: new Date() };
       await pedido.save();
+
+      // === ACUMULAR TAXAS quando pedido muda para pago ===
+      if (novoStatus === 'pago' && pedido.total > 0) {
+        try {
+          const lojaDoc = await Loja.findById(pedido.loja_id).select('lojista_id').lean();
+          if (lojaDoc) {
+            const lojistaDoc = await Lojista.findById(lojaDoc.lojista_id);
+            if (lojistaDoc && lojistaDoc.plano_id) {
+              const plano = await Plano.findById(lojistaDoc.plano_id).lean();
+              if (plano) {
+                const taxaPercentual = lojistaDoc.subscription_status === 'trialing'
+                  ? (plano.taxa_transacao_trial || 2.0)
+                  : (plano.taxa_transacao_percentual || plano.taxa_transacao || 1.5);
+                const taxaFixa = plano.taxa_transacao_fixa || 0;
+                const valorTaxa = (pedido.total * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
+                // Arredondar para 2 casas decimais
+                const valorTaxaArredondado = Math.round(valorTaxa * 100) / 100;
+                lojistaDoc.taxas_acumuladas = (lojistaDoc.taxas_acumuladas || 0) + valorTaxaArredondado;
+                if (!lojistaDoc.data_vencimento_taxas) {
+                  lojistaDoc.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                }
+                await lojistaDoc.save();
+                console.log(`[PEDIDO] Taxa acumulada: R$ ${valorTaxaArredondado.toFixed(2)} para lojista ${lojistaDoc.email} (total acumulado: R$ ${lojistaDoc.taxas_acumuladas.toFixed(2)})`);
+              }
+            }
+          }
+        } catch (taxErr) {
+          console.error('[PEDIDO] Erro ao acumular taxa:', taxErr.message);
+        }
+      }
 
       // Marcar carrinho como convertido se pago
       if (novoStatus === 'pago' && pedido.pagamento?.txid) {
