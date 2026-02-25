@@ -275,17 +275,32 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // === customer.subscription.updated ===
+      // === customer.subscription.updated (UPGRADES / DOWNGRADES / STATUS) ===
       if (event.type === 'customer.subscription.updated') {
         const sub = event.data.object;
         const customerId = sub.customer;
-        console.log(`[STRIPE-WEBHOOK] 📋 customer.subscription.updated — customerId=${customerId}, status=${sub.status}`);
+        const newPriceId = sub.items?.data?.[0]?.price?.id || null;
+        console.log(`[STRIPE-WEBHOOK] 📋 customer.subscription.updated — customerId=${customerId}, status=${sub.status}, priceId=${newPriceId}`);
         const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
         if (lojista) {
           lojista.subscription_status = sub.status;
           if (sub.current_period_end) {
             lojista.data_vencimento = new Date(sub.current_period_end * 1000);
           }
+
+          // Resolve plano dinamicamente pelo price_id da Stripe
+          if (newPriceId) {
+            const Plano = require('../models/Plano.js');
+            const planoEncontrado = await Plano.findOne({ stripe_price_id: newPriceId, is_active: true });
+            if (planoEncontrado) {
+              lojista.plano_id = planoEncontrado._id;
+              lojista.plano = planoEncontrado.nome.toLowerCase();
+              console.log(`[STRIPE-WEBHOOK] 🔄 Plano atualizado para "${planoEncontrado.nome}" (${planoEncontrado._id}) via upgrade/downgrade`);
+            } else {
+              console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum plano encontrado com stripe_price_id=${newPriceId}`);
+            }
+          }
+
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para ${sub.status}`);
         }
