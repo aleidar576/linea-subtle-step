@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, Send, Eye, EyeOff, CheckCircle2, XCircle, HardDrive, Mail } from 'lucide-react';
+import { Loader2, Save, Send, Eye, EyeOff, CheckCircle2, XCircle, HardDrive, Mail, Webhook, Copy } from 'lucide-react';
 
 const AdminIntegracoes = () => {
   const { toast } = useToast();
@@ -164,6 +164,40 @@ const AdminIntegracoes = () => {
             </Button>
             {bunnyStatus === 'ok' && <span className="text-sm text-primary flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> Conectado</span>}
             {bunnyStatus === 'error' && <span className="text-sm text-destructive flex items-center gap-1"><XCircle className="h-4 w-4" /> Falha na conexão</span>}
+          </div>
+        </div>
+
+        {/* Integração Stripe (Webhooks) */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Webhook className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-lg">Integração Stripe (Webhooks)</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Configure esta URL no painel de desenvolvedores da Stripe para receber notificações de assinaturas e pagamentos.</p>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">URL do Webhook</label>
+            <div className="flex gap-2">
+              <Input value={`${window.location.origin}/api/loja-extras?scope=stripe-webhook`} readOnly className="font-mono text-xs" />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/api/loja-extras?scope=stripe-webhook`);
+                  toast({ title: 'URL copiada!' });
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Cole esta URL no painel de desenvolvedores da Stripe e assine os eventos:{' '}
+              <code className="bg-muted px-1 rounded">checkout.session.completed</code>,{' '}
+              <code className="bg-muted px-1 rounded">invoice.payment_succeeded</code>,{' '}
+              <code className="bg-muted px-1 rounded">invoice.payment_failed</code>,{' '}
+              <code className="bg-muted px-1 rounded">customer.subscription.updated</code> e{' '}
+              <code className="bg-muted px-1 rounded">customer.subscription.deleted</code>.
+            </p>
           </div>
         </div>
       </div>
