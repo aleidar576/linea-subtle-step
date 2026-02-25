@@ -42,6 +42,22 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// Public POST request — NO 401 interceptor (used for checkout/cart endpoints)
+async function publicPostRequest<T>(path: string, data: any): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(body.error || `Request failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
 // === Interfaces ===
 
 export interface LojistaUser {
@@ -683,7 +699,7 @@ export const pedidosApi = {
     return request<PedidosListResponse>(`/pedidos?${params.toString()}`);
   },
   getById: (id: string) => request<Pedido>(`/pedidos?scope=pedido&id=${id}`),
-  create: (data: any) => request<Pedido>('/pedidos?scope=pedido', { method: 'POST', body: JSON.stringify(data) }),
+  create: (data: any) => publicPostRequest<Pedido>('/pedidos?scope=pedido', data),
   addRastreio: (id: string, codigo: string) =>
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=rastreio`, { method: 'PATCH', body: JSON.stringify({ codigo }) }),
   addObservacao: (id: string, texto: string) =>
@@ -696,7 +712,7 @@ export const pedidosApi = {
 
 export const carrinhosApi = {
   list: (lojaId: string) => request<CarrinhoAbandonado[]>(`/pedidos?loja_id=${lojaId}&scope=carrinhos`),
-  save: (data: any) => request<CarrinhoAbandonado>('/pedidos?scope=carrinho', { method: 'POST', body: JSON.stringify(data) }),
+  save: (data: any) => publicPostRequest<CarrinhoAbandonado>('/pedidos?scope=carrinho', data),
   marcarConvertido: (id: string) => request<CarrinhoAbandonado>(`/pedidos?scope=carrinho&id=${id}`, { method: 'PATCH' }),
 };
 

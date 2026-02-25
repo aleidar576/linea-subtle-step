@@ -445,20 +445,26 @@ const LojaCheckout = () => {
       setPixData(data);
       toast.success('QR Code Pix gerado!');
 
-      pedidosApi.create({
-        loja_id: lojaId,
-        itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
-        subtotal: totalPrice,
-        desconto: discountAmount + cupomDiscountAmount + (hasFreteGratisCupom ? shippingCost : 0),
-        frete: effectiveShippingCost,
-        frete_nome: selectedFrete?.nome || null,
-        total: finalTotal,
-        cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
-        pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
-        cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
-        endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
-        utms: utmParams,
-      }).catch(e => console.warn('[PEDIDO]', e));
+      // Create order (awaited — errors don't block PIX display)
+      try {
+        await pedidosApi.create({
+          loja_id: lojaId,
+          itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
+          subtotal: totalPrice,
+          desconto: discountAmount + cupomDiscountAmount + (hasFreteGratisCupom ? shippingCost : 0),
+          frete: effectiveShippingCost,
+          frete_nome: selectedFrete?.nome || null,
+          total: finalTotal,
+          cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
+          pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
+          cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
+          endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
+          utms: utmParams,
+        });
+      } catch (pedidoErr: any) {
+        console.error('[PEDIDO] Falha ao criar pedido:', pedidoErr);
+        toast.error('Erro ao registrar pedido. O pagamento PIX foi gerado normalmente.');
+      }
 
       carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(() => {});
 

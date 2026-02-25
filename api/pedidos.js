@@ -41,56 +41,60 @@ module.exports = async function handler(req, res) {
   // ========== PÚBLICO: criar pedido e carrinho (checkout) ==========
 
   if (req.method === 'POST' && scope === 'pedido') {
-    const body = req.body;
-    if (!body.loja_id) return res.status(400).json({ error: 'loja_id obrigatório' });
+    try {
+      const body = req.body;
+      if (!body.loja_id) return res.status(400).json({ error: 'loja_id obrigatório' });
 
-    // Auto-increment numero
-    const lastPedido = await Pedido.findOne({ loja_id: body.loja_id }).sort({ numero: -1 }).select('numero').lean();
-    const numero = (lastPedido?.numero || 0) + 1;
+      // Auto-increment numero
+      const lastPedido = await Pedido.findOne({ loja_id: body.loja_id }).sort({ numero: -1 }).select('numero').lean();
+      const numero = (lastPedido?.numero || 0) + 1;
 
-    // Upsert cliente
-    let cliente_id = null;
-    if (body.cliente?.email) {
-      let cliente = await Cliente.findOne({ loja_id: body.loja_id, email: body.cliente.email });
-      if (!cliente) {
-        // Censurar nome parcialmente se loja não exige cadastro
-        const censurado = !body.exigir_cadastro;
-        cliente = await Cliente.create({
-          loja_id: body.loja_id,
-          nome: body.cliente.nome || '',
-          email: body.cliente.email,
-          telefone: body.cliente.telefone || '',
-          cpf: body.cliente.cpf || '',
-          censurado,
-          total_pedidos: 1,
-          total_gasto: body.total || 0,
-        });
-      } else {
-        cliente.total_pedidos += 1;
-        cliente.total_gasto += (body.total || 0);
-        await cliente.save();
+      // Upsert cliente
+      let cliente_id = null;
+      if (body.cliente?.email) {
+        let cliente = await Cliente.findOne({ loja_id: body.loja_id, email: body.cliente.email });
+        if (!cliente) {
+          const censurado = !body.exigir_cadastro;
+          cliente = await Cliente.create({
+            loja_id: body.loja_id,
+            nome: body.cliente.nome || '',
+            email: body.cliente.email,
+            telefone: body.cliente.telefone || '',
+            cpf: body.cliente.cpf || '',
+            censurado,
+            total_pedidos: 1,
+            total_gasto: body.total || 0,
+          });
+        } else {
+          cliente.total_pedidos += 1;
+          cliente.total_gasto += (body.total || 0);
+          await cliente.save();
+        }
+        cliente_id = cliente._id;
       }
-      cliente_id = cliente._id;
+
+      const pedido = await Pedido.create({
+        numero,
+        loja_id: body.loja_id,
+        cliente_id,
+        itens: body.itens || [],
+        subtotal: body.subtotal || 0,
+        desconto: body.desconto || 0,
+        frete: body.frete || 0,
+        total: body.total || 0,
+        cupom: body.cupom || null,
+        status: 'pendente',
+        pagamento: body.pagamento || { metodo: 'pix', txid: null, pix_code: null, pago_em: null },
+        cliente: body.cliente || {},
+        endereco: body.endereco || null,
+        utms: body.utms || {},
+      });
+
+      return res.status(201).json(pedido);
+    } catch (err) {
+      console.error('[PEDIDO] Erro ao criar pedido:', err.message);
+      return res.status(500).json({ error: 'Erro ao criar pedido', details: err.message });
     }
-
-    const pedido = await Pedido.create({
-      numero,
-      loja_id: body.loja_id,
-      cliente_id,
-      itens: body.itens || [],
-      subtotal: body.subtotal || 0,
-      desconto: body.desconto || 0,
-      frete: body.frete || 0,
-      total: body.total || 0,
-      cupom: body.cupom || null,
-      status: 'pendente',
-      pagamento: body.pagamento || { metodo: 'pix', txid: null, pix_code: null, pago_em: null },
-      cliente: body.cliente || {},
-      endereco: body.endereco || null,
-      utms: body.utms || {},
-    });
-
-    return res.status(201).json(pedido);
   }
 
   if (req.method === 'POST' && scope === 'carrinho') {
