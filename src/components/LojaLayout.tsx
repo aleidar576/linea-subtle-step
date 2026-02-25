@@ -610,23 +610,23 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     );
   }
 
-  if (isError || !loja) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-4">
-        <Store className="h-16 w-16 text-muted-foreground" />
-        <h1 className="text-2xl font-bold text-foreground">Loja não encontrada</h1>
-        <p className="text-muted-foreground">Verifique o endereço e tente novamente.</p>
-      </div>
-    );
-  }
-
-  // White-label blocking: if store owner is delinquent/blocked, show blank page
-  if ((loja as any).is_blocked) {
+  // White-label blocking: if store owner is delinquent/blocked, show blank page (NO branding)
+  if ((loja as any)?.is_blocked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-foreground text-lg font-medium text-center px-4">
           Regularize seu plano para continuar a vender.
         </p>
+      </div>
+    );
+  }
+
+  if (isError || !loja || (loja as any)?.offline) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-4">
+        <Store className="h-16 w-16 text-muted-foreground" />
+        <h1 className="text-2xl font-bold text-foreground">Loja não encontrada</h1>
+        <p className="text-muted-foreground">Verifique o endereço e tente novamente.</p>
       </div>
     );
   }
