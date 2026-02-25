@@ -182,7 +182,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Regra de ouro legada
-    if (dono && dono.plano === 'free' && !dono.modo_amigo && !dono.ignorar_inadimplencia && !loja.ativada_por_admin && !dono.subscription_status) {
+    if (dono && dono.plano === 'free' && !dono.modo_amigo && !dono.ignorar_inadimplencia && !loja.ativada_por_admin && !dono.subscription_status && !dono.liberar_visualizacao_subdominio) {
       return res.status(403).json({ error: 'Loja Offline', offline: true });
     }
 
