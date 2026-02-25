@@ -6,6 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 
+const STATUS_MAP: Record<string, { label: string; className: string }> = {
+  trialing: { label: 'Trial Ativo', className: 'bg-blue-500/10 text-blue-600' },
+  active: { label: 'Ativa', className: 'bg-green-500/10 text-green-600' },
+  past_due: { label: 'Atrasada', className: 'bg-destructive/10 text-destructive' },
+  canceled: { label: 'Cancelada', className: 'bg-muted text-muted-foreground' },
+};
+
 const LojaAssinatura = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [profile, setProfile] = useState<LojistaProfile | null>(null);
@@ -30,6 +37,9 @@ const LojaAssinatura = () => {
   }, [searchParams]);
 
   const hasSubscription = profile?.subscription_status && ['trialing', 'active', 'past_due'].includes(profile.subscription_status);
+
+  // Resolve the full plan object from the loaded plans list
+  const currentPlano = planos.find(p => p._id === profile?.plano_id) || null;
 
   const handleCheckout = async (planoId: string) => {
     if (!profile?.cpf_cnpj || !profile?.telefone) {
@@ -76,16 +86,9 @@ const LojaAssinatura = () => {
 
   // === ACTIVE SUBSCRIPTION VIEW ===
   if (hasSubscription && profile) {
-    const statusLabels: Record<string, string> = {
-      trialing: 'Trial Ativo',
-      active: 'Ativo',
-      past_due: 'Pagamento Pendente',
-    };
-    const statusColors: Record<string, string> = {
-      trialing: 'bg-blue-500/10 text-blue-600',
-      active: 'bg-green-500/10 text-green-600',
-      past_due: 'bg-destructive/10 text-destructive',
-    };
+    const status = STATUS_MAP[profile.subscription_status!] || { label: profile.subscription_status, className: '' };
+    const planoNome = currentPlano?.nome || profile.plano || 'Free';
+    const precoPromocional = currentPlano?.preco_promocional ?? null;
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -95,16 +98,26 @@ const LojaAssinatura = () => {
         </div>
 
         <div className="bg-card border border-border rounded-xl p-8 space-y-6">
+          {/* Plan name + status */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Plano Atual</p>
-              <p className="text-2xl font-bold capitalize">{profile.plano}</p>
+              <p className="text-2xl font-bold">{planoNome}</p>
             </div>
-            <Badge className={statusColors[profile.subscription_status!] || ''}>
-              {statusLabels[profile.subscription_status!] || profile.subscription_status}
-            </Badge>
+            <Badge className={status.className}>{status.label}</Badge>
           </div>
 
+          {/* Price */}
+          {precoPromocional !== null && (
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-extrabold text-foreground">
+                R$ {precoPromocional.toFixed(2).replace('.', ',')}
+              </span>
+              <span className="text-sm text-muted-foreground">/ mês</span>
+            </div>
+          )}
+
+          {/* Past due warning */}
           {profile.subscription_status === 'past_due' && (
             <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-4">
               <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
@@ -114,12 +127,23 @@ const LojaAssinatura = () => {
             </div>
           )}
 
+          {/* Next billing date */}
           {profile.data_vencimento && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
                 {profile.subscription_status === 'trialing' ? 'Primeira cobrança em:' : 'Próxima cobrança:'}
               </span>
               <span className="font-medium">{new Date(profile.data_vencimento).toLocaleDateString('pt-BR')}</span>
+            </div>
+          )}
+
+          {/* Transaction fee info */}
+          {currentPlano && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Taxa de transação:</span>
+              <span className="font-medium">
+                {profile.subscription_status === 'trialing' ? '2.0%' : `${currentPlano.taxa_transacao}%`}
+              </span>
             </div>
           )}
 
