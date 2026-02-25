@@ -31,6 +31,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     }
 
     const err: any = new Error(body.error || `Request failed: ${res.status}`);
+    if (body.details) err.details = body.details;
     if (body.email_nao_verificado) {
       err.email_nao_verificado = true;
       err.email = body.email;

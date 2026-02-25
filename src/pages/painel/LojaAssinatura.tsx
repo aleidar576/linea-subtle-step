@@ -51,7 +51,8 @@ const LojaAssinatura = () => {
       const { url } = await stripeApi.createCheckout(planoId);
       window.location.href = url;
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      const details = err?.details || err?.message || 'Erro desconhecido';
+      toast({ title: 'Erro no checkout', description: details, variant: 'destructive' });
     } finally {
       setCheckoutLoading(null);
     }
