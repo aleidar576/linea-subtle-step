@@ -1,6 +1,6 @@
-# 🛍️ PANDORA — SaaS Multi-Loja com PIX Nativo
+# 🛍️ PANDORA — SaaS Multi-Loja com PIX, Stripe, Pixels e UTMs
 
-Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout com **PIX nativo via SealPay**, recuperação de carrinho abandonado e painel administrativo completo. Cada lojista possui sua loja pública acessível via subdomínio ou domínio customizado.
+Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout com **PIX nativo via SealPay**, **assinaturas recorrentes via Stripe**, **pixels de rastreamento multi-plataforma** (Facebook, TikTok, Google Ads, GTM), **UTMs completos**, recuperação de carrinho abandonado, **e-mails transacionais via Resend**, **CDN de imagens via Bunny.net** e painel administrativo completo. Cada lojista possui sua loja pública acessível via subdomínio ou domínio customizado.
 
 ---
 
@@ -19,15 +19,15 @@ Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout 
 | 1 | `api/admins.js` | CRUD de administradores, gestão de lojistas, impersonation, métricas |
 | 2 | `api/auth-action.ts` | Ações de autenticação (login, registro, reset) + Master Password |
 | 3 | `api/categorias.js` | Categorias de produtos por loja |
-| 4 | `api/create-pix.js` | Geração de cobranças PIX via SealPay |
-| 5 | `api/loja-extras.js` | Dados complementares da loja (banners, configs) |
+| 4 | `api/create-pix.js` | Geração de cobranças PIX via SealPay + disparo CAPI Purchase ao confirmar pagamento |
+| 5 | `api/loja-extras.js` | Stripe Checkout/Portal/Webhooks + Cupons + Fretes + Mídias + Temas + Pixels + Páginas + Leads + Upload Bunny.net |
 | 6 | `api/lojas.js` | CRUD de lojas + domínios customizados |
 | 7 | `api/lojista.js` | Perfil e gestão do lojista |
 | 8 | `api/pedidos.js` | Gestão de pedidos e status |
-| 9 | `api/pixels.ts` | Pixels de rastreamento (Facebook, TikTok) |
+| 9 | `api/pixels.ts` | Pixels de rastreamento (Facebook, TikTok, Google Ads, GTM) |
 | 10 | `api/products.ts` | CRUD consolidado de produtos (slug, toggle, listagem) |
-| 11 | `api/settings.js` | Configurações globais do SaaS + SealPay key + teste de mensagens |
-| 12 | `api/tracking-webhook.js` | Webhook de rastreamento de entregas |
+| 11 | `api/settings.js` | Configurações globais do SaaS + SealPay key + teste Resend + upload admin Bunny.net |
+| 12 | `api/tracking-webhook.js` | Webhook de rastreamento de entregas + CAPI server-side filtrado por loja_id |
 
 ---
 
@@ -83,6 +83,175 @@ O roteamento é decidido no `src/App.tsx` com base no **hostname** da requisiç�
 
 ---
 
+## 💳 Sistema de Assinaturas (Stripe)
+
+### Fluxo Completo
+
+```
+┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Lojista se  │────▶│ Escolhe plano no │────▶│ Stripe Checkout  │
+│  registra    │     │ painel /assinatura│     │ (trial 7 dias)   │
+└──────────────┘     └──────────────────┘     └────────┬────────┘
+                                                       │
+                              ┌─────────────────────────┘
+                              ▼
+                    ┌──────────────────┐
+                    │  Webhook recebe  │
+                    │  session.completed│
+                    └────────┬─────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │ subscription_status│
+                    │   = "trialing"    │
+                    └────────┬─────────┘
+                             │ (após 7 dias)
+                    ┌────────▼─────────┐
+                    │ invoice.payment   │
+                    │   _succeeded      │
+                    └────────┬─────────┘
+                             │
+                    ┌────────▼─────────┐     ┌──────────────────┐
+                    │  status = "active"│────▶│ Stripe Portal    │
+                    │  (plano ativo)    │     │ (gerenciar/cancel)│
+                    └──────────────────┘     └──────────────────┘
+```
+
+### Eventos Webhook Tratados
+
+| Evento Stripe | Ação no Sistema |
+|---|---|
+| `checkout.session.completed` | Cria assinatura, salva `stripe_customer_id`, `stripe_subscription_id`, define status `trialing` |
+| `customer.subscription.updated` | Atualiza `subscription_status`, `cancel_at_period_end`, `cancel_at`, `current_period_end` |
+| `customer.subscription.deleted` | Define `subscription_status: "canceled"`, limpa campos Stripe |
+| `invoice.payment_succeeded` | Atualiza `subscription_status: "active"`, registra `data_vencimento` |
+| `invoice.payment_failed` | Define `subscription_status: "past_due"`, envia e-mail de falha via Resend |
+
+### Cancelamento Programado
+
+Quando o lojista solicita cancelamento pelo Stripe Portal, o sistema recebe `cancel_at_period_end: true`:
+
+| Comportamento | Detalhe |
+|---|---|
+| Badge | Muda de verde "Ativa" para laranja "Cancelamento Programado" |
+| Aviso | Exibe data limite: "Sua assinatura será encerrada em DD/MM/AAAA" |
+| Próxima cobrança | Linha **ocultada** (não haverá nova cobrança) |
+| Retomada | Se o lojista clicar "Não cancelar" no Portal, webhook atualiza `cancel_at_period_end: false` |
+| Auto-refresh | `visibilitychange` listener recarrega dados ao retornar do Portal |
+
+### Campos no Model Lojista
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `plano` | String | Nome do plano ativo |
+| `plano_id` | ObjectId | Referência ao model Plano |
+| `stripe_customer_id` | String | ID do cliente no Stripe |
+| `stripe_subscription_id` | String | ID da assinatura no Stripe |
+| `subscription_status` | String | `trialing`, `active`, `past_due`, `canceled`, `incomplete` |
+| `cancel_at_period_end` | Boolean | Se o cancelamento está agendado |
+| `cancel_at` | Date | Data em que a assinatura será encerrada |
+| `current_period_end` | Date | Fim do período atual de cobrança |
+| `data_vencimento` | Date | Data da próxima cobrança |
+| `taxa_transacao` | Number | Taxa de transação (%) — 2.0 durante trial |
+
+---
+
+## 📡 Sistema de Pixels e Rastreamento
+
+### Plataformas Suportadas
+
+| Plataforma | Client-Side | Server-Side (CAPI) | Identificador |
+|---|---|---|---|
+| Facebook Pixel | ✅ `fbq()` | ✅ Conversions API | `pixel_id` + `access_token` |
+| TikTok Pixel | ✅ `ttq.track()` | ✅ Events API | `pixel_id` + `access_token` |
+| Google Ads | ✅ `gtag()` | ✅ Measurement Protocol | `pixel_id` (AW-xxx) + `access_token` + `conversion_label` |
+| Google Tag Manager | ✅ `dataLayer.push()` | ❌ | `pixel_id` (GTM-xxx) |
+
+### Eventos Suportados
+
+| Evento | Onde é Disparado |
+|---|---|
+| `PageView` | Automático em cada navegação (LojaLayout) |
+| `ViewContent` | Página do produto (LojaProduto) |
+| `AddToCart` | Botão "Adicionar ao Carrinho" |
+| `InitiateCheckout` | Página de checkout (LojaCheckout) |
+| `AddPaymentInfo` | Geração do QR Code PIX |
+| `Purchase` | Confirmação de pagamento (LojaSucesso + CAPI server-side) |
+
+### Filtros por Pixel
+
+Cada pixel pode ser configurado com filtros granulares:
+
+- **`events`**: Array de eventos que o pixel deve disparar (ex: apenas `Purchase` e `AddToCart`)
+- **`trigger_pages`**: Array de páginas onde o pixel é ativo (ex: `homepage`, `produto`, `checkout`, `categorias`)
+- **`conversion_label`**: (Google Ads) Label específico para conversões
+- **`product_ids`**: Filtro por produtos específicos (opcional)
+
+### Fluxo Client-Side
+
+```
+LojaLayout.tsx
+  └── firePixelEvent(event, data)
+        ├── Facebook: fbq('track', event, data)
+        ├── TikTok: ttq.track(event, data)
+        ├── Google Ads: gtag('event', 'conversion', { send_to: 'AW-xxx/label' })
+        └── GTM: dataLayer.push({ event, ...data })
+```
+
+### Fluxo Server-Side (CAPI)
+
+```
+api/create-pix.js (webhook PIX confirmado)
+  └── POST /api/tracking-webhook
+        └── Para cada pixel ativo da loja (filtrado por loja_id):
+              ├── Facebook: POST graph.facebook.com/.../events (Purchase)
+              ├── TikTok: POST business-api.tiktok.com/open_api/.../batch/ (CompletePayment)
+              └── Google Ads: POST google-analytics.com/mp/collect (purchase)
+```
+
+---
+
+## 🔗 UTMs e Atribuição de Marketing
+
+### Parâmetros Capturados
+
+| Parâmetro | Origem | Descrição |
+|---|---|---|
+| `utm_source` | URL | Fonte do tráfego (google, facebook, etc.) |
+| `utm_medium` | URL | Meio (cpc, email, social, etc.) |
+| `utm_campaign` | URL | Nome da campanha |
+| `utm_term` | URL | Palavra-chave paga |
+| `utm_content` | URL | Variação do anúncio |
+| `utm_id` | URL | ID da campanha |
+| `fbclid` | URL | Facebook Click ID |
+| `gclid` | URL | Google Click ID |
+| `ttclid` | URL | TikTok Click ID |
+| `src` | URL | Fonte alternativa |
+| `ref` | URL | Referência alternativa |
+
+### Onde os UTMs São Salvos
+
+| Local | Campos Salvos |
+|---|---|
+| Pedidos (`Pedido`) | `utm` (objeto completo), `src`, `fbp`, `fbc`, `gclid`, `ttclid`, `user_agent` |
+| Carrinhos Abandonados | `utm` (objeto completo) |
+| Payload PIX (SealPay) | `metadata.utm_*` |
+| Cookies do navegador | `_fbp`, `_fbc` (lidos pelo hook) |
+| `sessionStorage` | Todos os parâmetros UTM (persistidos entre navegações) |
+
+### Hook `useUtmParams`
+
+- Captura UTMs da URL na primeira visita
+- Persiste em `sessionStorage` para manter entre navegações SPA
+- `navigateWithUtm(url)` — adiciona UTMs salvos à URL de destino
+- `getUtmForApi()` — retorna UTMs para envio em chamadas de API
+
+### Hook `useTrackingData`
+
+- `getTrackingPayload()` — retorna objeto com `utm`, `src`, `fbp`, `fbc`, `ttclid`, `gclid`, `user_agent`
+- Lê cookies `_fbp` e `_fbc` do Facebook automaticamente
+
+---
+
 ## 🌐 Configuração de DNS na Vercel
 
 ### Passo 1: Domínio Principal
@@ -111,21 +280,149 @@ Para clientes que desejam usar seu próprio domínio (ex: `www.lojacliente.com.b
 
 ---
 
+## 📧 Como Configurar o Resend (E-mails Transacionais)
+
+### Passo a Passo
+
+1. **Crie uma conta** em [resend.com](https://resend.com)
+2. **Adicione e verifique seu domínio oficial**:
+   - No painel Resend, vá em **Domains → Add Domain**
+   - Adicione os registros DNS solicitados no seu provedor:
+     - **SPF** (TXT): `v=spf1 include:_spf.resend.com ~all`
+     - **DKIM** (TXT): Registro fornecido pelo Resend
+     - **DMARC** (TXT): `v=DMARC1; p=none;` (recomendado)
+   - Aguarde a verificação (pode levar até 48h)
+3. **Crie uma API Key**:
+   - Vá em **API Keys → Create API Key**
+   - Copie a chave gerada (começa com `re_`)
+   - Adicione na Vercel como variável de ambiente: `RESEND_API_KEY`
+4. **Defina o remetente aprovado**:
+   - Adicione na Vercel: `EMAIL_FROM_ADDRESS` com o endereço do domínio verificado
+   - Exemplo: `noreply@seudominio.com`
+5. **Teste a integração**:
+   - Acesse **Admin → Integrações → Sandbox de Mensagens**
+   - Envie um e-mail de teste para validar o envio
+
+> ⚠️ **NUNCA** coloque chaves reais da API Resend no código-fonte. Use exclusivamente as variáveis de ambiente da Vercel.
+
+### Templates de E-mail do Sistema
+
+| Template | Função | Quando é Enviado |
+|---|---|---|
+| `emailVerificacaoHtml` | Verificação de e-mail | Registro de lojista ou cliente |
+| `emailRedefinicaoSenhaHtml` | Redefinição de senha | Solicitação de "Esqueci minha senha" |
+| `emailAlteracaoSenhaHtml` | Alerta de segurança | Alteração de senha (com token de segurança) |
+| `emailRastreioHtml` | Código de rastreio | Atualização de status do pedido com rastreio |
+| `emailRelatorioHtml` | Relatório exportado | Exportação de relatórios (com CSV/XLSX anexos) |
+| `emailAssinaturaTrialHtml` | Boas-vindas trial | Início do período de teste de 7 dias |
+| `emailFalhaPagamentoHtml` | Falha no pagamento | Cobrança recusada pela Stripe |
+
+Todos os templates incluem **branding dinâmico** (logo e nome da plataforma) obtidos do banco de dados.
+
+---
+
+## ☁️ Como Configurar a Bunny.net (CDN e Imagens)
+
+### Passo a Passo
+
+1. **Crie uma conta** em [bunny.net](https://bunny.net)
+2. **Crie uma Storage Zone**:
+   - No painel Bunny, vá em **Storage → Add Storage Zone**
+   - Escolha um nome (ex: `pandora-uploads`) e a região mais próxima
+3. **Copie a API Key da Storage Zone**:
+   - Dentro da Storage Zone, vá em **FTP & API Access**
+   - Copie o campo **Password** (esta é a API Key)
+   - Adicione na Vercel: `BUNNY_API_KEY`
+4. **Adicione o nome da zona**:
+   - Adicione na Vercel: `BUNNY_STORAGE_ZONE` com o nome exato da zona criada
+5. **Crie uma Pull Zone**:
+   - Vá em **CDN → Add Pull Zone**
+   - Vincule à Storage Zone criada no passo 2
+   - Copie o hostname gerado (ex: `pandora-uploads.b-cdn.net`)
+   - Adicione na Vercel: `BUNNY_PULL_ZONE`
+6. **Teste a conexão**:
+   - Acesse **Admin → Integrações → Bunny.net**
+   - Clique em **"Testar Conexão Bunny.net"** para validar
+
+> ⚠️ **NUNCA** coloque a API Key da Bunny.net no código-fonte. Use exclusivamente as variáveis de ambiente da Vercel.
+
+### Onde o Upload é Usado
+
+| Contexto | Quem Usa | O que é Enviado |
+|---|---|---|
+| Admin → Integrações | Administrador | Logo da plataforma, assets globais |
+| Painel → Mídias | Lojista | Imagens de produtos, banners da loja |
+
+### Fluxo Técnico de Upload
+
+```
+┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Frontend    │────▶│  API Serverless  │────▶│  Bunny Storage  │
+│  (FormData)  │     │  (PUT request)   │     │  Zone (upload)  │
+└──────────────┘     └──────────────────┘     └────────┬────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  Bunny Pull Zone│
+                                              │  (CDN público)  │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │  URL retornada  │
+                                              │  ao frontend    │
+                                              └─────────────────┘
+```
+
+---
+
 ## 🔑 Variáveis de Ambiente
 
 Configure **todas** as variáveis abaixo no painel da Vercel (**Settings → Environment Variables**):
 
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `MONGODB_URI` | ✅ Sim | URI de conexão ao MongoDB Atlas |
-| `JWT_SECRET` | ✅ Sim | Segredo para assinar tokens JWT de autenticação |
-| `VITE_SAAS_DOMAIN` | ✅ Sim | Domínio principal do SaaS, **sem** `https://`, **sem** `www` |
-| `VERCEL_PROJECT_ID` | ✅ Sim | ID do projeto na Vercel (usado pela API de domínios customizados) |
-| `VERCEL_ACCESS_TOKEN` | ✅ Sim | Token de acesso da Vercel com permissão de escrita |
-| `MASTER_PASSWORD` | ⚠️ Opcional | Senha mestre para acesso de suporte a qualquer conta. **⚠️ NUNCA commite no código.** Configure apenas nas env vars da Vercel |
-| `VITE_SUPABASE_URL` | ⚙️ Auto | Gerada automaticamente pelo Lovable Cloud |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | ⚙️ Auto | Gerada automaticamente pelo Lovable Cloud |
-| `VITE_SUPABASE_PROJECT_ID` | ⚙️ Auto | Gerada automaticamente pelo Lovable Cloud |
+### Obrigatórias
+
+| Variável | Descrição |
+|---|---|
+| `MONGODB_URI` | URI de conexão ao MongoDB Atlas |
+| `JWT_SECRET` | Segredo para assinar tokens JWT de autenticação |
+| `VITE_SAAS_DOMAIN` | Domínio principal do SaaS, **sem** `https://`, **sem** `www` |
+| `VERCEL_PROJECT_ID` | ID do projeto na Vercel (usado pela API de domínios customizados) |
+| `VERCEL_ACCESS_TOKEN` | Token de acesso da Vercel com permissão de escrita |
+
+### Stripe (Assinaturas)
+
+| Variável | Descrição |
+|---|---|
+| `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_live_...` ou `sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Segredo do webhook Stripe (`whsec_...`) |
+
+### Resend (E-mails)
+
+| Variável | Descrição |
+|---|---|
+| `RESEND_API_KEY` | Chave de API do Resend (`re_...`) |
+| `EMAIL_FROM_ADDRESS` | Endereço de remetente aprovado (ex: `noreply@seudominio.com`) |
+
+### Bunny.net (CDN)
+
+| Variável | Descrição |
+|---|---|
+| `BUNNY_STORAGE_ZONE` | Nome da Storage Zone criada no Bunny.net |
+| `BUNNY_API_KEY` | Senha/API Key da Storage Zone (campo Password em FTP & API Access) |
+| `BUNNY_PULL_ZONE` | Hostname da Pull Zone CDN (ex: `nome.b-cdn.net`) |
+
+### Opcionais
+
+| Variável | Descrição |
+|---|---|
+| `MASTER_PASSWORD` | Senha mestre para acesso de suporte a qualquer conta. **⚠️ NUNCA commite no código** |
+
+### Automáticas (Lovable Cloud)
+
+| Variável | Descrição |
+|---|---|
+| `VITE_SUPABASE_URL` | Gerada automaticamente |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Gerada automaticamente |
+| `VITE_SUPABASE_PROJECT_ID` | Gerada automaticamente |
 
 > **Nota:** As variáveis `VITE_*` são expostas no bundle do frontend (prefixo `VITE_`). Nunca coloque segredos sensíveis com este prefixo.
 
@@ -149,19 +446,27 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 /
 ├── api/                    # 12 Serverless Functions (Vercel) — LIMITE ATINGIDO
 ├── lib/                    # Utilitários backend (auth, mongodb, email, date-utils)
-├── models/                 # Schemas Mongoose (Product, Loja, Pedido, etc.)
+├── models/                 # Schemas Mongoose (Product, Loja, Pedido, Lojista, TrackingPixel, etc.)
 ├── public/                 # Assets estáticos (favicon, imagens de produtos)
 ├── src/
 │   ├── assets/             # Imagens do frontend (banners, logo)
 │   ├── components/         # Componentes React reutilizáveis
 │   │   ├── layout/         # Layouts (PainelLayout)
+│   │   ├── LojaLayout.tsx  # Layout white-label da loja (tema, pixels, footer, header)
 │   │   ├── SaaSBrand.tsx   # Branding dinâmico (hook + componentes)
 │   │   └── ui/             # Componentes shadcn/ui
 │   ├── contexts/           # Context API (Cart, Loja)
-│   ├── hooks/              # Custom hooks (useAuth, useProducts, useLojas, useTheme, etc.)
+│   ├── hooks/              # Custom hooks
+│   │   ├── useAuth.tsx     # Autenticação admin
+│   │   ├── useLojistaAuth.tsx # Autenticação lojista
+│   │   ├── useClienteAuth.tsx # Autenticação cliente da loja
+│   │   ├── useTracking.tsx # Contexto de pixels (SaaS-side)
+│   │   ├── useUtmParams.tsx # Captura e persistência de UTMs
+│   │   ├── useLojaExtras.tsx # CRUD de fretes, cupons, mídias, temas, pixels, páginas, leads
+│   │   └── useTheme.tsx    # Toggle light/dark mode
 │   ├── pages/              # Páginas do SaaS, Admin e Demo
-│   │   ├── loja/           # Páginas da loja pública (LojaHome, LojaProduto, etc.)
-│   │   └── painel/         # Páginas do painel do lojista
+│   │   ├── loja/           # Páginas da loja pública (LojaHome, LojaProduto, LojaCheckout, etc.)
+│   │   └── painel/         # Páginas do painel do lojista (Produtos, Pedidos, Pixels, Assinatura, etc.)
 │   ├── services/           # Camada de API (api.ts, saas-api.ts)
 │   └── integrations/       # ⚠️ Supabase (INERTE — não utilizado)
 ├── supabase/               # ⚠️ Config e functions (INERTE — auto-gerenciado)
@@ -181,8 +486,12 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 | Estado | TanStack React Query + Context API |
 | Backend | Vercel Serverless Functions (Node.js) |
 | Banco de Dados | MongoDB Atlas (via Mongoose) |
-| Pagamentos | PIX nativo via SealPay API |
-| Autenticação | JWT customizado (lib/auth.js) + Master Password |
+| Pagamentos PIX | PIX nativo via SealPay API |
+| Assinaturas | Stripe (Checkout + Webhooks + Customer Portal) |
+| E-mails | Resend (templates transacionais com branding dinâmico) |
+| CDN / Imagens | Bunny.net (Storage Zone + Pull Zone) |
+| Rastreamento | Facebook Pixel, TikTok Pixel, Google Ads, GTM (client + server-side CAPI) |
+| Autenticação | JWT customizado (lib/auth.js) + Master Password + 2FA (speakeasy) |
 | Deploy | Vercel (com Wildcard DNS) |
 
 ---
@@ -218,3 +527,6 @@ O servidor iniciará em `http://localhost:8080`. Como `localhost` é reconhecido
 | 7 | Refatoração de roteamento (env vars) + Documentação Mestra | ✅ Concluído |
 | 8 | Theme Toggle (Light/Dark), Notificações, Auth Premium | ✅ Concluído |
 | 9 | Branding Dinâmico, Correção de Contraste, Impersonation, Master Password | ✅ Concluído |
+| 10 | Sistema de Assinaturas Stripe (Checkout, Portal, Webhooks, Trial 7 dias) | ✅ Concluído |
+| 11 | Pixels multi-plataforma (FB, TikTok, GAds, GTM) + CAPI server-side + filtro por loja_id | ✅ Concluído |
+| 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net | ✅ Concluído |
