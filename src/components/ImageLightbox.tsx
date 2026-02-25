@@ -14,6 +14,11 @@ export const ImageLightbox = ({ images, initialIndex = 0, open, onClose }: Image
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // Delayed close to prevent ghost-click from hitting elements underneath (e.g. Drawer)
+  const safeClose = () => {
+    setTimeout(() => onClose(), 50);
+  };
+
   useEffect(() => {
     if (open) setCurrent(initialIndex);
   }, [open, initialIndex]);
@@ -53,11 +58,12 @@ export const ImageLightbox = ({ images, initialIndex = 0, open, onClose }: Image
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
-          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); safeClose(); }}
         >
           {/* Close button */}
           <button
-            onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); safeClose(); }}
+            onPointerUp={(e) => { e.stopPropagation(); }}
             className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm transition-colors hover:bg-white/25"
           >
             <X className="h-6 w-6 text-white" />
