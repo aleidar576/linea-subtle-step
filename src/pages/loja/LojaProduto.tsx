@@ -844,8 +844,8 @@ const LojaProduto = () => {
             </button>
           </div>
 
-          <DrawerContent>
-            <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+          <DrawerContent className="[&>*]:[-webkit-font-smoothing:antialiased] [&>*]:[backface-visibility:hidden]">
+            <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto" style={{ transform: 'translateZ(0)', willChange: 'auto' }}>
               <div className="flex items-start gap-3">
                 <img src={images[currentImage] || product.image} alt="" className="w-20 h-20 rounded-lg object-cover shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -880,7 +880,7 @@ const LojaProduto = () => {
                         {v.imagem && (
                           <button
                             onClick={(e) => { e.stopPropagation(); openSingleLightbox(v.imagem!); }}
-                            className="absolute top-1 left-1 h-5 w-5 flex items-center justify-center rounded-full bg-background/80 shadow-sm backdrop-blur-sm"
+                            className="absolute top-1 left-1 h-5 w-5 flex items-center justify-center rounded-full bg-background/80 shadow-sm"
                           >
                             <Maximize2 className="h-3 w-3 text-foreground" />
                           </button>
