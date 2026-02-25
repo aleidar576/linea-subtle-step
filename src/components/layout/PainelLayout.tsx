@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
-import { lojistaApi, type LojistaProfile } from '@/services/saas-api';
+import { lojistaApi, planosApi, type LojistaProfile, type Plano } from '@/services/saas-api';
 import { useLojas, useCreateLoja } from '@/hooks/useLojas';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
@@ -60,12 +60,15 @@ const PainelLayout = () => {
   const [emailPrefs, setEmailPrefs] = useState({ pedidos_pendentes: false, pedidos_pagos: false });
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [lojistaProfile, setLojistaProfile] = useState<LojistaProfile | null>(null);
+  const [planosList, setPlanosList] = useState<Plano[]>([]);
   const { toast } = useToast();
   useFaviconUpdater();
 
-  // Fetch profile for subscription banners
+  // Fetch profile + plans for subscription banners & plan name resolution
   useEffect(() => {
-    lojistaApi.perfil().then(setLojistaProfile).catch(() => {});
+    Promise.all([lojistaApi.perfil(), planosApi.list()])
+      .then(([prof, pl]) => { setLojistaProfile(prof); setPlanosList(pl); })
+      .catch(() => {});
   }, []);
 
   // Dynamic title: {nomeLoja} · {menu} · {brandName} or Painel · {brandName}
@@ -215,7 +218,12 @@ const PainelLayout = () => {
                     {user?.modo_amigo ? (
                       <span className="inline-flex items-center gap-1 text-green-500 font-semibold">VIP</span>
                     ) : (
-                      <span className="capitalize">{user?.plano || 'Free'}</span>
+                      <span>{(() => {
+                        const resolvedPlano = lojistaProfile?.plano_id
+                          ? planosList.find(p => p._id === lojistaProfile.plano_id)
+                          : null;
+                        return resolvedPlano?.nome || 'Free';
+                      })()}</span>
                     )}
                   </div>
                 </div>
