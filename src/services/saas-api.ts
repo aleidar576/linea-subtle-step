@@ -310,6 +310,8 @@ export interface LojistaProfile {
   acesso_bloqueado?: boolean;
   plano_id?: string | null;
   data_vencimento?: string | null;
+  cancel_at_period_end?: boolean;
+  cancel_at?: string | null;
 }
 
 // === Product types (lojista) ===

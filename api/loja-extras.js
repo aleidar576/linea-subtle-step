@@ -270,6 +270,8 @@ module.exports = async function handler(req, res) {
           lojista.plano = 'free';
           lojista.plano_id = null;
           lojista.stripe_subscription_id = null;
+          lojista.cancel_at_period_end = false;
+          lojista.cancel_at = null;
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} cancelado, revertido para free`);
         }
@@ -300,6 +302,11 @@ module.exports = async function handler(req, res) {
               console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum plano encontrado com stripe_price_id=${newPriceId}`);
             }
           }
+
+          // Extrair flags de cancelamento programado
+          lojista.cancel_at_period_end = sub.cancel_at_period_end || false;
+          lojista.cancel_at = sub.cancel_at ? new Date(sub.cancel_at * 1000) : null;
+          console.log(`[STRIPE-WEBHOOK] 📋 cancel_at_period_end=${lojista.cancel_at_period_end}, cancel_at=${lojista.cancel_at}`);
 
           await lojista.save();
           console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para ${sub.status}`);
