@@ -458,6 +458,18 @@ const LojaPedidos = () => {
                   />
                   <p className="text-xs text-muted-foreground mt-1">Salvo automaticamente</p>
                 </div>
+
+                {/* UTMs */}
+                {selectedPedido.utms && Object.keys(selectedPedido.utms).length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-1"><Tag className="h-4 w-4" /> UTMs</h4>
+                    <div className="text-xs space-y-1 font-mono">
+                      {Object.entries(selectedPedido.utms).map(([k, v]) => (
+                        <p key={k}><span className="text-muted-foreground">{k}:</span> {String(v)}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

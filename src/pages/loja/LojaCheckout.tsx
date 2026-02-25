@@ -11,6 +11,7 @@ import { firePixelEvent } from '@/components/LojaLayout';
 import { pedidosApi, carrinhosApi, cuponsApi } from '@/services/saas-api';
 import { useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';
 import { useClienteAuth } from '@/hooks/useClienteAuth';
+import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { toast } from 'sonner';
 
 function formatPrice(cents: number) {
@@ -351,7 +352,7 @@ const LojaCheckout = () => {
     total: finalTotal,
     cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
     endereco: etapa !== 'customer' ? { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state } : null,
-    utms: {},
+    utms: getSavedUtmParams(),
   });
 
   const goNext = () => {
@@ -399,6 +400,15 @@ const LojaCheckout = () => {
     firePixelEvent('AddPaymentInfo', { value: finalTotal / 100, currency: 'BRL', num_items: items.reduce((s, i) => s + i.quantity, 0) });
     try {
       const desc = items.map(i => `${i.product.name} x${i.quantity}`).join(', ');
+      const utmParams = getSavedUtmParams();
+      const getCookie = (name: string): string => {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : '';
+      };
+      const utm: Record<string, string> = {};
+      Object.entries(utmParams).forEach(([key, value]) => {
+        if (key.startsWith('utm_')) utm[key] = value;
+      });
       const r = await fetch('/api/create-pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -407,6 +417,10 @@ const LojaCheckout = () => {
           description: desc,
           customer: { name: customerData.name, email: customerData.email, cellphone: customerData.cellphone, taxId: customerData.taxId },
           loja_id: lojaId,
+          tracking: { utm, src: utmParams.src || window.location.href },
+          fbp: getCookie('_fbp'),
+          fbc: getCookie('_fbc') || utmParams.fbclid || '',
+          user_agent: navigator.userAgent,
         }),
       });
       const data = await r.json();
@@ -426,7 +440,7 @@ const LojaCheckout = () => {
         pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
         cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
         endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
-        utms: {},
+        utms: utmParams,
       }).catch(e => console.warn('[PEDIDO]', e));
 
       carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(() => {});
