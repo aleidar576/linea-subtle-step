@@ -445,28 +445,41 @@ const LojaCheckout = () => {
       setPixData(data);
       toast.success('QR Code Pix gerado!');
 
-      // Create order (awaited — errors don't block PIX display)
+      // Create order with retry + fallback
+      const pedidoPayload = {
+        loja_id: lojaId,
+        itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
+        subtotal: totalPrice,
+        desconto: discountAmount + cupomDiscountAmount + (hasFreteGratisCupom ? shippingCost : 0),
+        frete: effectiveShippingCost,
+        frete_nome: selectedFrete?.nome || null,
+        total: finalTotal,
+        cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
+        pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
+        cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
+        endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
+        utms: utmParams,
+      };
       try {
-        await pedidosApi.create({
-          loja_id: lojaId,
-          itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
-          subtotal: totalPrice,
-          desconto: discountAmount + cupomDiscountAmount + (hasFreteGratisCupom ? shippingCost : 0),
-          frete: effectiveShippingCost,
-          frete_nome: selectedFrete?.nome || null,
-          total: finalTotal,
-          cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
-          pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
-          cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
-          endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
-          utms: utmParams,
-        });
-      } catch (pedidoErr: any) {
-        console.error('[PEDIDO] Falha ao criar pedido:', pedidoErr);
-        toast.error('Erro ao registrar pedido. O pagamento PIX foi gerado normalmente.');
+        await pedidosApi.create(pedidoPayload);
+        console.log('[PEDIDO] Criado com sucesso');
+      } catch (firstErr) {
+        console.warn('[PEDIDO] Primeira tentativa falhou, retentando...', firstErr);
+        try {
+          const retryRes = await fetch('/api/pedidos?scope=pedido', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pedidoPayload),
+          });
+          if (!retryRes.ok) throw new Error('Retry falhou');
+          console.log('[PEDIDO] Criado no retry');
+        } catch (retryErr) {
+          console.error('[PEDIDO] Falha total:', retryErr);
+          toast.error('Erro ao registrar pedido. O pagamento PIX foi gerado normalmente.');
+        }
       }
 
-      carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(() => {});
+      carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(e => console.error('[CARRINHO]', e));
 
       // Clean up redeemed coupons from localStorage after order
       cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
