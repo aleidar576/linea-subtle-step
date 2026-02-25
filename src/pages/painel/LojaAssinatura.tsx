@@ -110,9 +110,13 @@ const LojaAssinatura = () => {
 
   // === ACTIVE SUBSCRIPTION VIEW ===
   if (hasSubscription && profile) {
-    const status = STATUS_MAP[profile.subscription_status!] || { label: profile.subscription_status, className: '' };
+    const isCancelScheduled = profile.cancel_at_period_end === true;
+    const status = isCancelScheduled
+      ? { label: 'Cancelamento Programado', className: 'bg-orange-500/10 text-orange-600 border-orange-300' }
+      : STATUS_MAP[profile.subscription_status!] || { label: profile.subscription_status, className: '' };
     const planoNome = currentPlano?.nome || profile.plano || 'Free';
     const precoPromocional = currentPlano?.preco_promocional ?? null;
+    const cancelDate = profile.cancel_at || profile.data_vencimento;
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -141,8 +145,19 @@ const LojaAssinatura = () => {
             </div>
           )}
 
+          {/* Scheduled cancellation warning */}
+          {isCancelScheduled && cancelDate && (
+            <div className="flex items-center gap-3 rounded-lg bg-orange-500/10 p-4 border border-orange-300">
+              <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
+              <p className="text-sm text-orange-700 font-medium">
+                Sua assinatura foi cancelada, mas você tem acesso garantido até{' '}
+                <strong>{new Date(cancelDate).toLocaleDateString('pt-BR')}</strong>.
+              </p>
+            </div>
+          )}
+
           {/* Past due warning */}
-          {profile.subscription_status === 'past_due' && (
+          {!isCancelScheduled && profile.subscription_status === 'past_due' && (
             <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-4">
               <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
               <p className="text-sm text-destructive font-medium">

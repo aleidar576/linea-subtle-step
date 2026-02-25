@@ -309,18 +309,31 @@ const AdminLojistas = () => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status na Stripe:</span>
                   {selectedLojista.subscription_status ? (
-                    <Badge className={
-                      selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' :
-                      selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' :
-                      selectedLojista.subscription_status === 'past_due' ? 'bg-yellow-500/10 text-yellow-600' :
-                      'bg-destructive/10 text-destructive'
-                    }>
-                      {selectedLojista.subscription_status}
-                    </Badge>
+                    selectedLojista.cancel_at_period_end ? (
+                      <Badge className="bg-orange-500/10 text-orange-600 border-orange-300">
+                        Cancelamento Programado
+                      </Badge>
+                    ) : (
+                      <Badge className={
+                        selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' :
+                        selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' :
+                        selectedLojista.subscription_status === 'past_due' ? 'bg-yellow-500/10 text-yellow-600' :
+                        'bg-destructive/10 text-destructive'
+                      }>
+                        {selectedLojista.subscription_status}
+                      </Badge>
+                    )
                   ) : (
                     <span className="text-muted-foreground italic">Sem assinatura</span>
                   )}
                 </div>
+                {selectedLojista.cancel_at_period_end && (selectedLojista.cancel_at || selectedLojista.data_vencimento) && (
+                  <div className="flex items-center gap-2 rounded-lg bg-orange-500/10 p-2 border border-orange-300 mt-1">
+                    <span className="text-xs text-orange-700 font-medium">
+                      Acesso até {new Date(selectedLojista.cancel_at || selectedLojista.data_vencimento!).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Customer ID:</span>
                   <span className="font-mono text-xs truncate max-w-[200px]">{selectedLojista.stripe_customer_id || '—'}</span>

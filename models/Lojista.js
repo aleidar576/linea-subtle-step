@@ -41,6 +41,8 @@ const LojistaSchema = new mongoose.Schema({
     },
     default: { pedidos_pendentes: false, pedidos_pagos: false, alteracao_senha: true },
   },
+  cancel_at_period_end: { type: Boolean, default: false },
+  cancel_at: { type: Date, default: null },
   security_token: { type: String, default: null },
   criado_em: { type: Date, default: () => nowGMT3() },
 });

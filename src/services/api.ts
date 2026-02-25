@@ -107,6 +107,8 @@ export interface AdminLojista {
   stripe_subscription_id?: string | null;
   plano_id?: string | null;
   cpf_cnpj?: string;
+  cancel_at_period_end?: boolean;
+  cancel_at?: string | null;
 }
 
 export interface AdminStats {
