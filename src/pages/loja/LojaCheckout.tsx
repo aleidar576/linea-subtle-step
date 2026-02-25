@@ -376,6 +376,7 @@ const LojaCheckout = () => {
     if (currentStep === 'customer' && validate('customer')) {
       carrinhosApi.save(buildCartData('customer')).catch(() => {});
       setCurrentStep('shipping');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentStep === 'shipping') {
       if (!validate('shipping')) return;
       if (activeFretes.length > 0 && !selectedFrete) {
@@ -384,6 +385,7 @@ const LojaCheckout = () => {
       }
       carrinhosApi.save(buildCartData('shipping')).catch(() => {});
       setCurrentStep('payment');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -692,7 +694,7 @@ const LojaCheckout = () => {
                 <Button variant="outline" className="w-full rounded-full font-bold justify-start gap-2" onClick={() => navigate('/conta/registro?redirect=/checkout')}>
                   <UserPlus className="h-4 w-4" /> Criar uma conta
                 </Button>
-                <button onClick={() => setCurrentStep('customer')} className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+                <button onClick={() => { setCurrentStep('customer'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
                   Continuar sem cadastro →
                 </button>
               </div>
@@ -809,7 +811,7 @@ const LojaCheckout = () => {
 
                 <div className="lg:hidden">{orderSummaryJSX}</div>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setCurrentStep('customer')} className="flex-1 rounded-full">Voltar</Button>
+                  <Button variant="outline" onClick={() => { setCurrentStep('customer'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 rounded-full">Voltar</Button>
                   <Button onClick={goNext} className="flex-1 rounded-full font-bold bg-primary hover:bg-primary/90">Continuar <ChevronRight className="h-4 w-4 ml-1" /></Button>
                 </div>
               </div>
@@ -824,7 +826,7 @@ const LojaCheckout = () => {
                 <div className="lg:hidden">{orderSummaryJSX}</div>
 
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setCurrentStep('shipping')} className="flex-1 rounded-full">Voltar</Button>
+                  <Button variant="outline" onClick={() => { setCurrentStep('shipping'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 rounded-full">Voltar</Button>
                   <Button onClick={handleGeneratePix} disabled={isLoading} className="flex-1 gap-2 rounded-full font-bold">
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Gerar PIX
                   </Button>
