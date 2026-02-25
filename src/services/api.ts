@@ -103,6 +103,9 @@ export interface AdminLojista {
   qtd_lojas: number;
   acesso_bloqueado: boolean;
   subscription_status?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  plano_id?: string | null;
   cpf_cnpj?: string;
 }
 

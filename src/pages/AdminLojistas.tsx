@@ -5,7 +5,8 @@ import { platformApi } from '@/services/saas-api';
 import { useToast } from '@/hooks/use-toast';
 import {
   Store, Loader2, Ban, CheckCircle2, Crown, Eye,
-  ExternalLink, Package, ShoppingCart, DollarSign, ArrowDown, Power, Globe, ArrowLeft, ShieldOff
+  ExternalLink, Package, ShoppingCart, DollarSign, ArrowDown, Power, Globe, ArrowLeft, ShieldOff,
+  CreditCard, CalendarDays, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -284,6 +285,54 @@ const AdminLojistas = () => {
                 {impersonating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
                 Aceder à Loja (Suporte)
               </Button>
+            </div>
+
+            {/* Raio-X da Assinatura */}
+            <div className="bg-card border border-border rounded-xl p-6 space-y-3">
+              <h2 className="font-semibold flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" /> Raio-X da Assinatura
+              </h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Plano Atual:</span>
+                  <span className="font-medium capitalize">{selectedLojista.plano || 'free'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status na Stripe:</span>
+                  {selectedLojista.subscription_status ? (
+                    <Badge className={
+                      selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' :
+                      selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' :
+                      selectedLojista.subscription_status === 'past_due' ? 'bg-yellow-500/10 text-yellow-600' :
+                      'bg-destructive/10 text-destructive'
+                    }>
+                      {selectedLojista.subscription_status}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground italic">Sem assinatura</span>
+                  )}
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Customer ID:</span>
+                  <span className="font-mono text-xs truncate max-w-[200px]">{selectedLojista.stripe_customer_id || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subscription ID:</span>
+                  <span className="font-mono text-xs truncate max-w-[200px]">{selectedLojista.stripe_subscription_id || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Vencimento:</span>
+                  <span className="font-medium">{selectedLojista.data_vencimento ? formatDate(selectedLojista.data_vencimento) : '—'}</span>
+                </div>
+              </div>
+
+              {/* Histórico de Eventos (placeholder) */}
+              <div className="mt-4 pt-3 border-t border-border">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Histórico de Eventos
+                </h3>
+                <p className="text-xs text-muted-foreground italic">Em breve — os eventos da Stripe serão listados aqui.</p>
+              </div>
             </div>
 
             {/* Métricas */}
