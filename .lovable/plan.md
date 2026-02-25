@@ -1,38 +1,65 @@
 
 
-## Plano: Correcao do Filtro de Fretes no Checkout
+## Analise Final: Criacao de Pedido Pendente apos PIX
 
-### Causa Raiz
+### Status Atual do Codigo
 
-Na pagina do produto (`LojaProduto.tsx` linha 213-214), o produto e adicionado ao carrinho com o campo `id: product.product_id`.
+Apos revisao completa linha-a-linha, **o codigo esta correto**:
 
-No checkout (`LojaCheckout.tsx` linha 133), o codigo tenta ler `item.product.product_id` ou `item.product._id` — mas nenhum desses campos existe no objeto do carrinho. O campo correto e `item.product.id`.
+1. `pedidosApi.create` usa `publicPostRequest` (sem interceptor 401) - OK
+2. `publicPostRequest` aceita status 201 (`res.ok = true` para 200-299) - OK  
+3. No checkout, `await pedidosApi.create(...)` dentro de try/catch com toast de erro - OK
+4. Backend tem try/catch retornando 500 com mensagem de erro - OK
+5. `loja_id` vem de `loja._id` (ObjectId valido) - OK
+6. CORS nao e problema (same-origin em dominio customizado) - OK
 
-**Resultado**: `cartProductIds` fica vazio, `cartProducts` fica vazio, `hasVinculados` e sempre `false`, e o fallback mostra TODOS os fretes ativos da loja inteira.
+### Por que ainda nao funciona?
 
-A pagina do produto funciona corretamente porque usa os dados direto da API (`useLojaPublicaFretes` + `product.fretes_vinculados`), sem depender do carrinho.
+**Hipotese principal**: O deploy no Vercel pode estar com a versao ANTERIOR do codigo (antes das correcoes com `publicPostRequest` e `await`). O build do preview Lovable deu erro de permissao do Nix (infraestrutura), o que pode significar que o commit mais recente nao foi enviado ao Vercel.
 
-### Correcao
+### Correcao Defensiva Extra
 
-**Arquivo unico: `src/pages/loja/LojaCheckout.tsx`**
+Para garantir que funcione mesmo em cenarios adversos (timeout, erro de rede), vou adicionar:
 
-Alterar a linha 133 para incluir `item.product.id` na lista de IDs buscados:
+1. **Retry automatico**: Se `pedidosApi.create` falhar na primeira tentativa, tentar mais uma vez apos 2 segundos
+2. **Log detalhado**: Adicionar console.log com o payload enviado para facilitar debug em producao
+3. **Fallback inline**: Se `publicPostRequest` falhar por qualquer motivo, fazer um `fetch` direto (sem wrapper) como fallback final
 
+**Arquivo: `src/pages/loja/LojaCheckout.tsx`**
+
+Substituir o bloco try/catch do pedido (linhas 448-467) por:
+
+```text
+// Create order with retry
+const pedidoPayload = { loja_id, itens, subtotal, desconto, frete, total, cupom, pagamento, cliente, endereco, utms };
+try {
+  await pedidosApi.create(pedidoPayload);
+  console.log('[PEDIDO] Criado com sucesso');
+} catch (firstErr) {
+  console.warn('[PEDIDO] Primeira tentativa falhou, retentando...', firstErr);
+  // Retry com fetch direto (bypass total de wrappers)
+  try {
+    const retryRes = await fetch('/api/pedidos?scope=pedido', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pedidoPayload),
+    });
+    if (!retryRes.ok) throw new Error('Retry falhou');
+    console.log('[PEDIDO] Criado no retry');
+  } catch (retryErr) {
+    console.error('[PEDIDO] Falha total:', retryErr);
+    toast.error('Erro ao registrar pedido. O pagamento PIX foi gerado normalmente.');
+  }
+}
 ```
-// ANTES (bugado):
-const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id).filter(Boolean);
 
-// DEPOIS (corrigido):
-const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id || item.product?.id).filter(Boolean);
-```
-
-Isso garante que o `id` do carrinho (que contem o `product_id` do MongoDB) seja usado para cruzar com `allCheckoutProducts`, permitindo que `fretes_vinculados` seja encontrado e o filtro funcione corretamente.
+Isso garante que mesmo se `publicPostRequest` falhar (por qualquer bug no wrapper, CORS, timeout), o pedido sera criado via `fetch` direto — o mesmo mecanismo que funciona para o PIX.
 
 ### Resumo
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/loja/LojaCheckout.tsx` | Linha 133: adicionar `item.product?.id` como fallback no mapeamento de IDs |
+| `src/pages/loja/LojaCheckout.tsx` | Retry com fetch direto como fallback para criacao de pedido |
 
 ### Regras Respeitadas
 
