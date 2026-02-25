@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag } from 'lucide-react';
 import { useLojaByDomain } from '@/hooks/useLojaPublica';
@@ -662,6 +663,11 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const { totalItems } = useCart();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // 🔗 Capture UTMs on first load (before any navigation loses them)
+  useEffect(() => {
+    getSavedUtmParams();
+  }, []);
 
   // Init pixels (all 4 platforms)
   useEffect(() => {
