@@ -14,7 +14,6 @@ const FreteSchema = new mongoose.Schema({
   valor: { type: Number, default: 0 },
   valor_minimo_gratis: { type: Number, default: null },
   ocultar_preco: { type: Boolean, default: false },
-  exibir_no_produto: { type: Boolean, default: true },
   ordem_exibicao: { type: Number, default: 0 },
   pre_selecionado: { type: Boolean, default: false },
   is_active: { type: Boolean, default: true },

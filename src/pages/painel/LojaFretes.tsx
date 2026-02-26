@@ -30,7 +30,7 @@ const LojaFretes = () => {
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<RegraFrete & { exibir_no_produto?: boolean }>>(emptyFrete);
+  const [form, setForm] = useState<Partial<RegraFrete>>(emptyFrete);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const openNew = () => { setEditId(null); setForm({ ...emptyFrete }); setOpen(true); };
@@ -100,7 +100,6 @@ const LojaFretes = () => {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Prazo</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Exibir no Produto</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]">Ações</TableHead>
               </TableRow>
@@ -112,16 +111,6 @@ const LojaFretes = () => {
                   <TableCell>{f.tipo === 'entregue_ate' ? 'Entregue até' : 'Receba até'}</TableCell>
                   <TableCell>{f.prazo_dias_min}–{f.prazo_dias_max} dias úteis</TableCell>
                   <TableCell>{formatValor(f.valor)}</TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={(f as any).exibir_no_produto !== false}
-                      onCheckedChange={async (v) => {
-                        try {
-                          await updateMut.mutateAsync({ id: f._id, data: { exibir_no_produto: v } as any });
-                        } catch (e: any) { toast.error(e.message); }
-                      }}
-                    />
-                  </TableCell>
                   <TableCell><Badge variant={f.is_active ? 'default' : 'secondary'}>{f.is_active ? 'Ativo' : 'Inativo'}</Badge></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -175,10 +164,6 @@ const LojaFretes = () => {
             <div className="flex items-center justify-between">
               <Label>Ativo</Label>
               <Switch checked={form.is_active ?? true} onCheckedChange={v => setForm({ ...form, is_active: v })} />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Exibir na página do Produto</Label>
-              <Switch checked={(form as any).exibir_no_produto !== false} onCheckedChange={v => setForm({ ...form, exibir_no_produto: v } as any)} />
             </div>
           </div>
           <DialogFooter className="flex justify-between">
