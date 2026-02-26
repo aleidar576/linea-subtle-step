@@ -759,7 +759,6 @@ export interface RegraFrete {
   valor: number;
   valor_minimo_gratis: number | null;
   ocultar_preco: boolean;
-  exibir_no_produto: boolean;
   pre_selecionado: boolean;
   ordem_exibicao: number;
   is_active: boolean;
