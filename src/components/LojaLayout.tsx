@@ -664,6 +664,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const { totalItems } = useCart();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [gatewayAtivo, setGatewayAtivo] = useState<string | null>(null);
 
   // 🔗 Capture UTMs on first load (before any navigation loses them)
   useEffect(() => {
@@ -828,7 +829,6 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const exigirCadastro = config.exigir_cadastro_cliente ?? false;
 
   // Fetch gateway info for this store
-  const [gatewayAtivo, setGatewayAtivo] = useState<string | null>(null);
   useEffect(() => {
     if (!loja?._id) return;
     fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/loja-extras?scope=gateway-loja&loja_id=${loja._id}`)
