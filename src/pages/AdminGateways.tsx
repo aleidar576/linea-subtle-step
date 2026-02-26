@@ -26,6 +26,13 @@ const AdminGateways = () => {
   const [editNome, setEditNome] = useState('');
   const [editLogo, setEditLogo] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
+  const [editSandbox, setEditSandbox] = useState(false);
+  const [editAuthUrlSandbox, setEditAuthUrlSandbox] = useState('');
+  const [editApiUrlSandbox, setEditApiUrlSandbox] = useState('');
+  const [editRedirectUrlSandbox, setEditRedirectUrlSandbox] = useState('');
+  const [editAuthUrlProd, setEditAuthUrlProd] = useState('');
+  const [editApiUrlProd, setEditApiUrlProd] = useState('');
+  const [editRedirectUrlProd, setEditRedirectUrlProd] = useState('');
 
   useEffect(() => {
     adminApi.getGatewaysPlataforma()
@@ -59,20 +66,34 @@ const AdminGateways = () => {
     setEditNome(current.nome || '');
     setEditLogo(current.logo_url || '');
     setEditDescricao(current.descricao || '');
+    setEditSandbox(!!current.sandbox);
+    setEditAuthUrlSandbox(current.auth_url_sandbox || '');
+    setEditApiUrlSandbox(current.api_url_sandbox || '');
+    setEditRedirectUrlSandbox(current.redirect_url_sandbox || '');
+    setEditAuthUrlProd(current.auth_url_prod || '');
+    setEditApiUrlProd(current.api_url_prod || '');
+    setEditRedirectUrlProd(current.redirect_url_prod || '');
   };
 
   const handleSaveEdit = () => {
     if (!editGw) return;
     const current = configs[editGw.id] || { ativo: false };
-    const newConfigs = {
-      ...configs,
-      [editGw.id]: {
-        ...current,
-        nome: editNome.trim() || undefined,
-        logo_url: editLogo.trim() || undefined,
-        descricao: editDescricao.trim() || undefined,
-      },
+    const updated: any = {
+      ...current,
+      nome: editNome.trim() || undefined,
+      logo_url: editLogo.trim() || undefined,
+      descricao: editDescricao.trim() || undefined,
     };
+    if (editGw.id === 'appmax') {
+      updated.sandbox = editSandbox;
+      updated.auth_url_sandbox = editAuthUrlSandbox.trim() || undefined;
+      updated.api_url_sandbox = editApiUrlSandbox.trim() || undefined;
+      updated.redirect_url_sandbox = editRedirectUrlSandbox.trim() || undefined;
+      updated.auth_url_prod = editAuthUrlProd.trim() || undefined;
+      updated.api_url_prod = editApiUrlProd.trim() || undefined;
+      updated.redirect_url_prod = editRedirectUrlProd.trim() || undefined;
+    }
+    const newConfigs = { ...configs, [editGw.id]: updated };
     saveConfigs(newConfigs);
     setEditGw(null);
   };
@@ -214,38 +235,66 @@ const AdminGateways = () => {
 
             {/* Appmax-specific: Integration URLs */}
             {editGw?.id === 'appmax' && (
-              <div className="border-t border-border pt-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Info className="h-4 w-4 text-primary" />
-                  URLs de Integração do App
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Copie estas URLs e cole no painel de desenvolvedor da Appmax ao criar o seu Aplicativo.
-                </p>
-                {[
-                  { label: 'Host (Webhook)', value: `${window.location.origin}/api/loja-extras?scope=appmax-webhook` },
-                  { label: 'URL do Sistema', value: window.location.origin },
-                  { label: 'URL de Validação', value: `${window.location.origin}/api/loja-extras?scope=appmax-install` },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <Label className="text-xs text-muted-foreground">{label}</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input value={value} readOnly className="font-mono text-[11px] h-8 bg-muted" />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={() => {
-                          navigator.clipboard.writeText(value);
-                          toast({ title: 'URL copiada!' });
-                        }}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+              <div className="border-t border-border pt-4 space-y-4">
+                {/* Sandbox toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Modo Sandbox</Label>
+                    <p className="text-xs text-muted-foreground">Usar URLs de teste</p>
                   </div>
-                ))}
+                  <Switch checked={editSandbox} onCheckedChange={setEditSandbox} />
+                </div>
+
+                {/* Sandbox URLs */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">URLs do Ambiente de Teste (Sandbox)</Label>
+                  <Input placeholder="https://auth.appmax.com.br" value={editAuthUrlSandbox} onChange={(e) => setEditAuthUrlSandbox(e.target.value)} className="text-xs h-8" />
+                  <Input placeholder="https://api.appmax.com.br" value={editApiUrlSandbox} onChange={(e) => setEditApiUrlSandbox(e.target.value)} className="text-xs h-8" />
+                  <Input placeholder="https://admin.appmax.com.br" value={editRedirectUrlSandbox} onChange={(e) => setEditRedirectUrlSandbox(e.target.value)} className="text-xs h-8" />
+                </div>
+
+                {/* Production URLs */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">URLs do Ambiente Real (Produção)</Label>
+                  <Input placeholder="https://auth.appmax.com.br" value={editAuthUrlProd} onChange={(e) => setEditAuthUrlProd(e.target.value)} className="text-xs h-8" />
+                  <Input placeholder="https://api.appmax.com.br" value={editApiUrlProd} onChange={(e) => setEditApiUrlProd(e.target.value)} className="text-xs h-8" />
+                  <Input placeholder="https://admin.appmax.com.br" value={editRedirectUrlProd} onChange={(e) => setEditRedirectUrlProd(e.target.value)} className="text-xs h-8" />
+                </div>
+
+                {/* Integration URLs (read-only) */}
+                <div className="border-t border-border pt-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Info className="h-4 w-4 text-primary" />
+                    Suas URLs de Integração do App
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Copie estas URLs e cole no painel de desenvolvedor da Appmax ao criar o seu Aplicativo.
+                  </p>
+                  {[
+                    { label: 'Host (Webhook)', value: `${window.location.origin}/api/loja-extras?scope=appmax-webhook` },
+                    { label: 'URL do Sistema', value: window.location.origin },
+                    { label: 'URL de Validação', value: `${window.location.origin}/api/loja-extras?scope=appmax-install` },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <Label className="text-xs text-muted-foreground">{label}</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input value={value} readOnly className="font-mono text-[11px] h-8 bg-muted" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(value);
+                            toast({ title: 'URL copiada!' });
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -964,6 +964,13 @@ export interface GatewayPlatformConfig {
   nome?: string;
   logo_url?: string;
   descricao?: string;
+  sandbox?: boolean;
+  auth_url_sandbox?: string;
+  api_url_sandbox?: string;
+  redirect_url_sandbox?: string;
+  auth_url_prod?: string;
+  api_url_prod?: string;
+  redirect_url_prod?: string;
 }
 
 export type GatewayPlatformRecord = Record<string, GatewayPlatformConfig>;
