@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GATEWAYS, type GatewayDefinition } from '@/config/gateways';
 import { adminApi, type GatewayPlatformConfig, type GatewayPlatformRecord } from '@/services/saas-api';
+import { settingsApi } from '@/services/api';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,14 +10,16 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { Loader2, CreditCard, Pencil, Save } from 'lucide-react';
+import { Loader2, CreditCard, Pencil, Save, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminGateways = () => {
   const [configs, setConfigs] = useState<GatewayPlatformRecord>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit dialog state
   const [editGw, setEditGw] = useState<GatewayDefinition | null>(null);
@@ -140,14 +143,69 @@ const AdminGateways = () => {
               <Input placeholder={editGw?.nome} value={editNome} onChange={(e) => setEditNome(e.target.value)} />
             </div>
             <div>
-              <Label className="text-sm font-medium">URL do Logo</Label>
-              <Input placeholder={editGw?.logo_url} value={editLogo} onChange={(e) => setEditLogo(e.target.value)} />
-              {editLogo && (
-                <div className="mt-2 flex items-center gap-2">
-                  <img src={editLogo} alt="preview" className="h-8 w-8 rounded object-contain bg-muted p-1" />
-                  <span className="text-xs text-muted-foreground">Preview</span>
+              <Label className="text-sm font-medium">Logo do Gateway</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {editLogo ? (
+                  <div className="relative">
+                    <img src={editLogo} alt="preview" className="h-12 w-12 rounded object-contain bg-muted p-1 border border-border" />
+                    <button onClick={() => setEditLogo('')} className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 rounded bg-muted border border-dashed border-border flex items-center justify-center">
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2 w-fit"
+                  >
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploading ? 'Enviando...' : 'Enviar imagem'}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast({ title: 'Arquivo muito grande', description: 'Máximo 5MB', variant: 'destructive' });
+                        return;
+                      }
+                      setUploading(true);
+                      try {
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                          const base64 = reader.result as string;
+                          const { url } = await settingsApi.adminUpload(base64);
+                          setEditLogo(url);
+                          toast({ title: 'Imagem enviada!' });
+                          setUploading(false);
+                        };
+                        reader.readAsDataURL(file);
+                      } catch (err: any) {
+                        toast({ title: 'Erro no upload', description: err.message, variant: 'destructive' });
+                        setUploading(false);
+                      }
+                    }}
+                  />
+                  <Input
+                    placeholder="Ou cole uma URL"
+                    value={editLogo}
+                    onChange={(e) => setEditLogo(e.target.value)}
+                    className="text-xs h-8"
+                  />
                 </div>
-              )}
+              </div>
             </div>
             <div>
               <Label className="text-sm font-medium">Descrição</Label>
