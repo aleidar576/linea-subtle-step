@@ -560,6 +560,21 @@ module.exports = async function handler(req, res) {
     return res.json({ tipo: cupom.tipo, valor: cupom.valor, valor_minimo_pedido: cupom.valor_minimo_pedido, codigo: cupom.codigo, produtos_ids: cupom.produtos_ids || [] });
   }
 
+  // === PUBLIC: Gateways disponíveis na plataforma ===
+  if (scope === 'gateways-disponiveis' && method === 'GET') {
+    const setting = await Setting.findOne({ key: 'gateways_ativos', loja_id: null }).lean();
+    const ativos = setting?.value ? JSON.parse(setting.value) : [];
+    return res.json(ativos);
+  }
+
+  // === PUBLIC: Gateway ativo de uma loja (para checkout) ===
+  if (scope === 'gateway-loja' && method === 'GET' && loja_id) {
+    const lojaDoc = await Loja.findById(loja_id).lean();
+    if (!lojaDoc) return res.status(404).json({ error: 'Loja não encontrada' });
+    const dono = await Lojista.findById(lojaDoc.lojista_id).lean();
+    return res.json({ gateway_ativo: dono?.gateway_ativo || null });
+  }
+
   // === PUBLIC: Fretes de uma loja (sem auth) ===
   if (scope === 'fretes-publico' && method === 'GET' && loja_id) {
     const fretes = await Frete.find({ loja_id, is_active: true }).sort({ ordem_exibicao: 1 }).lean();
@@ -636,6 +651,71 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // ==========================================
+    // SALVAR GATEWAY (lojista)
+    // ==========================================
+    if (scope === 'salvar-gateway' && method === 'POST') {
+      const { id_gateway, config, ativar } = req.body;
+      if (!id_gateway) return res.status(400).json({ error: 'id_gateway é obrigatório' });
+
+      const lojista = await Lojista.findById(user.lojista_id);
+      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
+
+      // Save config
+      if (!lojista.gateways_config) lojista.gateways_config = {};
+      if (config) {
+        lojista.gateways_config[id_gateway] = config;
+        lojista.markModified('gateways_config');
+      }
+
+      // Toggle active
+      if (ativar === true) {
+        lojista.gateway_ativo = id_gateway;
+      } else if (ativar === false && lojista.gateway_ativo === id_gateway) {
+        lojista.gateway_ativo = null;
+      }
+
+      await lojista.save();
+
+      // Retrocompat: if sealpay, also save to loja.configuracoes.sealpay_api_key
+      if (id_gateway === 'sealpay' && config?.api_key && resolvedLojaId) {
+        await Loja.findByIdAndUpdate(resolvedLojaId, {
+          $set: { 'configuracoes.sealpay_api_key': config.api_key },
+        });
+      }
+
+      return res.json({ success: true, gateway_ativo: lojista.gateway_ativo, gateways_config: lojista.gateways_config });
+    }
+
+    // ==========================================
+    // DESCONECTAR GATEWAY (lojista)
+    // ==========================================
+    if (scope === 'desconectar-gateway' && method === 'POST') {
+      const { id_gateway } = req.body;
+      if (!id_gateway) return res.status(400).json({ error: 'id_gateway é obrigatório' });
+
+      const lojista = await Lojista.findById(user.lojista_id);
+      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
+
+      if (lojista.gateways_config && lojista.gateways_config[id_gateway]) {
+        delete lojista.gateways_config[id_gateway];
+        lojista.markModified('gateways_config');
+      }
+      if (lojista.gateway_ativo === id_gateway) {
+        lojista.gateway_ativo = null;
+      }
+      await lojista.save();
+
+      // Retrocompat: if sealpay, clear loja key
+      if (id_gateway === 'sealpay' && resolvedLojaId) {
+        await Loja.findByIdAndUpdate(resolvedLojaId, {
+          $set: { 'configuracoes.sealpay_api_key': null },
+        });
+      }
+
+      return res.json({ success: true, gateway_ativo: lojista.gateway_ativo });
+    }
+
     // ==========================================
     // FRETES
     // ==========================================

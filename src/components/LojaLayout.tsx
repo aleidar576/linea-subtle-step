@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import { GATEWAYS, getGatewayById } from '@/config/gateways';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag } from 'lucide-react';
@@ -826,6 +827,22 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
 
   const exigirCadastro = config.exigir_cadastro_cliente ?? false;
 
+  // Fetch gateway info for this store
+  const [gatewayAtivo, setGatewayAtivo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!loja?._id) return;
+    fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/loja-extras?scope=gateway-loja&loja_id=${loja._id}`)
+      .then(r => r.json())
+      .then(d => setGatewayAtivo(d.gateway_ativo || null))
+      .catch(() => {});
+  }, [loja?._id]);
+
+  const metodosSuportados = useMemo(() => {
+    if (!gatewayAtivo) return [];
+    const gw = getGatewayById(gatewayAtivo);
+    return gw?.metodos || [];
+  }, [gatewayAtivo]);
+
   const ctxValue = {
     lojaId: loja._id,
     slug: loja.slug,
@@ -848,6 +865,8 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     exigirCadastro,
     slogan: (loja as any).slogan || '',
     cartConfig: config.cart_config || null,
+    gatewayAtivo,
+    metodosSuportados,
     isLoading: false,
     notFound: false,
   };

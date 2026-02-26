@@ -97,7 +97,9 @@ interface AppliedCoupon {
 const LojaCheckout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart } = useCart();
-  const { lojaId, exigirCadastro, nomeExibicao, slogan } = useLoja();
+  const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, metodosSuportados } = useLoja();
+
+  // Gateway blocking is rendered at the end, after all hooks
 
   useEffect(() => {
     const parts = ['Checkout', nomeExibicao];
@@ -627,6 +629,26 @@ const LojaCheckout = () => {
       </div>
     </div>
   );
+
+  // ── BLOQUEIO DE CHECKOUT: Gateway não configurado ──
+  if (!gatewayAtivo) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
+        <div className="text-center max-w-md px-6 space-y-4">
+          <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
+            <CreditCard className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-xl font-bold">Checkout temporariamente indisponível</h1>
+          <p className="text-sm text-muted-foreground">
+            O lojista precisa configurar um gateway de pagamento para que você possa concluir sua compra.
+          </p>
+          <Button onClick={() => navigate('/')} variant="outline" className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Voltar à loja
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0 && !pixData) {
     return <div className="container py-20 text-center"><h1 className="text-2xl font-bold">Seu carrinho está vazio</h1><Button asChild className="mt-6"><Link to="/">Ver Produtos</Link></Button></div>;

@@ -27,8 +27,15 @@ const PainelInicio = () => {
         const allProducts = await Promise.all(productsPromises);
         setHasProduto(allProducts.some(p => p.length > 0));
 
-        // Check gateway
-        setHasGateway(activeLojas.some(l => !!(l as any).configuracoes?.sealpay_api_key));
+        // Check gateway (from lojista profile)
+        try {
+          const profile = await lojistaApi.perfil();
+          setHasGateway(!!profile.gateway_ativo);
+          setHasDadosPessoais(!!(profile.cpf_cnpj && profile.telefone));
+        } catch {
+          setHasGateway(false);
+          setHasDadosPessoais(false);
+        }
 
         // Check paid orders
         const pedidosPromises = activeLojas.map(l =>
@@ -36,12 +43,6 @@ const PainelInicio = () => {
         );
         const allPedidos = await Promise.all(pedidosPromises);
         setHasVenda(allPedidos.some(r => r.total > 0));
-
-        // Check personal data
-        try {
-          const profile = await lojistaApi.perfil();
-          setHasDadosPessoais(!!(profile.cpf_cnpj && profile.telefone));
-        } catch { setHasDadosPessoais(false); }
       } catch { /* ignore */ }
       setChecked(true);
     };
@@ -53,7 +54,7 @@ const PainelInicio = () => {
     { label: 'Complete o seu cadastro', done: hasDadosPessoais, link: '/painel/perfil' },
     { label: 'Configure um domínio', done: hasDomain },
     { label: 'Cadastre o seu primeiro produto', done: hasProduto },
-    { label: 'Integre com um gateway de pagamento', done: hasGateway },
+    { label: 'Configure um gateway de pagamento', done: hasGateway, link: activeLojas[0] ? `/painel/loja/${activeLojas[0]._id}/gateways` : undefined },
     { label: 'Faça a sua primeira venda paga!', done: hasVenda },
   ];
 

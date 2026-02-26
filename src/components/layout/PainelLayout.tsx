@@ -44,7 +44,7 @@ const LOJA_SUBMENUS = [
   { path: '/relatorios', label: 'Relatórios', icon: TrendingUp },
   { path: '/temas', label: 'Temas', icon: Palette },
   { path: '/configuracoes', label: 'Configurações', icon: Settings },
-  { path: '/integracoes', label: 'Integrações', icon: PayIcon },
+  { path: '/gateways', label: 'Gateways', icon: PayIcon },
 ];
 
 const PainelLayout = () => {

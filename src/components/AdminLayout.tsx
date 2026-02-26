@@ -14,6 +14,7 @@ import {
 const NAV_ITEMS = [
   { to: '/admin/lojistas', label: 'Lojistas', icon: Store },
   { to: '/admin/planos', label: 'Planos', icon: CreditCard },
+  { to: '/admin/gateways', label: 'Gateways', icon: CreditCard },
   { to: '/admin/equipe', label: 'Equipe SaaS', icon: Users },
   { to: '/admin/avisos', label: 'Avisos', icon: Bell },
   { to: '/admin/tickets', label: 'Tickets', icon: ShieldCheck },
