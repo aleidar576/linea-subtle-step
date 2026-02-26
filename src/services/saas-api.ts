@@ -104,6 +104,22 @@ export interface LojaEndereco {
   estado: string;
 }
 
+export interface LojaIntegracaoMelhorEnvio {
+  ativo: boolean;
+  token: string;
+  sandbox: boolean;
+}
+
+export interface LojaIntegracaoKangu {
+  ativo: boolean;
+  token: string;
+}
+
+export interface LojaIntegracoes {
+  melhor_envio?: LojaIntegracaoMelhorEnvio;
+  kangu?: LojaIntegracaoKangu;
+}
+
 export interface Loja {
   _id: string;
   lojista_id: string;
@@ -131,6 +147,7 @@ export interface Loja {
     checkout_config?: CheckoutConfig | null;
     empresa?: LojaEmpresa;
     endereco?: LojaEndereco;
+    integracoes?: LojaIntegracoes;
   };
   is_active: boolean;
   criado_em: string;

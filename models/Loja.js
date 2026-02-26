@@ -56,6 +56,13 @@ const LojaSchema = new mongoose.Schema({
       cidade: { type: String, default: '' },
       estado: { type: String, default: '' },
     },
+    integracoes: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        melhor_envio: { ativo: false, token: '', sandbox: true },
+        kangu: { ativo: false, token: '' },
+      },
+    },
   },
   ativada_por_admin: { type: Boolean, default: false },
   is_active: { type: Boolean, default: true },
