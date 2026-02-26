@@ -671,6 +671,21 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     getSavedUtmParams();
   }, []);
 
+  // Fetch gateway info for this store (must be before any early return)
+  useEffect(() => {
+    if (!loja?._id) return;
+    fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/loja-extras?scope=gateway-loja&loja_id=${loja._id}`)
+      .then(r => r.json())
+      .then(d => setGatewayAtivo(d.gateway_ativo || null))
+      .catch(() => {});
+  }, [loja?._id]);
+
+  const metodosSuportados = useMemo(() => {
+    if (!gatewayAtivo) return [];
+    const gw = getGatewayById(gatewayAtivo);
+    return gw?.metodos || [];
+  }, [gatewayAtivo]);
+
   // Init pixels (all 4 platforms)
   useEffect(() => {
     if (!loja?.pixels) return;
@@ -828,20 +843,6 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
 
   const exigirCadastro = config.exigir_cadastro_cliente ?? false;
 
-  // Fetch gateway info for this store
-  useEffect(() => {
-    if (!loja?._id) return;
-    fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/loja-extras?scope=gateway-loja&loja_id=${loja._id}`)
-      .then(r => r.json())
-      .then(d => setGatewayAtivo(d.gateway_ativo || null))
-      .catch(() => {});
-  }, [loja?._id]);
-
-  const metodosSuportados = useMemo(() => {
-    if (!gatewayAtivo) return [];
-    const gw = getGatewayById(gatewayAtivo);
-    return gw?.metodos || [];
-  }, [gatewayAtivo]);
 
   const ctxValue = {
     lojaId: loja._id,
