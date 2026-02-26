@@ -1735,16 +1735,13 @@ const LojaProdutos = () => {
     );
   }
 
-  // === Bulk sequential operations (avoids Vercel rate limits) ===
+  // === Bulk native operations (single HTTP request via MongoDB bulk ops) ===
 
   const handleBulkDelete = async () => {
     setBulkActionLoading(true);
     try {
-      let ok = 0, errs = 0;
-      for (const pid of Array.from(selectedIds)) {
-        try { await deleteMut.mutateAsync(pid); ok++; } catch { errs++; }
-      }
-      toast({ title: `${ok} produto(s) excluído(s)${errs ? `, ${errs} erro(s)` : ''}` });
+      const result = await lojaProductsApi.bulkDelete(Array.from(selectedIds), id!);
+      toast({ title: `${result.deleted} produto(s) excluído(s)` });
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['loja-products', id] });
     } catch (err: any) {
@@ -1758,11 +1755,8 @@ const LojaProdutos = () => {
   const handleBulkToggle = async (activate: boolean) => {
     setBulkActionLoading(true);
     try {
-      let ok = 0, errs = 0;
-      for (const pid of Array.from(selectedIds)) {
-        try { await toggleMut.mutateAsync({ id: pid, is_active: activate }); ok++; } catch { errs++; }
-      }
-      toast({ title: `${ok} produto(s) ${activate ? 'ativado(s)' : 'desativado(s)'}${errs ? `, ${errs} erro(s)` : ''}` });
+      const result = await lojaProductsApi.bulkToggleActive(Array.from(selectedIds), id!, activate);
+      toast({ title: `${result.modified} produto(s) ${activate ? 'ativado(s)' : 'desativado(s)'}` });
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['loja-products', id] });
     } catch (err: any) {

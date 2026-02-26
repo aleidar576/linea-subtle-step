@@ -630,6 +630,18 @@ export const lojaProductsApi = {
   toggleActive: (id: string, is_active: boolean) => request<{ success: boolean }>(`/products?id=${id}`, {
     method: 'PATCH', body: JSON.stringify({ is_active }),
   }),
+  bulkDelete: (ids: string[], loja_id: string) =>
+    request<{ success: boolean; deleted: number }>('/products?scope=bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, loja_id }),
+    }),
+  bulkToggleActive: (ids: string[], loja_id: string, is_active: boolean) =>
+    request<{ success: boolean; modified: number }>('/products?scope=bulk', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, loja_id, is_active }),
+    }),
 };
 
 export const lojaCategoriesApi = {
