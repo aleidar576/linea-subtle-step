@@ -31,7 +31,7 @@ import LojaConteudo from "./pages/painel/LojaConteudo";
 import LojaCupons from "./pages/painel/LojaCupons";
 import LojaTemas from "./pages/painel/LojaTemas";
 import LojaConfiguracoes from "./pages/painel/LojaConfiguracoes";
-import LojaIntegracoes from "./pages/painel/LojaIntegracoes";
+import LojaGateways from "./pages/painel/LojaGateways";
 import LojaAssinatura from "./pages/painel/LojaAssinatura";
 import LojaPerfil from "./pages/painel/LojaPerfil";
 import LojaPixels from "./pages/painel/LojaPixels";
@@ -61,7 +61,7 @@ import AdminEstatisticas from "./pages/AdminEstatisticas";
 import AdminAvisos from "./pages/AdminAvisos";
 import AdminTickets from "./pages/AdminTickets";
 import AdminPacotesComentarios from "./pages/AdminPacotesComentarios";
-import AdminIntegracoes from "./pages/AdminIntegracoes";
+import AdminGateways from "./pages/AdminGateways";
 import AdminPlanos from "./pages/AdminPlanos";
 import SegurancaConfirmacao from "./pages/SegurancaConfirmacao";
 
@@ -137,7 +137,8 @@ const SaaSApp = () => (
                     <Route path="loja/:id/pacotes-avaliacoes" element={<LojaPacotesAvaliacoes />} />
                     <Route path="loja/:id/newsletter" element={<LojaNewsletter />} />
                     <Route path="loja/:id/configuracoes" element={<LojaConfiguracoes />} />
-                    <Route path="loja/:id/integracoes" element={<LojaIntegracoes />} />
+                    <Route path="loja/:id/gateways" element={<LojaGateways />} />
+                    <Route path="loja/:id/integracoes" element={<LojaGateways />} />
                     <Route path="assinatura" element={<LojaAssinatura />} />
                     <Route path="perfil" element={<LojaPerfil />} />
                   </Route>
@@ -165,7 +166,8 @@ const SaaSApp = () => (
                     <Route path="tickets" element={<AdminTickets />} />
                     <Route path="configuracoes" element={<AdminConfigEmpresa />} />
                     <Route path="pacotes-comentarios" element={<AdminPacotesComentarios />} />
-                    <Route path="integracoes" element={<AdminIntegracoes />} />
+                    <Route path="integracoes" element={<AdminGateways />} />
+                    <Route path="gateways" element={<AdminGateways />} />
                     <Route path="estatisticas" element={<AdminEstatisticas />} />
                   </Route>
 

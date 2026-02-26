@@ -333,6 +333,8 @@ export interface LojistaProfile {
   tentativas_taxas?: number;
   status_taxas?: string;
   historico_assinatura?: Array<{ evento: string; data: string; detalhes: string }>;
+  gateway_ativo?: string | null;
+  gateways_config?: Record<string, any>;
 }
 
 // === Product types (lojista) ===
@@ -953,6 +955,21 @@ export const lojaPublicaApi = {
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
   getPagina: (lojaId: string, slug: string) =>
     publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+};
+
+// === Gateways API ===
+
+export const gatewaysApi = {
+  listDisponiveis: () => publicRequest<string[]>('/loja-extras?scope=gateways-disponiveis'),
+  getGatewayLoja: (lojaId: string) => publicRequest<{ gateway_ativo: string | null }>(`/loja-extras?scope=gateway-loja&loja_id=${lojaId}`),
+  salvar: (data: { id_gateway: string; config: any; ativar: boolean; loja_id: string }) =>
+    request<{ success: boolean; gateway_ativo: string | null }>('/loja-extras?scope=salvar-gateway', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  desconectar: (data: { id_gateway: string; loja_id: string }) =>
+    request<{ success: boolean; gateway_ativo: string | null }>('/loja-extras?scope=desconectar-gateway', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
 };
 
 // === Platform API (público) ===

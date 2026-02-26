@@ -1,20 +1,35 @@
-## Fase 14: Smart Retry + Regularização Manual de Taxas — ✅ CONCLUÍDO
+## Fase 15: Ecossistema de Gateways (Admin + Lojista + Checkout) — ✅ CONCLUÍDO
 
-### Arquivos Alterados
+### Arquitetura
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `vercel.json` | Schedule do cron alterado para `0 12 * * *` (12h UTC = 09h BRT) |
-| `models/Lojista.js` | +2 campos: `tentativas_taxas` (Number), `status_taxas` (enum ok/falha/bloqueado) |
-| `api/loja-extras.js` | Smart retry no `cron-taxas` (3 tentativas, +24h, bloqueio) + novo escopo `pagar-taxas-manual` |
-| `src/services/saas-api.ts` | +2 campos em `LojistaProfile` + método `pagarTaxasManual` em `stripeApi` |
-| `src/pages/painel/LojaAssinatura.tsx` | Banners condicionais (amarelo/vermelho) + botão "Regularizar Pagamento Agora" |
-| `README.md` | Documentação completa do Smart Retry, endpoint manual e campos de retry |
+- Lista de gateways 100% estática em `src/config/gateways.ts` (zero CRUD no backend)
+- Controle de visibilidade via `Setting` (key: `gateways_ativos`) gerenciado pelo Admin
+- Credenciais por lojista nos campos `gateway_ativo` e `gateways_config` do Model `Lojista`
+- Sheet lateral (shadcn/ui) modular com switch por `id_gateway`
 
-### Regras de Negócio
+### Arquivos Alterados/Criados
 
-- Cron roda às 09h BRT (12h UTC) — horário comercial
-- Máximo 3 tentativas automáticas com intervalo de 24h
-- `status_taxas`: `ok` → `falha` → `bloqueado` (após 3 falhas)
-- Lojistas `bloqueado` são ignorados pelo Cron — só pagam via botão manual
-- `taxas_acumuladas` NUNCA é zerado em caso de falha
+| Arquivo | Ação |
+|---------|------|
+| `src/config/gateways.ts` | **Novo** — Constantes estáticas dos gateways |
+| `models/Lojista.js` | +2 campos: `gateway_ativo`, `gateways_config` |
+| `api/settings.js` | +2 escopos: GET/PATCH `gateways-plataforma` |
+| `api/loja-extras.js` | +4 escopos: `gateways-disponiveis`, `gateway-loja`, `salvar-gateway`, `desconectar-gateway` |
+| `src/services/saas-api.ts` | +2 campos em `LojistaProfile` + `gatewaysApi` |
+| `src/pages/AdminGateways.tsx` | **Novo** — Tela admin com toggles |
+| `src/pages/painel/LojaGateways.tsx` | **Novo** — Layout Vega (grid 1/3+2/3) + Sheet |
+| `src/components/AdminLayout.tsx` | +1 nav item "Gateways" |
+| `src/components/layout/PainelLayout.tsx` | Menu renomeado: Integrações → Gateways |
+| `src/App.tsx` | Rotas atualizadas (admin + lojista) |
+| `src/pages/painel/PainelInicio.tsx` | Checklist atualizado para `gateway_ativo` |
+| `src/contexts/LojaContext.tsx` | +2 campos: `gatewayAtivo`, `metodosSuportados` |
+| `src/components/LojaLayout.tsx` | Fetch gateway ativo no contexto público |
+| `src/pages/loja/LojaCheckout.tsx` | Overlay de bloqueio total quando `gatewayAtivo` é nulo |
+
+### Regras Respeitadas
+
+- `vite.config.mts` NÃO alterado
+- Pasta `api/` permanece com 12 arquivos
+- Sheet lateral usado para configuração do lojista
+- Todos os campos da SealPay migrados para dentro do Sheet
+- Checkout bloqueado completamente quando gateway_ativo é nulo

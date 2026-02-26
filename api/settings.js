@@ -19,6 +19,28 @@ module.exports = async function handler(req, res) {
   await connectDB();
   const { scope } = req.query;
 
+  // ── scope=gateways-plataforma: Gateways habilitados (Admin) ──
+  if (scope === 'gateways-plataforma') {
+    if (req.method === 'GET') {
+      const setting = await Setting.findOne({ key: 'gateways_ativos', loja_id: null }).lean();
+      const ativos = setting?.value ? JSON.parse(setting.value) : [];
+      return res.status(200).json(ativos);
+    }
+    if (req.method === 'PATCH') {
+      const admin = requireAdmin(req);
+      if (!admin) return res.status(401).json({ error: 'Não autorizado' });
+      const { gateways_ativos } = req.body;
+      if (!Array.isArray(gateways_ativos)) return res.status(400).json({ error: 'gateways_ativos deve ser um array' });
+      await Setting.findOneAndUpdate(
+        { key: 'gateways_ativos', loja_id: null },
+        { value: JSON.stringify(gateways_ativos) },
+        { upsert: true }
+      );
+      return res.status(200).json({ success: true, gateways_ativos });
+    }
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   // ── scope=planos: Listar planos (público) ──────────────
   if (scope === 'planos' && req.method === 'GET') {
     const planos = await Plano.find({ is_active: true }).sort({ ordem: 1 }).lean();

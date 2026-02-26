@@ -48,6 +48,8 @@ interface LojaContextType {
   exigirCadastro: boolean;
   slogan: string;
   cartConfig: any | null;
+  gatewayAtivo: string | null;
+  metodosSuportados: string[];
   isLoading: boolean;
   notFound: boolean;
 }
