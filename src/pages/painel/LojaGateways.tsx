@@ -224,7 +224,7 @@ const LojaGateways = () => {
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<any>(null);
-  const [enabledGateways, setEnabledGateways] = useState<string[]>([]);
+  const [platformConfigs, setPlatformConfigs] = useState<Record<string, { ativo: boolean; nome?: string; logo_url?: string; descricao?: string }>>({});
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState<GatewayDefinition | null>(null);
@@ -232,12 +232,12 @@ const LojaGateways = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [prof, enabled] = await Promise.all([
+      const [prof, configs] = await Promise.all([
         lojistaApi.perfil(),
-        authRequest<string[]>('/loja-extras?scope=gateways-disponiveis'),
+        authRequest<Record<string, any>>('/loja-extras?scope=gateways-disponiveis'),
       ]);
       setProfile(prof);
-      setEnabledGateways(enabled);
+      setPlatformConfigs(configs);
     } catch {}
     setLoading(false);
   };
@@ -251,9 +251,23 @@ const LojaGateways = () => {
     return GATEWAYS.filter(gw => gatewaysConfig[gw.id]);
   }, [gatewaysConfig]);
 
+  // Merge static GATEWAYS with admin customizations — fallback to static values
+  const mergedGateways = useMemo(() => {
+    return GATEWAYS.map(gw => {
+      const custom = platformConfigs[gw.id];
+      if (!custom) return gw;
+      return {
+        ...gw,
+        nome: custom.nome || gw.nome,
+        logo_url: custom.logo_url || gw.logo_url,
+        descricao: custom.descricao || gw.descricao,
+      };
+    });
+  }, [platformConfigs]);
+
   const disponiveis = useMemo(() => {
-    return GATEWAYS.filter(gw => enabledGateways.includes(gw.id));
-  }, [enabledGateways]);
+    return mergedGateways.filter(gw => platformConfigs[gw.id]?.ativo);
+  }, [mergedGateways, platformConfigs]);
 
   const handleOpenSheet = (gw: GatewayDefinition) => {
     setSelectedGateway(gw);
@@ -303,12 +317,14 @@ const LojaGateways = () => {
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum gateway configurado ainda.</p>
             ) : (
               <div className="space-y-3">
-                {integrados.map(gw => (
+                {integrados.map(gw => {
+                  const merged = mergedGateways.find(m => m.id === gw.id) || gw;
+                  return (
                   <div key={gw.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background">
-                    <img src={gw.logo_url} alt={gw.nome} className="h-8 w-8 rounded object-contain bg-muted p-1" />
+                    <img src={merged.logo_url} alt={merged.nome} className="h-8 w-8 rounded object-contain bg-muted p-1" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{gw.nome}</span>
+                        <span className="font-medium text-sm">{merged.nome}</span>
                         {gatewayAtivo === gw.id && (
                           <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">ATIVO</Badge>
                         )}
@@ -324,7 +340,8 @@ const LojaGateways = () => {
                       </Button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

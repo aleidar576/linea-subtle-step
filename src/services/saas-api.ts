@@ -959,8 +959,17 @@ export const lojaPublicaApi = {
 
 // === Gateways API ===
 
+export interface GatewayPlatformConfig {
+  ativo: boolean;
+  nome?: string;
+  logo_url?: string;
+  descricao?: string;
+}
+
+export type GatewayPlatformRecord = Record<string, GatewayPlatformConfig>;
+
 export const gatewaysApi = {
-  listDisponiveis: () => publicRequest<string[]>('/loja-extras?scope=gateways-disponiveis'),
+  listDisponiveis: () => publicRequest<GatewayPlatformRecord>('/loja-extras?scope=gateways-disponiveis'),
   getGatewayLoja: (lojaId: string) => publicRequest<{ gateway_ativo: string | null }>(`/loja-extras?scope=gateway-loja&loja_id=${lojaId}`),
   salvar: (data: { id_gateway: string; config: any; ativar: boolean; loja_id: string }) =>
     request<{ success: boolean; gateway_ativo: string | null }>('/loja-extras?scope=salvar-gateway', {
@@ -1046,4 +1055,10 @@ export const adminApi = {
     adminRequest<any[]>('/admins?scope=tickets'),
   resolveTicket: (id: string) =>
     adminRequest<{ success: boolean }>(`/admins?scope=ticket&id=${id}`, { method: 'PATCH' }),
+  getGatewaysPlataforma: () =>
+    adminRequest<GatewayPlatformRecord>('/settings?scope=gateways-plataforma'),
+  updateGatewaysPlataforma: (config: GatewayPlatformRecord) =>
+    adminRequest<{ success: boolean }>('/settings?scope=gateways-plataforma', {
+      method: 'PATCH', body: JSON.stringify({ gateways_config: config }),
+    }),
 };
