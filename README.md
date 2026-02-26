@@ -554,6 +554,84 @@ O sistema de gateways é **modular e extensível**, com definições estáticas 
 
 ---
 
+# 🧠 RELEMBRE A IA: Ecossistema de Gateways (Dusking SaaS)
+
+## 📌 1. Arquitetura Geral (A Regra do "Zero CRUD")
+
+O nosso SaaS possui uma arquitetura Multi-Gateway baseada em **"Zero CRUD"** no backend. 
+
+- Não existe uma tabela/banco de dados para "cadastrar" novos gateways.
+
+- A lista de gateways suportados é **estática** e vive no Frontend.
+
+- O Administrador (Plataforma) apenas liga/desliga a visibilidade e configura as credenciais globais (OAuth, URLs de Sandbox/Prod) através da tabela genérica `Settings`.
+
+- O Lojista (Tenant) salva as suas credenciais locais dentro do seu próprio documento no banco de dados.
+
+## 📂 2. Mapa de Arquivos Principais (Onde Mexer)
+
+Se você (IA) precisar adicionar, editar ou remover um Gateway, restrinja-se aos seguintes arquivos:
+
+### Frontend (Interface e Regras Visuais)
+
+1. `src/config/gateways.ts`: **A Fonte da Verdade.** É aqui que você adiciona o objeto estático do novo gateway (ID, Nome, Logo, Métodos de pagamento suportados).
+
+2. `src/pages/AdminGateways.tsx`: Painel do Admin. Possui um `Dialog` com os inputs para o dono da plataforma colar URLs de API, URLs de Auth e alternar o switch de Sandbox/Produção.
+
+3. `src/pages/painel/LojaGateways.tsx`: Painel do Lojista. Possui um layout "Vega" (Grid 1/3 e 2/3). A configuração do gateway ocorre dentro de um componente `<Sheet>` lateral. Cada gateway tem o seu `case 'nome_gateway':` com seus próprios inputs ou botões de OAuth.
+
+4. `src/pages/loja/LojaCheckout.tsx`: A tela de Checkout Pública. Possui regras rígidas de renderização e bloqueio (veja as Regras de Ouro abaixo).
+
+### Backend e Banco de Dados (Regras de Negócio)
+
+1. `models/Lojista.js`: Possui `gateway_ativo` (String) e `gateways_config` (Object/Mixed).
+
+2. `api/settings.js`: Controla as configurações globais do admin no escopo `?scope=gateways-plataforma`.
+
+3. `api/loja-extras.js`: Controla o que o lojista vê e salva nos escopos `gateways-disponiveis` e `salvar-gateway`. **Rotas de OAuth de Gateways (como redirecionamento e webhooks de instalação) devem ser criadas aqui usando escopos.**
+
+---
+
+## 🛑 3. Regras de Ouro e Limites Inegociáveis
+
+Se você for instruída a mexer em pagamentos ou gateways, você **DEVE** respeitar estas regras:
+
+1. **Limite da Pasta API:** É terminantemente proibido criar novos arquivos na pasta `/api`. O limite máximo é de 12 Serverless Functions. Novas integrações de backend devem ser feitas adicionando `scopes` lógicos (ex: `if (scope === 'stripe-connect')`) dentro de `api/loja-extras.js` ou arquivos existentes.
+
+2. **NUNCA altere o `vite.config.mts`.**
+
+3. **Mongoose `markModified`:** Como `gateways_config` é um objeto do tipo `Mixed` no MongoDB, toda vez que você atualizar uma chave de gateway no backend, você é OBRIGADA a rodar `lojista.markModified('gateways_config')` antes do `lojista.save()`, senão o Node.js não salvará as alterações.
+
+4. **Checkout - A Regra do Bloqueio Absoluto:** No arquivo `LojaCheckout.tsx`, se o `gatewayAtivo` for `null`, `undefined` ou vazio, a tela inteira DEVE ser bloqueada por um overlay (Tela Cheia) impedindo o cliente final de interagir com o carrinho.
+
+5. **Checkout - Condicional de Métodos de Pagamento:** O Checkout deve ler os `metodosSuportados` (array de strings) do gateway ativo. 
+
+   - Se for `sealpay`: Oculte as abas de Cartão e Boleto. Mostre apenas PIX.
+
+   - Se for `appmax`: Mostre Cartão, PIX e Boleto.
+
+6. **Injeção Dinâmica de Scripts:** Nunca "chumbe" scripts de gateways (como o `appmax.min.js`) no `index.html` ou de forma global no React. Eles devem ser injetados dinamicamente via `useEffect` no Checkout APENAS se aquele for o `gatewayAtivo` do lojista.
+
+---
+
+## 🛠️ 4. Como adicionar um NOVO Gateway (Passo a Passo para a IA)
+
+Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga este fluxo:
+
+1. Adicione as constantes em `src/config/gateways.ts`.
+
+2. Adicione os campos de configuração global (Tokens de Admin, chaves de Sandbox) na tipagem `GatewayPlatformConfig` em `saas-api.ts`.
+
+3. Crie os campos no Dialog do Admin em `AdminGateways.tsx`.
+
+4. Crie o formulário ou botão de OAuth no `case 'novo_gateway':` dentro do Sheet em `LojaGateways.tsx`.
+
+5. Se for OAuth, crie os escopos de conexão (`novo-connect` e `novo-install`) em `api/loja-extras.js`.
+
+6. Atualize as condicionais visuais de métodos de pagamento no `LojaCheckout.tsx`.
+
+---
+
 ## 🔗 Integração OAuth Appmax (Instalação de Aplicativo)
 
 ### Pré-Requisitos
