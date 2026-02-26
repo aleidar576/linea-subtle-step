@@ -179,6 +179,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // DELETE bulk (scope=bulk)
+  if (req.method === 'DELETE' && scope === 'bulk') {
+    try {
+      const { ids, loja_id: bodyLojaId } = req.body || {};
+      if (!Array.isArray(ids) || !ids.length || !bodyLojaId) {
+        return res.status(400).json({ error: 'ids[] e loja_id são obrigatórios' });
+      }
+      if (lojista) {
+        const loja = await Loja.findOne({ _id: bodyLojaId, lojista_id: lojista.lojista_id });
+        if (!loja) return res.status(403).json({ error: 'Sem permissão' });
+      }
+      const result = await Product.deleteMany({ _id: { $in: ids }, loja_id: bodyLojaId });
+      return res.status(200).json({ success: true, deleted: result.deletedCount });
+    } catch (error) {
+      console.error('Erro no DELETE bulk /products:', error);
+      return res.status(500).json({ error: 'Erro ao excluir em lote' });
+    }
+  }
+
   // DELETE ?id=xxx → deletar produto
   if (req.method === 'DELETE') {
     if (!id) return res.status(400).json({ error: 'ID é obrigatório' });
@@ -190,6 +209,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       console.error('Erro no DELETE /products:', error);
       return res.status(500).json({ error: 'Erro ao deletar' });
+    }
+  }
+
+  // PATCH bulk (scope=bulk)
+  if (req.method === 'PATCH' && scope === 'bulk') {
+    try {
+      const { ids, loja_id: bodyLojaId, is_active } = req.body || {};
+      if (!Array.isArray(ids) || !ids.length || !bodyLojaId || typeof is_active !== 'boolean') {
+        return res.status(400).json({ error: 'ids[], loja_id e is_active são obrigatórios' });
+      }
+      if (lojista) {
+        const loja = await Loja.findOne({ _id: bodyLojaId, lojista_id: lojista.lojista_id });
+        if (!loja) return res.status(403).json({ error: 'Sem permissão' });
+      }
+      const result = await Product.updateMany(
+        { _id: { $in: ids }, loja_id: bodyLojaId },
+        { $set: { is_active } }
+      );
+      return res.status(200).json({ success: true, modified: result.modifiedCount });
+    } catch (error) {
+      console.error('Erro no PATCH bulk /products:', error);
+      return res.status(500).json({ error: 'Erro ao atualizar em lote' });
     }
   }
 
