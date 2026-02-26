@@ -12,11 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Store, Home, Plus, LogOut, User, CreditCard, ChevronDown, ChevronRight,
   Loader2, BarChart3, Package, Settings, ShoppingCart, Layers, Boxes, Truck,
   Users, Image, Tag, Palette, CreditCard as PayIcon, Sun, Moon, Monitor,
-  Code, FileText, Bell, TrendingUp, Star, Mail, AlertTriangle
+  Code, FileText, Bell, TrendingUp, Star, Mail, AlertTriangle, Megaphone, StoreIcon, Wrench
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -27,24 +28,61 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Loja } from '@/services/saas-api';
 
-const LOJA_SUBMENUS = [
-  { path: '', label: 'Overview', icon: BarChart3 },
-  { path: '/pedidos', label: 'Pedidos', icon: ShoppingCart },
-  { path: '/produtos', label: 'Produtos', icon: Package },
-  { path: '/categorias', label: 'Categorias', icon: Layers },
-  { path: '/estoque', label: 'Estoque', icon: Boxes },
-  { path: '/fretes', label: 'Fretes', icon: Truck },
-  { path: '/clientes', label: 'Clientes', icon: Users },
-  { path: '/conteudo', label: 'Conteúdo', icon: Image },
-  { path: '/paginas', label: 'Páginas', icon: FileText },
-  { path: '/cupons', label: 'Cupons', icon: Tag },
-  { path: '/pacotes-avaliacoes', label: 'Avaliações', icon: Star },
-  { path: '/newsletter', label: 'Newsletter', icon: Mail },
-  { path: '/pixels', label: 'Pixels & Scripts', icon: Code },
-  { path: '/relatorios', label: 'Relatórios', icon: TrendingUp },
-  { path: '/temas', label: 'Temas', icon: Palette },
-  { path: '/configuracoes', label: 'Configurações', icon: Settings },
-  { path: '/gateways', label: 'Gateways', icon: PayIcon },
+// Grouped submenu structure
+const MENU_GROUPS = [
+  {
+    label: 'Produtos',
+    icon: Package,
+    items: [
+      { path: '/produtos', label: 'Produtos', icon: Package },
+      { path: '/categorias', label: 'Categorias', icon: Layers },
+      { path: '/estoque', label: 'Estoque', icon: Boxes },
+      { path: '/pacotes-avaliacoes', label: 'Avaliações', icon: Star },
+    ],
+  },
+  {
+    label: 'Vendas',
+    icon: ShoppingCart,
+    items: [
+      { path: '/pedidos', label: 'Pedidos', icon: ShoppingCart },
+      { path: '/clientes', label: 'Clientes', icon: Users },
+      { path: '/relatorios', label: 'Relatórios', icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'Loja Virtual',
+    icon: Palette,
+    items: [
+      { path: '/temas', label: 'Temas', icon: Palette },
+      { path: '/paginas', label: 'Páginas', icon: FileText },
+      { path: '/conteudo', label: 'Conteúdo', icon: Image },
+    ],
+  },
+  {
+    label: 'Marketing',
+    icon: Megaphone,
+    items: [
+      { path: '/cupons', label: 'Cupons', icon: Tag },
+      { path: '/newsletter', label: 'Newsletter', icon: Mail },
+      { path: '/pixels', label: 'Pixels & Scripts', icon: Code },
+    ],
+  },
+  {
+    label: 'Administração',
+    icon: Wrench,
+    items: [
+      { path: '/perfil-loja', label: 'Perfil da Loja', icon: StoreIcon },
+      { path: '/fretes', label: 'Fretes', icon: Truck },
+      { path: '/gateways', label: 'Gateways', icon: PayIcon },
+      { path: '/configuracoes', label: 'Configurações', icon: Settings },
+    ],
+  },
+];
+
+// Flat list for title resolution
+const ALL_SUBMENUS = [
+  { path: '', label: 'Overview' },
+  ...MENU_GROUPS.flatMap(g => g.items),
 ];
 
 const PainelLayout = () => {
@@ -64,25 +102,21 @@ const PainelLayout = () => {
   const { toast } = useToast();
   useFaviconUpdater();
 
-  // Fetch profile + plans for subscription banners & plan name resolution
   useEffect(() => {
     Promise.all([lojistaApi.perfil(), planosApi.list()])
       .then(([prof, pl]) => { setLojistaProfile(prof); setPlanosList(pl); })
       .catch(() => {});
   }, []);
 
-  // Dynamic title: {nomeLoja} · {menu} · {brandName} or Painel · {brandName}
   useEffect(() => {
     const safeLojas = Array.isArray(lojas) ? lojas : [];
-    // Check if we're inside a loja: /painel/loja/:id/...
     const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
     if (lojaMatch) {
       const lojaId = lojaMatch[1];
       const currentLoja = safeLojas.find(l => l._id === lojaId);
       const lojaName = currentLoja?.nome || 'Loja';
-      // Find active submenu
       const afterLojaId = location.pathname.replace(`/painel/loja/${lojaId}`, '');
-      const activeSub = LOJA_SUBMENUS.find(sub => {
+      const activeSub = ALL_SUBMENUS.find(sub => {
         if (sub.path === '') return afterLojaId === '' || afterLojaId === '/';
         return afterLojaId.startsWith(sub.path);
       });
@@ -245,7 +279,6 @@ const PainelLayout = () => {
 
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
-        {/* Subscription Banners */}
         {lojistaProfile?.subscription_status === 'past_due' && (() => {
           const toleranciaGlobal = 7;
           const toleranciaExtra = (lojistaProfile as any)?.tolerancia_extra_dias || 0;
@@ -314,10 +347,17 @@ const PainelLayout = () => {
   );
 };
 
+// === Loja Menu Item with grouped Collapsible submenus ===
 const LojaMenuItem = ({ loja, currentPath }: { loja: Loja; currentPath: string }) => {
   const basePath = `/painel/loja/${loja._id}`;
   const isInThisLoja = currentPath.startsWith(basePath);
   const [open, setOpen] = useState(isInThisLoja);
+  const afterLojaId = currentPath.replace(basePath, '');
+
+  // Determine which group is active
+  const activeGroupIndex = MENU_GROUPS.findIndex(g =>
+    g.items.some(item => afterLojaId.startsWith(item.path))
+  );
 
   return (
     <div>
@@ -332,25 +372,53 @@ const LojaMenuItem = ({ loja, currentPath }: { loja: Loja; currentPath: string }
         <span className="truncate flex-1 text-left">{loja.nome}</span>
       </button>
       {open && (
-        <div className="ml-6 space-y-0.5">
-          {LOJA_SUBMENUS.map((sub) => {
-            const fullPath = `${basePath}${sub.path}`;
-            const isActive = sub.path === ''
-              ? currentPath === basePath
-              : currentPath.startsWith(fullPath);
+        <div className="ml-4 mt-1 space-y-0.5">
+          {/* Overview (no group) */}
+          <Link
+            to={basePath}
+            className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+              (afterLojaId === '' || afterLojaId === '/')
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+            }`}
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Overview
+          </Link>
+
+          {/* Grouped menus */}
+          {MENU_GROUPS.map((group, gi) => {
+            const isGroupActive = gi === activeGroupIndex;
             return (
-              <Link
-                key={sub.path}
-                to={fullPath}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded transition-colors ${
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                }`}
-              >
-                <sub.icon className="h-3 w-3" />
-                {sub.label}
-              </Link>
+              <Collapsible key={group.label} defaultOpen={isGroupActive}>
+                <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-sidebar-foreground transition-colors rounded-lg">
+                  <group.icon className="h-3.5 w-3.5" />
+                  <span className="flex-1 text-left">{group.label}</span>
+                  <ChevronDown className="h-3 w-3 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="ml-2 space-y-0.5 mt-0.5">
+                    {group.items.map(item => {
+                      const fullPath = `${basePath}${item.path}`;
+                      const isActive = afterLojaId.startsWith(item.path);
+                      return (
+                        <Link
+                          key={item.path}
+                          to={fullPath}
+                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                              : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                          }`}
+                        >
+                          <item.icon className="h-3.5 w-3.5" />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             );
           })}
         </div>

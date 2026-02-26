@@ -287,7 +287,7 @@ module.exports = async function handler(req, res) {
     const loja = await Loja.findOne({ _id: id, lojista_id: lojista.lojista_id });
     if (!loja) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    const allowed = ['nome', 'nome_exibicao', 'favicon', 'icone', 'dominio_customizado'];
+    const allowed = ['nome', 'nome_exibicao', 'slogan', 'favicon', 'icone', 'dominio_customizado'];
     const update = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) update[key] = req.body[key];
