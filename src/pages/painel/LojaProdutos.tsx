@@ -9,7 +9,7 @@ import type { LojaProduct, Variacao, AvaliacaoManual, AvaliacoesConfig, FreteCon
 import { lojaProductsApi } from '@/services/saas-api';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown } from 'lucide-react';
+import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +24,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ImageUploader from '@/components/ImageUploader';
 import { CurrencyInput } from '@/components/ui/currency-input';
 
@@ -70,6 +72,7 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
     cross_sell: { modo: 'aleatorio', categoria_manual_id: null },
     social_proof_gender: 'desativado',
     badge_imagem: null,
+    dimensoes: { peso: 0, altura: 0, largura: 0, comprimento: 0 },
   };
 }
 
@@ -228,6 +231,7 @@ const LojaProdutos = () => {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [expandedReviews, setExpandedReviews] = useState<string[]>([]);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
@@ -320,6 +324,7 @@ const LojaProdutos = () => {
       cross_sell: p.cross_sell || { modo: 'aleatorio', categoria_manual_id: null },
       social_proof_gender: p.social_proof_gender || 'desativado',
       badge_imagem: p.badge_imagem || null,
+      dimensoes: p.dimensoes || { peso: 0, altura: 0, largura: 0, comprimento: 0 },
     });
     setActiveTab('basico');
     setMode('editor');
@@ -449,6 +454,13 @@ const LojaProdutos = () => {
     });
   };
 
+  const setDimensao = (key: string, value: number) => {
+    setEditingProduct(prev => prev ? {
+      ...prev,
+      dimensoes: { ...(prev.dimensoes || { peso: 0, altura: 0, largura: 0, comprimento: 0 }), [key]: value }
+    } : prev);
+  };
+
   const addImage = (url: string) => {
     if (!url.trim()) return;
     setEditingProduct(prev => {
@@ -494,10 +506,14 @@ const LojaProdutos = () => {
   };
 
   const addAvaliacaoManual = () => {
+    const currentList = editingProduct?.avaliacoes_config?.avaliacoes_manuais || [];
+    const newIndex = currentList.length;
     setAvalConfig('avaliacoes_manuais', [
-      ...(editingProduct?.avaliacoes_config?.avaliacoes_manuais || []),
+      ...currentList,
       { nome: '', texto: '', nota: 5, data: new Date().toISOString().split('T')[0] },
     ]);
+    // Auto-expand the newly added review
+    setExpandedReviews(prev => [...prev, `review-${newIndex}`]);
   };
 
   const updateAvaliacaoManual = (idx: number, key: keyof AvaliacaoManual, value: any) => {
@@ -617,833 +633,829 @@ const LojaProdutos = () => {
   const freteConf = editingProduct?.frete_config || EMPTY_FRETE;
   const oferta = editingProduct?.oferta_relampago || EMPTY_OFERTA;
 
+  const dims = editingProduct?.dimensoes || { peso: 0, altura: 0, largura: 0, comprimento: 0 };
+
   // ============ EDITOR MODE ============
   if (mode === 'editor' && editingProduct) {
     return (
-      <div>
-        {/* Top Bar */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={goBack}><ArrowLeft className="h-5 w-5" /></Button>
-            <h1 className="text-xl font-bold">{editingProduct._id ? editingProduct.name || 'Editar Produto' : 'Novo Produto'}</h1>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {editingProduct._id && (
-              <Button variant="outline" size="sm" className="gap-1" onClick={handleDuplicate}>
-                <Copy className="h-4 w-4" /> Duplicar
+      <div className="bg-muted/30 min-h-screen -m-6">
+        {/* ── STICKY HEADER ── */}
+        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={goBack}><ArrowLeft className="h-5 w-5" /></Button>
+              <h1 className="text-lg font-semibold truncate max-w-[300px]">
+                {editingProduct._id ? editingProduct.name || 'Editar Produto' : 'Novo Produto'}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Switch Produto Ativo */}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editingProduct.is_active ?? true}
+                  onCheckedChange={v => setField('is_active', v)}
+                />
+                <span className="text-sm font-medium">
+                  {editingProduct.is_active ? 'Ativo' : 'Inativo'}
+                </span>
+              </div>
+
+              {/* Opções Avançadas */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <Settings className="h-4 w-4" /> Opções
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuContent align="end" className="z-[100] w-48">
+                    {editingProduct._id && (
+                      <DropdownMenuItem onClick={handleDuplicate}>
+                        <Copy className="h-4 w-4 mr-2" /> Duplicar
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => { setJsonText(''); setJsonDialogOpen(true); }}>
+                      <FileJson className="h-4 w-4 mr-2" /> Importar JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportJson}>
+                      <FileJson className="h-4 w-4 mr-2" /> Exportar JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadJsonExample}>
+                      <Download className="h-4 w-4 mr-2" /> JSON Exemplo
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuPortal>
+              </DropdownMenu>
+
+              {/* Único botão Salvar */}
+              <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingProduct._id ? 'Salvar' : 'Criar'}
               </Button>
-            )}
-            <Button variant="outline" size="sm" className="gap-1" onClick={() => { setJsonText(''); setJsonDialogOpen(true); }}>
-              <FileJson className="h-4 w-4" /> Importar JSON
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1" onClick={handleExportJson}>
-              <FileJson className="h-4 w-4" /> Exportar JSON
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1" onClick={handleDownloadJsonExample}>
-              <Download className="h-4 w-4" /> JSON Exemplo
-            </Button>
-            <Button onClick={handleSave} disabled={saving} className="gap-1">
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {editingProduct._id ? 'Salvar' : 'Criar'}
-            </Button>
+            </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-5">
-            <TabsTrigger value="basico">Básico</TabsTrigger>
-            <TabsTrigger value="variacoes">Variações</TabsTrigger>
-            <TabsTrigger value="avaliacoes">Avaliações</TabsTrigger>
-            <TabsTrigger value="frete">Frete</TabsTrigger>
-            <TabsTrigger value="extras">Extras</TabsTrigger>
-          </TabsList>
+        {/* ── CONTENT ── */}
+        <div className="p-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full grid grid-cols-5 mb-6">
+              <TabsTrigger value="basico">Básico</TabsTrigger>
+              <TabsTrigger value="variacoes">Variações</TabsTrigger>
+              <TabsTrigger value="avaliacoes">Avaliações</TabsTrigger>
+              <TabsTrigger value="frete">Frete</TabsTrigger>
+              <TabsTrigger value="extras">Extras</TabsTrigger>
+            </TabsList>
 
-          {/* ── TAB BÁSICO ── */}
-          <TabsContent value="basico" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <Label>Nome *</Label>
-                  <Input placeholder="Frigobar" value={editingProduct.name || ''} onChange={e => setField('name', e.target.value)} />
-                  {nameWarning && <p className="text-xs text-amber-500 mt-1">{nameWarning}</p>}
-                </div>
-                <div>
-                  <Label>Descrição curta</Label>
-                  <Input value={editingProduct.short_description || ''} onChange={e => setField('short_description', e.target.value)} />
-                </div>
-                <div>
-                  <Label>Descrição longa</Label>
-                  <Textarea rows={4} value={editingProduct.description || ''} onChange={e => setField('description', e.target.value)} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Preço</Label>
-                    <CurrencyInput value={editingProduct.price || 0} onChange={v => setField('price', v)} />
-                  </div>
-                  <div>
-                    <Label>Preço Promocional</Label>
-                    <CurrencyInput value={editingProduct.original_price || 0} onChange={v => setField('original_price', v || null)} />
-                    {discountPercent !== null && (
-                      <p className="text-xs text-green-600 mt-1 font-medium">Seu produto está com {discountPercent}% de desconto</p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <Switch checked={!!editingProduct.promotion} onCheckedChange={v => setField('promotion', v ? '🔥 Em alta' : null)} />
-                    <Label className="mb-0">Ativar tag de promoção</Label>
-                  </div>
-                  {editingProduct.promotion && (
-                    <Input placeholder="🎁 55% OFF ou 🔥 Em alta" value={editingProduct.promotion} onChange={e => setField('promotion', e.target.value || null)} />
-                  )}
-                  <p className="text-xs text-muted-foreground">Texto livre com emojis. Aparecerá como pill de destaque no produto.</p>
-                </div>
-                <div>
-                  <Label>Categorias</Label>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {(editingProduct.category_ids || (editingProduct.category_id ? [editingProduct.category_id] : [])).map(cid => {
-                      const cat = categories.find(c => c._id === cid);
-                      return cat ? (
-                        <Badge key={cid} variant="secondary" className="gap-1 pr-1">
-                          {cat.nome}
-                          <button type="button" onClick={() => {
-                            const ids = (editingProduct.category_ids || []).filter(x => x !== cid);
+            {/* ══════════ TAB BÁSICO ══════════ */}
+            <TabsContent value="basico" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left column (2/3) */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Card 1: Informações Gerais */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Informações Gerais</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label>Nome *</Label>
+                        <Input placeholder="Nome do produto" value={editingProduct.name || ''} onChange={e => setField('name', e.target.value)} />
+                        {nameWarning && <p className="text-xs text-amber-500 mt-1">{nameWarning}</p>}
+                      </div>
+                      <div>
+                        <Label>Descrição curta</Label>
+                        <Input value={editingProduct.short_description || ''} onChange={e => setField('short_description', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label>Descrição longa</Label>
+                        <Textarea rows={4} value={editingProduct.description || ''} onChange={e => setField('description', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label>Imagem ao fim da descrição</Label>
+                        <p className="text-xs text-muted-foreground mb-2">Aparece no final da seção "Sobre o produto" com zoom ao clicar</p>
+                        {editingProduct.description_image && (
+                          <div className="relative mb-2">
+                            <img src={editingProduct.description_image} alt="" className="w-full max-h-40 object-contain rounded-lg border border-border" />
+                            <Button variant="ghost" size="icon" className="absolute top-1 right-1 bg-background/80" onClick={() => setField('description_image', null)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        <ImageUploader lojaId={id || ''} onChange={(url) => setField('description_image', url)} placeholder="Cole a URL ou faça upload da imagem" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 2: Preço e Promoção */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Preço e Promoção</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Preço</Label>
+                          <CurrencyInput value={editingProduct.price || 0} onChange={v => setField('price', v)} />
+                        </div>
+                        <div>
+                          <Label>Preço Promocional</Label>
+                          <CurrencyInput value={editingProduct.original_price || 0} onChange={v => setField('original_price', v || null)} />
+                          {discountPercent !== null && (
+                            <p className="text-xs text-emerald-500 mt-1 font-medium">Seu produto está com {discountPercent}% de desconto</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <Switch checked={!!editingProduct.promotion} onCheckedChange={v => setField('promotion', v ? '🔥 Em alta' : null)} />
+                          <Label className="mb-0">Ativar tag de promoção</Label>
+                        </div>
+                        {editingProduct.promotion && (
+                          <Input placeholder="🎁 55% OFF ou 🔥 Em alta" value={editingProduct.promotion} onChange={e => setField('promotion', e.target.value || null)} />
+                        )}
+                        <p className="text-xs text-muted-foreground">Texto livre com emojis. Aparecerá como pill de destaque no produto.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 3: Categorias e Destaques */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Categorias e Destaques</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label>Categorias</Label>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {(editingProduct.category_ids || (editingProduct.category_id ? [editingProduct.category_id] : [])).map(cid => {
+                            const cat = categories.find((c: any) => c._id === cid);
+                            return cat ? (
+                              <Badge key={cid} variant="secondary" className="gap-1 pr-1">
+                                {cat.nome}
+                                <button type="button" onClick={() => {
+                                  const ids = (editingProduct.category_ids || []).filter((x: string) => x !== cid);
+                                  setField('category_ids', ids);
+                                  setField('category_id', ids[0] || null);
+                                }}><X className="h-3 w-3" /></button>
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                        <Select value="" onValueChange={v => {
+                          if (!v) return;
+                          const current = editingProduct.category_ids || (editingProduct.category_id ? [editingProduct.category_id] : []);
+                          if (!current.includes(v)) {
+                            const ids = [...current, v];
                             setField('category_ids', ids);
                             setField('category_id', ids[0] || null);
-                          }}><X className="h-3 w-3" /></button>
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                  <Select value="" onValueChange={v => {
-                    if (!v) return;
-                    const current = editingProduct.category_ids || (editingProduct.category_id ? [editingProduct.category_id] : []);
-                    if (!current.includes(v)) {
-                      const ids = [...current, v];
-                      setField('category_ids', ids);
-                      setField('category_id', ids[0] || null);
-                    }
-                  }}>
-                    <SelectTrigger><SelectValue placeholder="Adicionar Categorias" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.filter(c => !(editingProduct.category_ids || []).includes(c._id)).map(c => (
-                        <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">Selecione uma ou mais categorias.</p>
-                </div>
-                <div>
-                  <Label>Estoque geral</Label>
-                  <Input type="number" value={editingProduct.estoque || 0} onChange={e => setField('estoque', Number(e.target.value))} />
-                </div>
-
-                {/* Features (checkmarks) */}
-                <div>
-                  <Label>Destaques do produto (checkmarks)</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Itens que aparecem com ✓ na seção "Sobre o produto"</p>
-                  {(editingProduct.features || []).map((feat, fi) => (
-                    <div key={fi} className="flex items-center gap-2 mb-1.5">
-                      <Check className="h-4 w-4 text-primary shrink-0" />
-                      <Input
-                        value={feat}
-                        onChange={e => {
-                          const arr = [...(editingProduct.features || [])];
-                          arr[fi] = e.target.value;
-                          setField('features', arr);
-                        }}
-                        className="flex-1"
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        const arr = [...(editingProduct.features || [])];
-                        arr.splice(fi, 1);
-                        setField('features', arr);
-                      }}><X className="h-3 w-3" /></Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" className="mt-1" onClick={() => setField('features', [...(editingProduct.features || []), ''])}>
-                    <Plus className="h-3 w-3 mr-1" /> Adicionar destaque
-                  </Button>
-                </div>
-
-                {/* Description Image */}
-                <div>
-                  <Label>Imagem ao fim da descrição</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Aparece no final da seção "Sobre o produto" com zoom ao clicar</p>
-                  {editingProduct.description_image && (
-                    <div className="relative mb-2">
-                      <img src={editingProduct.description_image} alt="" className="w-full max-h-40 object-contain rounded-lg border border-border" />
-                      <Button variant="ghost" size="icon" className="absolute top-1 right-1 bg-background/80" onClick={() => setField('description_image', null)}>
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                  <ImageUploader
-                    lojaId={id || ''}
-                    onChange={(url) => setField('description_image', url)}
-                    placeholder="Cole a URL ou faça upload da imagem"
-                  />
-                </div>
-              </div>
-
-               {/* Right column: Images with Drag-and-Drop */}
-              <div className="space-y-4">
-                <Label>Imagens do produto (arraste para reordenar)</Label>
-                <div className="space-y-2">
-                  {(editingProduct.images || []).map((img, i) => (
-                    <div
-                      key={`${img}-${i}`}
-                      draggable
-                      onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }}
-                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-                      onDrop={e => {
-                        e.preventDefault();
-                        const from = Number(e.dataTransfer.getData('text/plain'));
-                        if (isNaN(from) || from === i) return;
-                        setEditingProduct(prev => {
-                          if (!prev) return prev;
-                          const imgs = [...(prev.images || [])];
-                          const [moved] = imgs.splice(from, 1);
-                          imgs.splice(i, 0, moved);
-                          return { ...prev, images: imgs, image: imgs[0] || '' };
-                        });
-                      }}
-                      className="flex items-center gap-2 bg-muted/30 rounded-lg p-2 cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors"
-                    >
-                      <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <img src={img} alt="" className="w-12 h-12 rounded object-cover shrink-0" />
-                      <span className="text-xs truncate flex-1">{img}</span>
-                      {i === 0 && <Badge variant="secondary" className="text-[10px] shrink-0">Principal</Badge>}
-                      <Button variant="ghost" size="icon" onClick={() => removeImage(i)}><X className="h-3 w-3" /></Button>
-                    </div>
-                  ))}
-                </div>
-                <ImageUploader
-                  lojaId={id || ''}
-                  onChange={(url) => addImage(url)}
-                  placeholder="Cole a URL ou faça upload"
-                />
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* ── TAB VARIAÇÕES ── */}
-          <TabsContent value="variacoes" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <Label>Variações do produto</Label>
-              <Button size="sm" onClick={addVariacao}><Plus className="h-3 w-3 mr-1" /> Nova Variação</Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={editingProduct.vender_sem_estoque || false} onCheckedChange={v => setField('vender_sem_estoque', v)} />
-              <span className="text-sm">Vender sem estoque</span>
-            </div>
-
-            {(editingProduct.variacoes || []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma variação cadastrada.</p>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {(editingProduct.variacoes || []).map((v, i) => (
-                  <div key={i} className="border border-border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Variação {i + 1}</span>
-                      <Button variant="ghost" size="icon" onClick={() => removeVariacao(i)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                    </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <Label className="text-xs">Tipo</Label>
-                        <Select value={v.tipo || 'Cor'} onValueChange={val => updateVariacao(i, 'tipo', val)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          }
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="Adicionar Categorias" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Cor">Cor</SelectItem>
-                            <SelectItem value="Tamanho">Tamanho</SelectItem>
-                            <SelectItem value="Modelo">Modelo</SelectItem>
+                            {categories.filter((c: any) => !(editingProduct.category_ids || []).includes(c._id)).map((c: any) => (
+                              <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs">Nome</Label>
-                        <div className="flex gap-2">
-                          <Input value={v.nome} onChange={e => updateVariacao(i, 'nome', e.target.value)} placeholder="Vermelho" className="flex-1" />
-                          {v.tipo === 'Cor' && (
-                            <input
-                              type="color"
-                              value={v.color_hex || '#000000'}
-                              onChange={e => updateVariacao(i, 'color_hex', e.target.value)}
-                              className="w-10 h-10 rounded border border-input cursor-pointer shrink-0"
-                              title="Selecionar cor"
-                            />
-                          )}
-                        </div>
-                        {v.tipo === 'Cor' && v.color_hex && (
-                          <p className="text-xs text-muted-foreground mt-1">HEX: {v.color_hex}</p>
-                        )}
+                        <Label>Estoque geral</Label>
+                        <Input type="number" value={editingProduct.estoque || 0} onChange={e => setField('estoque', Number(e.target.value))} />
                       </div>
                       <div>
-                        <Label className="text-xs">Estoque</Label>
-                        <Input type="number" value={v.estoque} onChange={e => updateVariacao(i, 'estoque', Number(e.target.value))} />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Preço (vazio = padrão)</Label>
-                        <CurrencyInput value={v.preco ?? 0} onChange={val => updateVariacao(i, 'preco', val || null)} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Imagem da variação</Label>
-                      <div className="flex items-center gap-3 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => setImagePickerIdx(i)}
-                          className="w-12 h-12 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors cursor-pointer shrink-0"
-                        >
-                          {v.imagem ? (
-                            <img src={v.imagem} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </button>
-                        <span className="text-xs text-muted-foreground">
-                          {v.imagem ? 'Clique para trocar' : 'Clique para selecionar'}
-                        </span>
-                        {v.imagem && (
-                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateVariacao(i, 'imagem', null)}>
-                            Remover
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* ── TAB AVALIAÇÕES ── */}
-          <TabsContent value="avaliacoes" className="space-y-4 mt-4">
-            <div>
-              <Label>Nota geral do produto</Label>
-              <input
-                type="text"
-                inputMode="numeric"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                placeholder="4,7"
-                value={avConfig.nota_exibicao || (avConfig.nota ? avConfig.nota.toFixed(1).replace('.', ',') : '')}
-                onChange={e => {
-                  const raw = e.target.value.replace(/\D/g, '');
-                  if (!raw) {
-                    setAvalConfig('nota', 0);
-                    setAvalConfig('nota_exibicao', '');
-                    setField('rating', 0);
-                    return;
-                  }
-                  let num = parseInt(raw, 10) / 10;
-                  if (num > 5) num = 5.0;
-                  const formatted = num.toFixed(1).replace('.', ',');
-                  setAvalConfig('nota', num);
-                  setAvalConfig('nota_exibicao', formatted);
-                  setField('rating', num);
-                }}
-                onKeyDown={e => { if (e.key === '.') e.preventDefault(); }}
-              />
-              <p className="text-xs text-muted-foreground mt-1">Digite "47" para 4,7 — valor entre 0,0 e 5,0. As estrelas seguirão essa nota.</p>
-            </div>
-
-            <div>
-              <Label>Comportamento do "Ver Mais"</Label>
-              <RadioGroup value={avConfig.ver_mais_modo} onValueChange={v => setAvalConfig('ver_mais_modo', v)} className="mt-2 space-y-2">
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="ocultar" id="vm-ocultar" />
-                  <Label htmlFor="vm-ocultar" className="font-normal">Ocultar totalmente</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="funcional" id="vm-funcional" />
-                  <Label htmlFor="vm-funcional" className="font-normal">Exibir e carregar mais avaliações</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="estetico" id="vm-estetico" />
-                  <Label htmlFor="vm-estetico" className="font-normal">Exibir sem função (apenas estético)</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {avConfig.ver_mais_modo !== 'ocultar' && (
-              <div>
-                <Label>Quantidade antes do "Ver Mais"</Label>
-                <Input type="number" min="1" value={avConfig.qtd_antes_ver_mais} onChange={e => setAvalConfig('qtd_antes_ver_mais', Number(e.target.value))} />
-              </div>
-            )}
-
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-base font-semibold">Avaliações Manuais (Prioritárias)</Label>
-                <Button size="sm" onClick={addAvaliacaoManual}><Plus className="h-3 w-3 mr-1" /> Nova</Button>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">Estas avaliações sempre aparecem primeiro.</p>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {(avConfig.avaliacoes_manuais || []).map((av, i) => (
-                  <div key={i} className="border border-border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">Avaliação {i + 1}</span>
-                      <Button variant="ghost" size="icon" onClick={() => removeAvaliacaoManual(i)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                    </div>
-                    {/* Foto do avaliador */}
-                    <div className="flex items-center gap-3">
-                      {(av as any).foto_avaliador ? (
-                        <img src={(av as any).foto_avaliador} alt={av.nome} className="h-10 w-10 rounded-full object-cover border border-border shrink-0" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border shrink-0">
-                          <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <Label className="text-xs">Foto do avaliador</Label>
-                         <ImageUploader
-                          lojaId={id || ''}
-                          value={(av as any).foto_avaliador || ''}
-                          onChange={(url) => updateAvaliacaoManual(i, 'foto_avaliador' as any, url)}
-                          placeholder="Cole a URL aqui"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Input placeholder="Nome" value={av.nome} onChange={e => updateAvaliacaoManual(i, 'nome', e.target.value)} />
-                      <Input placeholder="Nota" type="number" step="0.1" min="0" max="5" value={av.nota} onChange={e => updateAvaliacaoManual(i, 'nota', Number(e.target.value))} />
-                      <Input placeholder="Data" type="date" value={av.data} onChange={e => updateAvaliacaoManual(i, 'data', e.target.value)} />
-                    </div>
-                    <Textarea placeholder="Texto da avaliação..." rows={2} value={av.texto} onChange={e => updateAvaliacaoManual(i, 'texto', e.target.value)} />
-                    {/* Imagens da avaliação */}
-                    <div className="space-y-1">
-                      <Label className="text-xs">Fotos (até 3)</Label>
-                      <div className="flex gap-2 flex-wrap">
-                        {(av.imagens || []).map((img, j) => (
-                          <div key={j} className="relative group">
-                            <img src={img} alt="" className="w-14 h-14 rounded-lg object-cover border border-border" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const imgs = [...(av.imagens || [])];
-                                imgs.splice(j, 1);
-                                updateAvaliacaoManual(i, 'imagens' as any, imgs);
-                              }}
-                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
-                            >×</button>
+                        <Label>Destaques do produto (checkmarks)</Label>
+                        <p className="text-xs text-muted-foreground mb-2">Itens que aparecem com ✓ na seção "Sobre o produto"</p>
+                        {(editingProduct.features || []).map((feat, fi) => (
+                          <div key={fi} className="flex items-center gap-2 mb-1.5">
+                            <Check className="h-4 w-4 text-primary shrink-0" />
+                            <Input value={feat} onChange={e => { const arr = [...(editingProduct.features || [])]; arr[fi] = e.target.value; setField('features', arr); }} className="flex-1" />
+                            <Button variant="ghost" size="icon" onClick={() => { const arr = [...(editingProduct.features || [])]; arr.splice(fi, 1); setField('features', arr); }}><X className="h-3 w-3" /></Button>
                           </div>
                         ))}
+                        <Button variant="outline" size="sm" className="mt-1" onClick={() => setField('features', [...(editingProduct.features || []), ''])}>
+                          <Plus className="h-3 w-3 mr-1" /> Adicionar destaque
+                        </Button>
                       </div>
-                      {(av.imagens || []).length < 3 && (
-                        <ImageUploader
-                          lojaId={id || ''}
-                          onChange={(url) => {
-                            const imgs = [...(av.imagens || []), url];
-                            updateAvaliacaoManual(i, 'imagens' as any, imgs);
-                          }}
-                          placeholder="URL da foto ou upload"
-                          className="mt-1"
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <div>
-                <Label className="text-base font-semibold">Comentários Genéricos</Label>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">Selecione um pacote de comentários para complementar as avaliações manuais.</p>
-                <Select
-                  value={avConfig.pacote_comentarios || '_none'}
-                  onValueChange={v => {
-                    if (v === '_none') {
-                      setAvalConfig('pacote_comentarios', undefined);
-                      setAvalConfig('usar_comentarios_padrao', false);
-                    } else {
-                      setAvalConfig('pacote_comentarios', v);
-                      setAvalConfig('usar_comentarios_padrao', true);
-                    }
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhum</SelectItem>
-                    {pacotesComentarios.map((p, i) => (
-                      <SelectItem key={`${p.origem}-${i}`} value={p.nome}>
-                        <span className="flex items-center gap-2">
-                          {p.nome}
-                          <Badge variant={p.origem === 'admin' ? 'default' : 'secondary'} className="text-[10px] ml-1">
-                            {p.origem === 'admin' ? 'Global' : 'Loja'}
-                          </Badge>
-                          <span className="text-muted-foreground text-xs">({(p.comentarios?.length || p.textos?.length || 0)})</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* ── TAB FRETE ── */}
-          <TabsContent value="frete" className="space-y-4 mt-4">
-            {/* Switch ocultar valor */}
-            <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-              <Switch
-                checked={freteConf.ocultar_frete_produto || false}
-                onCheckedChange={v => setFreteConfig('ocultar_frete_produto', v)}
-              />
-              <div>
-                <p className="text-sm font-medium">Ocultar o valor do frete na página do produto</p>
-                <p className="text-xs text-muted-foreground">O prazo aparecerá, mas o preço será substituído por "Calcular no checkout".</p>
-              </div>
-            </div>
-
-            {/* Fretes vinculados */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-semibold">Fretes do Produto</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Vincule fretes cadastrados em /fretes. Cada frete pode ter um valor personalizado.</p>
+                    </CardContent>
+                  </Card>
                 </div>
-                <Select
-                  value=""
-                  onValueChange={freteId => {
-                    if (!freteId) return;
-                    const current = (editingProduct as any).fretes_vinculados || [];
-                    if (current.some((v: any) => v.frete_id === freteId)) return;
-                    setField('fretes_vinculados', [...current, { frete_id: freteId, valor_personalizado: null, exibir_no_produto: true }]);
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]"><SelectValue placeholder="Adicionar Frete" /></SelectTrigger>
-                  <SelectContent>
-                    {fretesLoja.filter(f => f.is_active && !((editingProduct as any).fretes_vinculados || []).some((v: any) => v.frete_id === f._id)).map(f => (
-                      <SelectItem key={f._id} value={f._id}>{f.nome} — {f.valor === 0 ? 'Grátis' : `R$ ${(f.valor / 100).toFixed(2).replace('.', ',')}`}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {((editingProduct as any).fretes_vinculados || []).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum frete vinculado. Adicione fretes cadastrados no menu "Fretes".</p>
-              )}
-
-              {((editingProduct as any).fretes_vinculados || []).map((vinculo: any, i: number) => {
-                const freteGlobal = fretesLoja.find(f => f._id === vinculo.frete_id);
-                if (!freteGlobal) return null;
-                return (
-                  <div key={vinculo.frete_id} className="border border-border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold">{freteGlobal.nome}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {freteGlobal.tipo === 'entregue_ate' ? 'Entregue até' : 'Receba até'} · {freteGlobal.prazo_dias_min}–{freteGlobal.prazo_dias_max} dias úteis ·
-                          Valor padrão: {freteGlobal.valor === 0 ? 'Grátis' : `R$ ${(freteGlobal.valor / 100).toFixed(2).replace('.', ',')}`}
-                          {!freteGlobal.is_active && <Badge variant="secondary" className="ml-2">Inativo</Badge>}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <Switch checked={vinculo.exibir_no_produto !== false} onCheckedChange={v => {
-                            const list = [...((editingProduct as any).fretes_vinculados || [])];
-                            list[i] = { ...list[i], exibir_no_produto: v };
-                            setField('fretes_vinculados', list);
-                          }} />
-                          <span className="text-xs text-muted-foreground">Exibir</span>
+                {/* Right column (1/3): Images */}
+                <div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Imagens</CardTitle>
+                      <CardDescription>Arraste para reordenar. A primeira é a principal.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(editingProduct.images || []).map((img, i) => (
+                        <div
+                          key={`${img}-${i}`}
+                          draggable
+                          onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }}
+                          onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                          onDrop={e => {
+                            e.preventDefault();
+                            const from = Number(e.dataTransfer.getData('text/plain'));
+                            if (isNaN(from) || from === i) return;
+                            setEditingProduct(prev => {
+                              if (!prev) return prev;
+                              const imgs = [...(prev.images || [])];
+                              const [moved] = imgs.splice(from, 1);
+                              imgs.splice(i, 0, moved);
+                              return { ...prev, images: imgs, image: imgs[0] || '' };
+                            });
+                          }}
+                          className="flex items-center gap-2 bg-muted/30 rounded-lg p-2 cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors border border-border"
+                        >
+                          <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <img src={img} alt="" className="w-12 h-12 rounded-md object-cover shrink-0 border border-border shadow-sm" />
+                          <span className="text-xs truncate flex-1 text-muted-foreground">{img.split('/').pop()}</span>
+                          {i === 0 && <Badge variant="secondary" className="text-[10px] shrink-0">Principal</Badge>}
+                          <Button variant="ghost" size="icon" onClick={() => removeImage(i)}><X className="h-3 w-3" /></Button>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          const list = [...((editingProduct as any).fretes_vinculados || [])];
-                          list.splice(i, 1);
-                          setField('fretes_vinculados', list);
-                        }}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                      </div>
+                      ))}
+                      <ImageUploader lojaId={id || ''} onChange={(url) => addImage(url)} placeholder="Cole a URL ou faça upload" />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ══════════ TAB VARIAÇÕES ══════════ */}
+            <TabsContent value="variacoes" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Variações do Produto</CardTitle>
+                      <CardDescription>Cores, tamanhos ou modelos com estoque e preço individual.</CardDescription>
+                    </div>
+                    <Button size="sm" onClick={addVariacao}><Plus className="h-3 w-3 mr-1" /> Nova Variação</Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={editingProduct.vender_sem_estoque || false} onCheckedChange={v => setField('vender_sem_estoque', v)} />
+                    <span className="text-sm">Vender sem estoque</span>
+                  </div>
+
+                  {(editingProduct.variacoes || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Nenhuma variação cadastrada.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {(editingProduct.variacoes || []).map((v, i) => (
+                        <div key={i} className="rounded-lg border border-border bg-muted/20 p-4">
+                          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+                            <div>
+                              <Label className="text-xs">Tipo</Label>
+                              <Select value={v.tipo || 'Cor'} onValueChange={val => updateVariacao(i, 'tipo', val)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Cor">Cor</SelectItem>
+                                  <SelectItem value="Tamanho">Tamanho</SelectItem>
+                                  <SelectItem value="Modelo">Modelo</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Nome</Label>
+                              <div className="flex gap-1">
+                                <Input value={v.nome} onChange={e => updateVariacao(i, 'nome', e.target.value)} placeholder="Vermelho" className="flex-1" />
+                                {v.tipo === 'Cor' && (
+                                  <input type="color" value={v.color_hex || '#000000'} onChange={e => updateVariacao(i, 'color_hex', e.target.value)} className="w-10 h-10 rounded border border-input cursor-pointer shrink-0" />
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Estoque</Label>
+                              <Input type="number" value={v.estoque} onChange={e => updateVariacao(i, 'estoque', Number(e.target.value))} />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Preço (vazio = padrão)</Label>
+                              <CurrencyInput value={v.preco ?? 0} onChange={val => updateVariacao(i, 'preco', val || null)} />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Imagem</Label>
+                              <button type="button" onClick={() => setImagePickerIdx(i)} className="w-full h-10 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
+                                {v.imagem ? <img src={v.imagem} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                              </button>
+                            </div>
+                            <div className="flex items-end justify-end">
+                              <Button variant="ghost" size="icon" onClick={() => removeVariacao(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ══════════ TAB AVALIAÇÕES ══════════ */}
+            <TabsContent value="avaliacoes" className="space-y-6">
+              {/* Config Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Configurações de Avaliação</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Nota geral do produto</Label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+                      placeholder="4,7"
+                      value={avConfig.nota_exibicao || (avConfig.nota ? avConfig.nota.toFixed(1).replace('.', ',') : '')}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        if (!raw) { setAvalConfig('nota', 0); setAvalConfig('nota_exibicao', ''); setField('rating', 0); return; }
+                        let num = parseInt(raw, 10) / 10;
+                        if (num > 5) num = 5.0;
+                        const formatted = num.toFixed(1).replace('.', ',');
+                        setAvalConfig('nota', num); setAvalConfig('nota_exibicao', formatted); setField('rating', num);
+                      }}
+                      onKeyDown={e => { if (e.key === '.') e.preventDefault(); }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Digite "47" para 4,7 — valor entre 0,0 e 5,0.</p>
+                  </div>
+                  <div>
+                    <Label>Comportamento do "Ver Mais"</Label>
+                    <RadioGroup value={avConfig.ver_mais_modo} onValueChange={v => setAvalConfig('ver_mais_modo', v)} className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2"><RadioGroupItem value="ocultar" id="vm-ocultar" /><Label htmlFor="vm-ocultar" className="font-normal">Ocultar totalmente</Label></div>
+                      <div className="flex items-center gap-2"><RadioGroupItem value="funcional" id="vm-funcional" /><Label htmlFor="vm-funcional" className="font-normal">Exibir e carregar mais</Label></div>
+                      <div className="flex items-center gap-2"><RadioGroupItem value="estetico" id="vm-estetico" /><Label htmlFor="vm-estetico" className="font-normal">Exibir sem função (estético)</Label></div>
+                    </RadioGroup>
+                  </div>
+                  {avConfig.ver_mais_modo !== 'ocultar' && (
+                    <div>
+                      <Label>Quantidade antes do "Ver Mais"</Label>
+                      <Input type="number" min="1" value={avConfig.qtd_antes_ver_mais} onChange={e => setAvalConfig('qtd_antes_ver_mais', Number(e.target.value))} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Manual Reviews Accordion Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Avaliações Manuais</CardTitle>
+                      <CardDescription>Estas avaliações sempre aparecem primeiro.</CardDescription>
+                    </div>
+                    <Button size="sm" onClick={addAvaliacaoManual}><Plus className="h-3 w-3 mr-1" /> Nova</Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {(avConfig.avaliacoes_manuais || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Nenhuma avaliação manual cadastrada.</p>
+                  ) : (
+                    <Accordion type="multiple" value={expandedReviews} onValueChange={setExpandedReviews}>
+                      {(avConfig.avaliacoes_manuais || []).map((av, i) => (
+                        <AccordionItem key={i} value={`review-${i}`}>
+                          <AccordionTrigger className="hover:no-underline py-3">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="flex items-center gap-0.5">
+                                {Array.from({ length: 5 }).map((_, s) => (
+                                  <Star key={s} className={`h-3.5 w-3.5 ${s < av.nota ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'}`} />
+                                ))}
+                              </div>
+                              <span className="text-sm font-medium">{av.nome || 'Sem nome'}</span>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={e => { e.stopPropagation(); removeAvaliacaoManual(i); }}>
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-3 pt-2">
+                              <div className="flex items-center gap-3">
+                                {(av as any).foto_avaliador ? (
+                                  <img src={(av as any).foto_avaliador} alt={av.nome} className="h-10 w-10 rounded-full object-cover border border-border shrink-0" />
+                                ) : (
+                                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border shrink-0">
+                                    <User className="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <Label className="text-xs">Foto do avaliador</Label>
+                                  <ImageUploader lojaId={id || ''} value={(av as any).foto_avaliador || ''} onChange={(url) => updateAvaliacaoManual(i, 'foto_avaliador' as any, url)} placeholder="Cole a URL aqui" />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Input placeholder="Nome" value={av.nome} onChange={e => updateAvaliacaoManual(i, 'nome', e.target.value)} />
+                                <Input placeholder="Nota" type="number" step="0.1" min="0" max="5" value={av.nota} onChange={e => updateAvaliacaoManual(i, 'nota', Number(e.target.value))} />
+                                <Input placeholder="Data" type="date" value={av.data} onChange={e => updateAvaliacaoManual(i, 'data', e.target.value)} />
+                              </div>
+                              <Textarea placeholder="Texto da avaliação..." rows={2} value={av.texto} onChange={e => updateAvaliacaoManual(i, 'texto', e.target.value)} />
+                              <div className="space-y-1">
+                                <Label className="text-xs">Fotos (até 3)</Label>
+                                <div className="flex gap-2 flex-wrap">
+                                  {(av.imagens || []).map((img, j) => (
+                                    <div key={j} className="relative group">
+                                      <img src={img} alt="" className="w-14 h-14 rounded-lg object-cover border border-border" />
+                                      <button type="button" onClick={() => { const imgs = [...(av.imagens || [])]; imgs.splice(j, 1); updateAvaliacaoManual(i, 'imagens' as any, imgs); }} className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                    </div>
+                                  ))}
+                                </div>
+                                {(av.imagens || []).length < 3 && (
+                                  <ImageUploader lojaId={id || ''} onChange={(url) => { const imgs = [...(av.imagens || []), url]; updateAvaliacaoManual(i, 'imagens' as any, imgs); }} placeholder="URL da foto ou upload" className="mt-1" />
+                                )}
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Generic Comments Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Comentários Genéricos</CardTitle>
+                  <CardDescription>Selecione um pacote de comentários para complementar as avaliações manuais.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select
+                    value={avConfig.pacote_comentarios || '_none'}
+                    onValueChange={v => {
+                      if (v === '_none') { setAvalConfig('pacote_comentarios', undefined); setAvalConfig('usar_comentarios_padrao', false); }
+                      else { setAvalConfig('pacote_comentarios', v); setAvalConfig('usar_comentarios_padrao', true); }
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Nenhum</SelectItem>
+                      {pacotesComentarios.map((p, i) => (
+                        <SelectItem key={`${p.origem}-${i}`} value={p.nome}>
+                          <span className="flex items-center gap-2">
+                            {p.nome}
+                            <Badge variant={p.origem === 'admin' ? 'default' : 'secondary'} className="text-[10px] ml-1">{p.origem === 'admin' ? 'Global' : 'Loja'}</Badge>
+                            <span className="text-muted-foreground text-xs">({(p.comentarios?.length || p.textos?.length || 0)})</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ══════════ TAB FRETE ══════════ */}
+            <TabsContent value="frete" className="space-y-6">
+              {/* Card 1: Dimensões e Peso */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2"><Weight className="h-4 w-4" /> Dimensões e Peso do Pacote</CardTitle>
+                  <CardDescription>Necessário para cálculo automático de frete via Correios/Melhor Envio.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-xs">Peso (kg)</Label>
+                      <Input type="number" step="0.1" min="0" value={dims.peso} onChange={e => setDimensao('peso', Number(e.target.value))} placeholder="0.5" />
                     </div>
                     <div>
-                      <Label className="text-xs">Valor personalizado (deixe vazio para usar o padrão)</Label>
-                      <CurrencyInput
-                        value={vinculo.valor_personalizado ?? 0}
-                        onChange={v => {
-                          const list = [...((editingProduct as any).fretes_vinculados || [])];
-                          list[i] = { ...list[i], valor_personalizado: v || null };
-                          setField('fretes_vinculados', list);
-                        }}
-                        placeholder={`Padrão: ${(freteGlobal.valor / 100).toFixed(2).replace('.', ',')}`}
-                      />
+                      <Label className="text-xs">Altura (cm)</Label>
+                      <Input type="number" step="1" min="0" value={dims.altura} onChange={e => setDimensao('altura', Number(e.target.value))} placeholder="10" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Largura (cm)</Label>
+                      <Input type="number" step="1" min="0" value={dims.largura} onChange={e => setDimensao('largura', Number(e.target.value))} placeholder="20" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Comprimento (cm)</Label>
+                      <Input type="number" step="1" min="0" value={dims.comprimento} onChange={e => setDimensao('comprimento', Number(e.target.value))} placeholder="30" />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </TabsContent>
+                </CardContent>
+              </Card>
 
-          {/* ── TAB EXTRAS ── */}
-          <TabsContent value="extras" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
-                <Label>Parcelas do produto</Label>
-                <Select value={editingProduct.parcelas_fake || '0'} onValueChange={v => setField('parcelas_fake', v === '0' ? null : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Não exibir</SelectItem>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n}x {editingProduct.price ? `de ${(editingProduct.price / 100 / n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Escolha quantas parcelas exibir. O valor será calculado automaticamente.</p>
-              </div>
-              <div>
-                <Label>Vendas fake (número)</Label>
-                <Input type="number" value={editingProduct.vendas_fake || 0} onChange={e => setField('vendas_fake', Number(e.target.value))} />
-              </div>
-            </div>
-
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Oferta Relâmpago</Label>
-                <Switch checked={oferta.ativo} onCheckedChange={v => setOferta('ativo', v)} />
-              </div>
-              {oferta.ativo && (
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs">Título da Oferta</Label>
-                    <Input value={oferta.titulo || ''} onChange={e => setOferta('titulo', e.target.value)} placeholder="Oferta Relâmpago" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Ícone da Oferta</Label>
-                    <Select value={oferta.icone || 'zap'} onValueChange={v => setOferta('icone', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+              {/* Card 2: Frete Manual */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Frete Manual Personalizado</CardTitle>
+                      <CardDescription>Vincule fretes cadastrados em /fretes. Cada frete pode ter um valor personalizado.</CardDescription>
+                    </div>
+                    <Select
+                      value=""
+                      onValueChange={freteId => {
+                        if (!freteId) return;
+                        const current = (editingProduct as any).fretes_vinculados || [];
+                        if (current.some((v: any) => v.frete_id === freteId)) return;
+                        setField('fretes_vinculados', [...current, { frete_id: freteId, valor_personalizado: null, exibir_no_produto: true }]);
+                      }}
+                    >
+                      <SelectTrigger className="w-[200px]"><SelectValue placeholder="Adicionar Frete" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="zap"><span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Raio</span></SelectItem>
-                        <SelectItem value="flame"><span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Fogo</span></SelectItem>
-                        <SelectItem value="shopping-cart"><span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Carrinho</span></SelectItem>
+                        {fretesLoja.filter((f: any) => f.is_active && !((editingProduct as any).fretes_vinculados || []).some((v: any) => v.frete_id === f._id)).map((f: any) => (
+                          <SelectItem key={f._id} value={f._id}>{f.nome} — {f.valor === 0 ? 'Grátis' : `R$ ${(f.valor / 100).toFixed(2).replace('.', ',')}`}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Switch ocultar valor */}
+                  <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                    <Switch checked={freteConf.ocultar_frete_produto || false} onCheckedChange={v => setFreteConfig('ocultar_frete_produto', v)} />
                     <div>
-                      <Label className="text-xs">Data/Hora de Término</Label>
-                      <Input type="datetime-local" value={oferta.data_termino || ''} onChange={e => setOferta('data_termino', e.target.value || null)} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Estoque da Campanha</Label>
-                      <Input type="number" min="0" value={oferta.estoque_campanha || 0} onChange={e => setOferta('estoque_campanha', Number(e.target.value))} />
+                      <p className="text-sm font-medium">Ocultar o valor do frete na página do produto</p>
+                      <p className="text-xs text-muted-foreground">O prazo aparecerá, mas o preço será substituído por "Calcular no checkout".</p>
                     </div>
                   </div>
-                  <div className="border-t border-border pt-3 mt-3">
-                    <Label className="text-sm font-medium">Tempo Dinâmico (Evergreen)</Label>
-                    <p className="text-xs text-muted-foreground mt-1 mb-2">Se a data de término estiver vazia, o cronômetro evergreen será usado. O tempo é exclusivo por visitante.</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs">Minutos</Label>
-                        <Input type="number" min="0" value={oferta.evergreen_minutos || 0} onChange={e => setOferta('evergreen_minutos', Number(e.target.value))} />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Segundos (0-59)</Label>
-                        <Input type="number" min="0" max="59" value={oferta.evergreen_segundos || 0} onChange={e => setOferta('evergreen_segundos', Math.min(59, Math.max(0, Number(e.target.value))))} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {/* Vantagens do Produto */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-semibold">Vantagens do Produto</Label>
-                  <p className="text-xs text-muted-foreground">Até 6 características curtas (Ex: "Material Micro Expandido")</p>
-                </div>
-                <Switch
-                  checked={editingProduct.vantagens?.ativo ?? false}
-                  onCheckedChange={v => setField('vantagens', { ...(editingProduct.vantagens || { ativo: false, itens: [] }), ativo: v })}
-                />
-              </div>
-              {editingProduct.vantagens?.ativo && (
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-xs">Título da seção</Label>
-                    <Input
-                      value={(editingProduct as any).vantagens_titulo || ''}
-                      onChange={e => setField('vantagens_titulo', e.target.value || null)}
-                      placeholder="Vantagens do Produto"
-                    />
-                  </div>
-                  {(editingProduct.vantagens.itens || []).map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
-                      <Input
-                        value={item}
-                        onChange={e => {
-                          const itens = [...(editingProduct.vantagens?.itens || [])];
-                          itens[i] = e.target.value;
-                          setField('vantagens', { ...editingProduct.vantagens!, itens });
-                        }}
-                        placeholder={`Vantagem ${i + 1}`}
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        const itens = [...(editingProduct.vantagens?.itens || [])];
-                        itens.splice(i, 1);
-                        setField('vantagens', { ...editingProduct.vantagens!, itens });
-                      }}><X className="h-3 w-3" /></Button>
-                    </div>
-                  ))}
-                  {(editingProduct.vantagens.itens?.length || 0) < 6 && (
-                    <Button variant="outline" size="sm" onClick={() => {
-                      const itens = [...(editingProduct.vantagens?.itens || []), ''];
-                      setField('vantagens', { ...editingProduct.vantagens!, itens });
-                    }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
+                  {((editingProduct as any).fretes_vinculados || []).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum frete vinculado. Adicione fretes cadastrados no menu "Fretes".</p>
                   )}
-                </div>
-              )}
-            </div>
 
-            {/* Proteção do Cliente */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-semibold">Proteção do Cliente</Label>
-                  <p className="text-xs text-muted-foreground">Trust badges (Ex: "Devolução Gratuita", "Compra Segura")</p>
-                </div>
-                <Switch
-                  checked={editingProduct.protecao_cliente?.ativo ?? false}
-                  onCheckedChange={v => setField('protecao_cliente', { ...(editingProduct.protecao_cliente || { ativo: false, itens: [] }), ativo: v })}
-                />
-              </div>
-              {editingProduct.protecao_cliente?.ativo && (
-                <div className="space-y-2">
-                  {(editingProduct.protecao_cliente.itens || []).map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Select value={item.icone || 'shield'} onValueChange={v => {
-                        const itens = [...(editingProduct.protecao_cliente?.itens || [])];
-                        itens[i] = { ...itens[i], icone: v };
-                        setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens });
-                      }}>
-                        <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                  {((editingProduct as any).fretes_vinculados || []).map((vinculo: any, i: number) => {
+                    const freteGlobal = fretesLoja.find((f: any) => f._id === vinculo.frete_id);
+                    if (!freteGlobal) return null;
+                    return (
+                      <div key={vinculo.frete_id} className="rounded-lg border border-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{freteGlobal.nome}</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {freteGlobal.prazo_dias_min}–{freteGlobal.prazo_dias_max} dias úteis · Padrão: {freteGlobal.valor === 0 ? 'Grátis' : `R$ ${(freteGlobal.valor / 100).toFixed(2).replace('.', ',')}`}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <Switch checked={vinculo.exibir_no_produto !== false} onCheckedChange={v => {
+                                const list = [...((editingProduct as any).fretes_vinculados || [])];
+                                list[i] = { ...list[i], exibir_no_produto: v };
+                                setField('fretes_vinculados', list);
+                              }} />
+                              <span className="text-xs text-muted-foreground">Exibir</span>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              const list = [...((editingProduct as any).fretes_vinculados || [])];
+                              list.splice(i, 1);
+                              setField('fretes_vinculados', list);
+                            }}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Valor personalizado (vazio = padrão)</Label>
+                          <CurrencyInput
+                            value={vinculo.valor_personalizado ?? 0}
+                            onChange={v => {
+                              const list = [...((editingProduct as any).fretes_vinculados || [])];
+                              list[i] = { ...list[i], valor_personalizado: v || null };
+                              setField('fretes_vinculados', list);
+                            }}
+                            placeholder={`Padrão: ${(freteGlobal.valor / 100).toFixed(2).replace('.', ',')}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ══════════ TAB EXTRAS ══════════ */}
+            <TabsContent value="extras" className="space-y-6">
+              {/* Card 1: Gatilhos de Escassez */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Gatilhos de Escassez</CardTitle>
+                  <CardDescription>Parcelas, vendas fake e oferta relâmpago.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Parcelas do produto</Label>
+                      <Select value={editingProduct.parcelas_fake || '0'} onValueChange={v => setField('parcelas_fake', v === '0' ? null : v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="shield">🛡️ Escudo</SelectItem>
-                          <SelectItem value="truck">🚚 Entrega</SelectItem>
-                          <SelectItem value="lock">🔒 Seguro</SelectItem>
-                          <SelectItem value="refresh">🔄 Troca</SelectItem>
+                          <SelectItem value="0">Não exibir</SelectItem>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}x {editingProduct.price ? `de ${(editingProduct.price / 100 / n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      <Input
-                        className="flex-1"
-                        value={item.texto}
-                        onChange={e => {
-                          const itens = [...(editingProduct.protecao_cliente?.itens || [])];
-                          itens[i] = { ...itens[i], texto: e.target.value };
-                          setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens });
-                        }}
-                        placeholder="Devolução Gratuita"
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        const itens = [...(editingProduct.protecao_cliente?.itens || [])];
-                        itens.splice(i, 1);
-                        setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens });
-                      }}><X className="h-3 w-3" /></Button>
                     </div>
-                  ))}
-                  {(editingProduct.protecao_cliente.itens?.length || 0) < 4 && (
-                    <Button variant="outline" size="sm" onClick={() => {
-                      const itens = [...(editingProduct.protecao_cliente?.itens || []), { icone: 'shield', texto: '' }];
-                      setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens });
-                    }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Pessoas Vendo Agora */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-semibold">Pessoas Vendo Agora</Label>
-                  <p className="text-xs text-muted-foreground">Exibe "🔥 X pessoas vendo agora" na página do produto.</p>
-                </div>
-                <Switch
-                  checked={editingProduct.pessoas_vendo?.ativo ?? false}
-                  onCheckedChange={v => setField('pessoas_vendo', { ...(editingProduct.pessoas_vendo || { ativo: false, min: 10, max: 50 }), ativo: v })}
-                />
-              </div>
-              {editingProduct.pessoas_vendo?.ativo && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs">Mínimo</Label>
-                    <Input type="number" min="1" value={editingProduct.pessoas_vendo.min} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, min: Number(e.target.value) })} />
+                    <div>
+                      <Label>Vendas fake (número)</Label>
+                      <Input type="number" value={editingProduct.vendas_fake || 0} onChange={e => setField('vendas_fake', Number(e.target.value))} />
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Máximo</Label>
-                    <Input type="number" min="1" value={editingProduct.pessoas_vendo.max} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, max: Number(e.target.value) })} />
+
+                  {/* Oferta Relâmpago */}
+                  <div className="rounded-lg border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-semibold">Oferta Relâmpago</Label>
+                      <Switch checked={oferta.ativo} onCheckedChange={v => setOferta('ativo', v)} />
+                    </div>
+                    {oferta.ativo && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs">Título da Oferta</Label>
+                          <Input value={oferta.titulo || ''} onChange={e => setOferta('titulo', e.target.value)} placeholder="Oferta Relâmpago" />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Ícone da Oferta</Label>
+                          <Select value={oferta.icone || 'zap'} onValueChange={v => setOferta('icone', v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="zap"><span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Raio</span></SelectItem>
+                              <SelectItem value="flame"><span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Fogo</span></SelectItem>
+                              <SelectItem value="shopping-cart"><span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Carrinho</span></SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">Data/Hora de Término</Label>
+                            <Input type="datetime-local" value={oferta.data_termino || ''} onChange={e => setOferta('data_termino', e.target.value || null)} />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Estoque da Campanha</Label>
+                            <Input type="number" min="0" value={oferta.estoque_campanha || 0} onChange={e => setOferta('estoque_campanha', Number(e.target.value))} />
+                          </div>
+                        </div>
+                        <div className="border-t border-border pt-3">
+                          <Label className="text-sm font-medium">Tempo Dinâmico (Evergreen)</Label>
+                          <p className="text-xs text-muted-foreground mt-1 mb-2">Se a data de término estiver vazia, o cronômetro evergreen será usado.</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs">Minutos</Label>
+                              <Input type="number" min="0" value={oferta.evergreen_minutos || 0} onChange={e => setOferta('evergreen_minutos', Number(e.target.value))} />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Segundos (0-59)</Label>
+                              <Input type="number" min="0" max="59" value={oferta.evergreen_segundos || 0} onChange={e => setOferta('evergreen_segundos', Math.min(59, Math.max(0, Number(e.target.value))))} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
+                </CardContent>
+              </Card>
 
-            {/* Cross-Sell */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <Label className="text-base font-semibold">Cross-Sell (Você Também Pode Gostar)</Label>
-              <Select value={editingProduct.cross_sell?.modo || 'aleatorio'} onValueChange={v => setField('cross_sell', { ...(editingProduct.cross_sell || { modo: 'aleatorio', categoria_manual_id: null }), modo: v, ...(v !== 'categoria_manual' ? { categoria_manual_id: null } : {}) })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="aleatorio">Aleatórios da loja</SelectItem>
-                  <SelectItem value="mesma_categoria">Mesma categoria</SelectItem>
-                  <SelectItem value="categoria_manual">Selecionar categoria manual</SelectItem>
-                </SelectContent>
-              </Select>
-              {editingProduct.cross_sell?.modo === 'categoria_manual' && (
-                <div>
-                  <Label className="text-xs">Categoria</Label>
-                  <Select value={editingProduct.cross_sell.categoria_manual_id || ''} onValueChange={v => setField('cross_sell', { ...editingProduct.cross_sell!, categoria_manual_id: v || null })}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map(c => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
+              {/* Card 2: Prova Social */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Prova Social</CardTitle>
+                  <CardDescription>Pessoas vendo agora e toasts de compras.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Pessoas Vendo Agora */}
+                  <div className="rounded-lg border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="font-semibold">Pessoas Vendo Agora</Label>
+                        <p className="text-xs text-muted-foreground">Exibe "🔥 X pessoas vendo agora" na página.</p>
+                      </div>
+                      <Switch checked={editingProduct.pessoas_vendo?.ativo ?? false} onCheckedChange={v => setField('pessoas_vendo', { ...(editingProduct.pessoas_vendo || { ativo: false, min: 10, max: 50 }), ativo: v })} />
+                    </div>
+                    {editingProduct.pessoas_vendo?.ativo && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">Mínimo</Label>
+                          <Input type="number" min="1" value={editingProduct.pessoas_vendo.min} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, min: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Máximo</Label>
+                          <Input type="number" min="1" value={editingProduct.pessoas_vendo.max} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, max: Number(e.target.value) })} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-            {/* Badge da Imagem */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <Label className="text-base font-semibold">Badge da Imagem (Card do Produto)</Label>
-              <p className="text-xs text-muted-foreground">Texto curto exibido sobre a foto do produto nos cards. Ex: "-55%", "🔥 Em alta", "Novo"</p>
-              <Input
-                placeholder='Ex: -55%, 🔥 Em alta'
-                value={editingProduct.badge_imagem || ''}
-                onChange={e => setField('badge_imagem', e.target.value || null)}
-              />
-            </div>
+                  {/* Social Proof Gender */}
+                  <div className="rounded-lg border border-border p-4 space-y-3">
+                    <Label className="font-semibold">Social Proof (Toast de Compras)</Label>
+                    <p className="text-xs text-muted-foreground">Exibe notificações "🔥 Fulano acabou de comprar" a cada 15-45s.</p>
+                    <Select value={editingProduct.social_proof_gender || 'desativado'} onValueChange={v => setField('social_proof_gender', v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desativado">Desativado</SelectItem>
+                        <SelectItem value="feminino">Feminino</SelectItem>
+                        <SelectItem value="masculino">Masculino</SelectItem>
+                        <SelectItem value="misto">Misto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Social Proof Gender */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <Label className="text-base font-semibold">Social Proof (Toast de Compras)</Label>
-              <p className="text-xs text-muted-foreground">Exibe notificações "🔥 Fulano acabou de comprar" a cada 15-45s na página do produto.</p>
-              <Select value={editingProduct.social_proof_gender || 'desativado'} onValueChange={v => setField('social_proof_gender', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desativado">Desativado</SelectItem>
-                  <SelectItem value="feminino">Feminino</SelectItem>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="misto">Misto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Card 3: Upsell e Exibição */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Upsell e Exibição</CardTitle>
+                  <CardDescription>Badge, cross-sell, vantagens e proteção do cliente.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Badge da Imagem */}
+                  <div className="rounded-lg border border-border p-4 space-y-2">
+                    <Label className="font-semibold">Badge da Imagem (Card do Produto)</Label>
+                    <p className="text-xs text-muted-foreground">Texto curto sobre a foto nos cards. Ex: "-55%", "🔥 Em alta"</p>
+                    <Input placeholder='Ex: -55%, 🔥 Em alta' value={editingProduct.badge_imagem || ''} onChange={e => setField('badge_imagem', e.target.value || null)} />
+                  </div>
 
-            <div className="flex items-center gap-2">
-              <Switch checked={editingProduct.is_active ?? true} onCheckedChange={v => setField('is_active', v)} />
-              <span className="text-sm">Produto ativo</span>
-            </div>
-          </TabsContent>
-        </Tabs>
+                  {/* Cross-Sell */}
+                  <div className="rounded-lg border border-border p-4 space-y-3">
+                    <Label className="font-semibold">Cross-Sell (Você Também Pode Gostar)</Label>
+                    <Select value={editingProduct.cross_sell?.modo || 'aleatorio'} onValueChange={v => setField('cross_sell', { ...(editingProduct.cross_sell || { modo: 'aleatorio', categoria_manual_id: null }), modo: v, ...(v !== 'categoria_manual' ? { categoria_manual_id: null } : {}) })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="aleatorio">Aleatórios da loja</SelectItem>
+                        <SelectItem value="mesma_categoria">Mesma categoria</SelectItem>
+                        <SelectItem value="categoria_manual">Selecionar categoria manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {editingProduct.cross_sell?.modo === 'categoria_manual' && (
+                      <div>
+                        <Label className="text-xs">Categoria</Label>
+                        <Select value={editingProduct.cross_sell.categoria_manual_id || ''} onValueChange={v => setField('cross_sell', { ...editingProduct.cross_sell!, categoria_manual_id: v || null })}>
+                          <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
 
-        <div className="mt-6 flex gap-3">
-          <Button onClick={handleSave} disabled={saving} className="flex-1 gap-2">
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {editingProduct._id ? 'Salvar Alterações' : 'Criar Produto'}
-          </Button>
-          <Button variant="outline" onClick={goBack}>Cancelar</Button>
+                  {/* Vantagens do Produto */}
+                  <div className="rounded-lg border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="font-semibold">Vantagens do Produto</Label>
+                        <p className="text-xs text-muted-foreground">Até 6 características curtas</p>
+                      </div>
+                      <Switch checked={editingProduct.vantagens?.ativo ?? false} onCheckedChange={v => setField('vantagens', { ...(editingProduct.vantagens || { ativo: false, itens: [] }), ativo: v })} />
+                    </div>
+                    {editingProduct.vantagens?.ativo && (
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-xs">Título da seção</Label>
+                          <Input value={(editingProduct as any).vantagens_titulo || ''} onChange={e => setField('vantagens_titulo', e.target.value || null)} placeholder="Vantagens do Produto" />
+                        </div>
+                        {(editingProduct.vantagens.itens || []).map((item, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                            <Input value={item} onChange={e => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens[i] = e.target.value; setField('vantagens', { ...editingProduct.vantagens!, itens }); }} placeholder={`Vantagem ${i + 1}`} />
+                            <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens.splice(i, 1); setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><X className="h-3 w-3" /></Button>
+                          </div>
+                        ))}
+                        {(editingProduct.vantagens.itens?.length || 0) < 6 && (
+                          <Button variant="outline" size="sm" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || []), '']; setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Proteção do Cliente */}
+                  <div className="rounded-lg border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="font-semibold">Proteção do Cliente</Label>
+                        <p className="text-xs text-muted-foreground">Trust badges (Ex: "Devolução Gratuita")</p>
+                      </div>
+                      <Switch checked={editingProduct.protecao_cliente?.ativo ?? false} onCheckedChange={v => setField('protecao_cliente', { ...(editingProduct.protecao_cliente || { ativo: false, itens: [] }), ativo: v })} />
+                    </div>
+                    {editingProduct.protecao_cliente?.ativo && (
+                      <div className="space-y-2">
+                        {(editingProduct.protecao_cliente.itens || []).map((item, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <Select value={item.icone || 'shield'} onValueChange={v => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens[i] = { ...itens[i], icone: v }; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}>
+                              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="shield">🛡️ Escudo</SelectItem>
+                                <SelectItem value="truck">🚚 Entrega</SelectItem>
+                                <SelectItem value="lock">🔒 Seguro</SelectItem>
+                                <SelectItem value="refresh">🔄 Troca</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input className="flex-1" value={item.texto} onChange={e => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens[i] = { ...itens[i], texto: e.target.value }; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }} placeholder="Devolução Gratuita" />
+                            <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens.splice(i, 1); setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}><X className="h-3 w-3" /></Button>
+                          </div>
+                        ))}
+                        {(editingProduct.protecao_cliente.itens?.length || 0) < 4 && (
+                          <Button variant="outline" size="sm" onClick={() => { const itens = [...(editingProduct.protecao_cliente?.itens || []), { icone: 'shield', texto: '' }]; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* JSON Import Dialog */}
@@ -1451,23 +1463,12 @@ const LojaProdutos = () => {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Importar Produto via JSON</DialogTitle>
-              <DialogDescription>
-                Cole o código JSON do produto abaixo para preencher os campos automaticamente.
-              </DialogDescription>
+              <DialogDescription>Cole o código JSON do produto abaixo para preencher os campos automaticamente.</DialogDescription>
             </DialogHeader>
-            <Textarea
-              className="min-h-[300px] font-mono text-sm"
-              placeholder='{"name": "Meu Produto", "price": 9990, ...}'
-              value={jsonText}
-              onChange={e => setJsonText(e.target.value)}
-            />
+            <Textarea className="min-h-[300px] font-mono text-sm" placeholder='{"name": "Meu Produto", "price": 9990, ...}' value={jsonText} onChange={e => setJsonText(e.target.value)} />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setJsonDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleJsonPaste}>
-                Preencher Dados
-              </Button>
+              <Button variant="outline" onClick={() => setJsonDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleJsonPaste}>Preencher Dados</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1477,26 +1478,14 @@ const LojaProdutos = () => {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Selecionar Imagem da Variação</DialogTitle>
-              <DialogDescription>
-                Clique numa imagem do produto ou insira uma URL personalizada.
-              </DialogDescription>
+              <DialogDescription>Clique numa imagem do produto ou insira uma URL personalizada.</DialogDescription>
             </DialogHeader>
             {(editingProduct.images || []).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">Nenhuma imagem cadastrada. Adicione imagens na aba "Básico" primeiro.</p>
             ) : (
               <div className="grid grid-cols-4 gap-3">
                 {(editingProduct.images || []).map((img, j) => (
-                  <button
-                    key={j}
-                    type="button"
-                    onClick={() => {
-                      if (imagePickerIdx !== null) {
-                        updateVariacao(imagePickerIdx, 'imagem', img);
-                        setImagePickerIdx(null);
-                      }
-                    }}
-                    className="aspect-square rounded-lg border-2 border-border hover:border-primary overflow-hidden transition-colors cursor-pointer"
-                  >
+                  <button key={j} type="button" onClick={() => { if (imagePickerIdx !== null) { updateVariacao(imagePickerIdx, 'imagem', img); setImagePickerIdx(null); } }} className="aspect-square rounded-lg border-2 border-border hover:border-primary overflow-hidden transition-colors cursor-pointer">
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -1508,10 +1497,7 @@ const LojaProdutos = () => {
                 e.preventDefault();
                 const input = (e.target as HTMLFormElement).elements.namedItem('customUrl') as HTMLInputElement;
                 const url = input?.value?.trim();
-                if (url && imagePickerIdx !== null) {
-                  updateVariacao(imagePickerIdx, 'imagem', url);
-                  setImagePickerIdx(null);
-                }
+                if (url && imagePickerIdx !== null) { updateVariacao(imagePickerIdx, 'imagem', url); setImagePickerIdx(null); }
               }} className="flex gap-2">
                 <Input name="customUrl" placeholder="https://exemplo.com/imagem.jpg" className="flex-1" />
                 <Button type="submit" size="sm" className="gap-1 shrink-0"><LinkIcon className="h-3 w-3" /> Usar URL</Button>

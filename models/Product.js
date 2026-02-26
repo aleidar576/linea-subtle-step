@@ -120,6 +120,14 @@ const ProductSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: { modo: 'aleatorio', categoria_manual_id: null },
   },
+
+  // Dimensões físicas (para cálculo de frete via Correios/Melhor Envio)
+  dimensoes: {
+    peso: { type: Number, default: 0 },
+    altura: { type: Number, default: 0 },
+    largura: { type: Number, default: 0 },
+    comprimento: { type: Number, default: 0 },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.models.Product || mongoose.model('Product', ProductSchema);

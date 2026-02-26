@@ -448,6 +448,7 @@ export interface LojaProduct {
   protecao_cliente?: { ativo: boolean; itens: { icone: string; texto: string }[] };
   pessoas_vendo?: { ativo: boolean; min: number; max: number };
   cross_sell?: { modo: string; categoria_manual_id: string | null };
+  dimensoes?: { peso: number; altura: number; largura: number; comprimento: number };
 }
 
 export interface LojaCategory {

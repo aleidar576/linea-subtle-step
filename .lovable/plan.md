@@ -1,4 +1,3 @@
-
 # Redesign Menu Lateral + Split Configuracoes — IMPLEMENTADO
 
 ## Status: ✅ Concluído
@@ -33,3 +32,30 @@
 
 ### 7. `src/App.tsx` — Nova rota
 - Adicionada rota `/painel/loja/:id/perfil-loja`
+
+# Redesign Editor de Produtos — IMPLEMENTADO
+
+## Status: ✅ Concluído
+
+## Alteracoes Realizadas
+
+### 1. `models/Product.js` — Campo dimensoes (strict schema)
+- Adicionado `dimensoes: { peso, altura, largura, comprimento }` com tipos Number e defaults 0
+- Schema estrito (não Mixed) para segurança na futura integração de fretes
+
+### 2. `src/services/saas-api.ts` — Interface atualizada
+- Adicionado `dimensoes?: { peso: number; altura: number; largura: number; comprimento: number }` na interface `LojaProduct`
+
+### 3. `src/pages/painel/LojaProdutos.tsx` — Redesign completo do Editor
+- **Sticky Header**: `position: sticky top-0 z-50` com backdrop-blur, contendo:
+  - Botão Voltar + Nome do produto
+  - Switch "Produto Ativo" (migrado da aba Extras)
+  - Dropdown "Opções" (Duplicar, JSON Import/Export, JSON Exemplo)
+  - Único botão "Salvar" primário
+- **Barra inferior removida**: Sem mais duplicação de botões Salvar/Cancelar
+- **Background**: `bg-muted/30` com conteúdo em Cards shadcn
+- **Aba Básico**: 3 Cards (Info Gerais, Preço/Promoção, Categorias/Destaques) + Card Imagens na lateral
+- **Aba Variações**: Card único com variações em grid horizontal `grid-cols-6`
+- **Aba Avaliações**: Accordion shadcn com auto-expand ao criar nova avaliação via `expandedReviews` state
+- **Aba Frete**: Card "Dimensões e Peso" (4 inputs numéricos) + Card "Frete Manual"
+- **Aba Extras**: 3 Cards semânticos (Escassez, Prova Social, Upsell/Exibição)
