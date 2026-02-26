@@ -1,6 +1,6 @@
-# 🛍️ PANDORA — SaaS Multi-Loja com PIX, Stripe, Pixels e UTMs
+# 🛍️ PANDORA — SaaS Multi-Loja com PIX, Stripe, Appmax, Pixels e UTMs
 
-Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout com **PIX nativo via SealPay**, **assinaturas recorrentes via Stripe**, **pixels de rastreamento multi-plataforma** (Facebook, TikTok, Google Ads, GTM), **UTMs completos**, recuperação de carrinho abandonado, **e-mails transacionais via Resend**, **CDN de imagens via Bunny.net** e painel administrativo completo. Cada lojista possui sua loja pública acessível via subdomínio ou domínio customizado.
+Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout com **PIX nativo via SealPay**, **pagamentos via Appmax (PIX, Cartão, Boleto) com OAuth**, **assinaturas recorrentes via Stripe**, **pixels de rastreamento multi-plataforma** (Facebook, TikTok, Google Ads, GTM), **UTMs completos**, recuperação de carrinho abandonado, **e-mails transacionais via Resend**, **CDN de imagens via Bunny.net** e painel administrativo completo. Cada lojista possui sua loja pública acessível via subdomínio ou domínio customizado.
 
 ---
 
@@ -20,7 +20,7 @@ Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout 
 | 2 | `api/auth-action.ts` | Ações de autenticação (login, registro, reset) + Master Password |
 | 3 | `api/categorias.js` | Categorias de produtos por loja |
 | 4 | `api/create-pix.js` | Geração de cobranças PIX via SealPay + disparo CAPI Purchase ao confirmar pagamento |
-| 5 | `api/loja-extras.js` | Stripe Checkout/Portal/Webhooks + Cupons + Fretes + Mídias + Temas + Pixels + Páginas + Leads + Upload Bunny.net |
+| 5 | `api/loja-extras.js` | Stripe Checkout/Portal/Webhooks + Cupons + Fretes + Mídias + Temas + Pixels + Páginas + Leads + Upload Bunny.net + **OAuth Appmax** |
 | 6 | `api/lojas.js` | CRUD de lojas + domínios customizados |
 | 7 | `api/lojista.js` | Perfil e gestão do lojista |
 | 8 | `api/pedidos.js` | Gestão de pedidos e status |
@@ -514,6 +514,133 @@ Todos os templates incluem **branding dinâmico** (logo e nome da plataforma) ob
 
 ---
 
+## 🏦 Ecossistema de Gateways de Pagamento
+
+### Arquitetura
+
+O sistema de gateways é **modular e extensível**, com definições estáticas no frontend e controle de visibilidade pelo Admin:
+
+```
+┌──────────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐
+│  src/config/gateways │     │  Admin (Settings)    │     │  Lojista (Model)     │
+│  .ts (estático)      │     │  gateways_ativos     │     │  gateway_ativo       │
+│                      │     │  (visibilidade)      │     │  gateways_config     │
+│  - SealPay           │────▶│  - SealPay: ativo    │────▶│  - sealpay: {key}    │
+│  - Appmax            │     │  - Appmax: ativo     │     │  - appmax: {creds}   │
+└──────────────────────┘     └──────────────────────┘     └──────────────────────┘
+```
+
+### Gateways Disponíveis
+
+| Gateway | Métodos | Tipo de Integração | Status |
+|---|---|---|---|
+| **SealPay** | PIX | Chave API direta | ✅ Ativo |
+| **Appmax** | PIX, Cartão, Boleto | OAuth (Instalação de App) | ✅ Ativo |
+
+### Fluxo de Configuração
+
+1. **Admin** habilita/desabilita gateways globalmente em `AdminGateways.tsx`
+2. **Admin** pode customizar nome, logo e descrição de cada gateway (Dialog de edição)
+3. **Lojista** vê apenas os gateways habilitados pelo Admin em `LojaGateways.tsx`
+4. **Lojista** configura suas credenciais via Sheet lateral (gaveta direita)
+5. **Lojista** ativa o gateway como padrão para receber pagamentos
+
+### Campos no Model Lojista
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `gateway_ativo` | String | ID do gateway ativo (`sealpay`, `appmax`, ou `null`) |
+| `gateways_config` | Mixed | Objeto com credenciais por gateway: `{ sealpay: { api_key }, appmax: { client_id, client_secret, external_id } }` |
+
+---
+
+## 🔗 Integração OAuth Appmax (Instalação de Aplicativo)
+
+### Pré-Requisitos
+
+1. Criar um **Aplicativo** no [painel de desenvolvedor da Appmax](https://admin.appmax.com.br)
+2. Preencher as URLs de integração (disponíveis em Admin > Gateways > Editar Appmax):
+   - **Host (Webhook):** `https://seudominio.com/api/loja-extras?scope=appmax-webhook`
+   - **URL do Sistema:** `https://seudominio.com`
+   - **URL de Validação:** `https://seudominio.com/api/loja-extras?scope=appmax-install`
+3. Configurar as variáveis de ambiente na Vercel (ver seção abaixo)
+
+### Fluxo OAuth Completo
+
+```
+┌──────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐
+│  Lojista clica   │────▶│  Backend obtém       │────▶│  Backend solicita    │
+│  "Conectar       │     │  Bearer Token via    │     │  autorização do app  │
+│  Appmax"         │     │  client_credentials  │     │  (POST /app/authorize│
+└──────────────────┘     └──────────────────────┘     └──────────┬───────────┘
+                                                                 │
+                                                        ┌────────▼───────────┐
+                                                        │  Appmax retorna    │
+                                                        │  hash de install   │
+                                                        └────────┬───────────┘
+                                                                 │
+┌──────────────────┐     ┌──────────────────────┐     ┌──────────▼───────────┐
+│  Lojista autoriza│◀────│  Redirect para       │◀────│  Frontend redireciona│
+│  no painel       │     │  admin.appmax.com.br  │     │  via redirect_url    │
+│  Appmax          │     │  /appstore/integration│     │                      │
+└────────┬─────────┘     └──────────────────────┘     └──────────────────────┘
+         │
+         │ (Appmax envia POST para URL de Validação)
+         ▼
+┌──────────────────┐     ┌──────────────────────┐
+│  Webhook recebe  │────▶│  Salva credenciais   │
+│  client_id,      │     │  no Lojista:         │
+│  client_secret,  │     │  gateways_config     │
+│  external_key    │     │  .appmax = {...}     │
+└──────────────────┘     │  gateway_ativo =     │
+                         │  'appmax'            │
+                         └──────────────────────┘
+```
+
+### Scopes no Backend (`api/loja-extras.js`)
+
+| Scope | Método | Auth | Descrição |
+|---|---|---|---|
+| `appmax-connect` | GET | JWT Lojista | Obtém Bearer Token e retorna `redirect_url` para autorização |
+| `appmax-install` | POST | Público (webhook) | Recebe credenciais da Appmax, gera `external_id`, salva no Lojista |
+
+### Detalhes do Scope `appmax-connect`
+
+1. Lê variáveis de ambiente: `APPMAX_APP_ID`, `APPMAX_CLIENT_ID`, `APPMAX_CLIENT_SECRET`
+2. POST para `https://auth.appmax.com.br/oauth2/token` (grant_type=client_credentials)
+3. POST para `https://api.appmax.com.br/app/authorize` com `app_id`, `external_key` (= lojista._id), `url_callback`
+4. Retorna `{ redirect_url: 'https://admin.appmax.com.br/appstore/integration/HASH' }`
+
+### Detalhes do Scope `appmax-install`
+
+1. Recebe POST da Appmax com `app_id`, `client_id`, `client_secret`, `external_key`
+2. Busca Lojista pelo `_id` usando `external_key`
+3. Gera UUID via `crypto.randomUUID()`
+4. Salva `gateways_config.appmax = { client_id, client_secret, external_id }`
+5. Define `gateway_ativo = 'appmax'` e usa `markModified('gateways_config')` (campo Mixed do Mongoose)
+6. Retorna `200` com `{ external_id }` — **obrigatório** para a Appmax completar a instalação
+
+### Frontend do Lojista (`LojaGateways.tsx`)
+
+O componente `AppmaxConfig` exibe dois estados:
+
+| Estado | UI | Ação |
+|---|---|---|
+| **Desconectado** | Texto explicativo + botão "Conectar Conta Appmax" | Chama `appmax-connect` e redireciona |
+| **Conectado** | Alerta verde + ID de conexão (readonly) + botão "Ativar" | Chama `salvar-gateway` para ativar |
+
+> O botão de conexão inclui `try/catch` com `toast.error` para tratar erros 500 (ex: variáveis de ambiente não configuradas).
+
+### Frontend Admin (`AdminGateways.tsx`)
+
+O Dialog de edição da Appmax exibe uma seção adicional **"URLs de Integração do App"** com 3 campos read-only e botão de copiar:
+
+- Host (Webhook)
+- URL do Sistema
+- URL de Validação
+
+---
+
 ## 🔑 Variáveis de Ambiente
 
 Configure **todas** as variáveis abaixo no painel da Vercel (**Settings → Environment Variables**):
@@ -542,6 +669,14 @@ Configure **todas** as variáveis abaixo no painel da Vercel (**Settings → Env
 |---|---|
 | `RESEND_API_KEY` | Chave de API do Resend (`re_...`) |
 | `EMAIL_FROM_ADDRESS` | Endereço de remetente aprovado (ex: `noreply@seudominio.com`) |
+
+### Appmax (OAuth)
+
+| Variável | Descrição |
+|---|---|
+| `APPMAX_APP_ID` | ID do aplicativo criado no painel de desenvolvedor da Appmax |
+| `APPMAX_CLIENT_ID` | Client ID do aplicativo Appmax |
+| `APPMAX_CLIENT_SECRET` | Client Secret do aplicativo Appmax |
 
 ### Bunny.net (CDN)
 
@@ -628,6 +763,7 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 | Backend | Vercel Serverless Functions (Node.js) |
 | Banco de Dados | MongoDB Atlas (via Mongoose) |
 | Pagamentos PIX | PIX nativo via SealPay API |
+| Pagamentos Multi-método | Appmax (PIX, Cartão, Boleto) via OAuth |
 | Assinaturas | Stripe (Checkout + Webhooks + Customer Portal) |
 | E-mails | Resend (templates transacionais com branding dinâmico) |
 | CDN / Imagens | Bunny.net (Storage Zone + Pull Zone) |
@@ -673,3 +809,5 @@ O servidor iniciará em `http://localhost:8080`. Como `localhost` é reconhecido
 | 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net | ✅ Concluído |
 | 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira nos Painéis | ✅ Concluído |
 | 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas, Cron ajustado para 09h BRT | ✅ Concluído |
+| 15 | Ecossistema de Gateways (Admin + Lojista + Checkout), Sheet modular, SealPay migrado para gateway_ativo | ✅ Concluído |
+| 16 | OAuth Appmax (Instalação de Aplicativo), scopes appmax-connect/appmax-install, AppmaxConfig no painel lojista | ✅ Concluído |
