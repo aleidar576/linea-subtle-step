@@ -28,6 +28,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ImageUploader from '@/components/ImageUploader';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
+
+// === SortableImageItem Component ===
+function SortableImageItem({ img, index, onRemove }: { img: string; index: number; onRemove: () => void }) {
+  const id = `${img}-${index}`;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 bg-muted/30 rounded-lg p-3 border border-border hover:border-primary/30 transition-colors"
+    >
+      <button
+        type="button"
+        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <img src={img} alt="" className="w-12 h-12 rounded-md object-cover shrink-0 border border-border shadow-sm" />
+      <span className="text-xs truncate flex-1 text-muted-foreground">{img.split('/').pop()}</span>
+      {index === 0 && <Badge variant="secondary" className="text-[10px] shrink-0">Principal</Badge>}
+      <Button variant="ghost" size="icon" onClick={onRemove}><X className="h-3 w-3" /></Button>
+    </div>
+  );
+}
 
 const EMPTY_AVALIACAO_CONFIG: AvaliacoesConfig = {
   nota: 5.0,
@@ -849,33 +887,34 @@ const LojaProdutos = () => {
                       <CardDescription>Arraste para reordenar. A primeira é a principal.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {(editingProduct.images || []).map((img, i) => (
-                        <div
-                          key={`${img}-${i}`}
-                          draggable
-                          onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }}
-                          onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-                          onDrop={e => {
-                            e.preventDefault();
-                            const from = Number(e.dataTransfer.getData('text/plain'));
-                            if (isNaN(from) || from === i) return;
-                            setEditingProduct(prev => {
-                              if (!prev) return prev;
-                              const imgs = [...(prev.images || [])];
-                              const [moved] = imgs.splice(from, 1);
-                              imgs.splice(i, 0, moved);
-                              return { ...prev, images: imgs, image: imgs[0] || '' };
-                            });
-                          }}
-                          className="flex items-center gap-2 bg-muted/30 rounded-lg p-2 cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors border border-border"
+                      <DndContext
+                        collisionDetection={closestCenter}
+                        modifiers={[restrictToVerticalAxis]}
+                        onDragEnd={(event: DragEndEvent) => {
+                          const { active, over } = event;
+                          if (!over || active.id === over.id) return;
+                          setEditingProduct(prev => {
+                            if (!prev) return prev;
+                            const imgs = [...(prev.images || [])];
+                            const oldIndex = imgs.findIndex((img, i) => `${img}-${i}` === active.id);
+                            const newIndex = imgs.findIndex((img, i) => `${img}-${i}` === over.id);
+                            if (oldIndex === -1 || newIndex === -1) return prev;
+                            const reordered = arrayMove(imgs, oldIndex, newIndex);
+                            return { ...prev, images: reordered, image: reordered[0] || '' };
+                          });
+                        }}
+                      >
+                        <SortableContext
+                          items={(editingProduct.images || []).map((img, i) => `${img}-${i}`)}
+                          strategy={verticalListSortingStrategy}
                         >
-                          <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <img src={img} alt="" className="w-12 h-12 rounded-md object-cover shrink-0 border border-border shadow-sm" />
-                          <span className="text-xs truncate flex-1 text-muted-foreground">{img.split('/').pop()}</span>
-                          {i === 0 && <Badge variant="secondary" className="text-[10px] shrink-0">Principal</Badge>}
-                          <Button variant="ghost" size="icon" onClick={() => removeImage(i)}><X className="h-3 w-3" /></Button>
-                        </div>
-                      ))}
+                          <div className="space-y-2">
+                            {(editingProduct.images || []).map((img, i) => (
+                              <SortableImageItem key={`${img}-${i}`} img={img} index={i} onRemove={() => removeImage(i)} />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                       <ImageUploader lojaId={id || ''} onChange={(url) => addImage(url)} placeholder="Cole a URL ou faça upload" />
                     </CardContent>
                   </Card>
