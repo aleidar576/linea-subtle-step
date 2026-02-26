@@ -75,6 +75,7 @@ const MENU_GROUPS = [
       { path: '/perfil-loja', label: 'Perfil da Loja' },
       { path: '/fretes', label: 'Fretes' },
       { path: '/gateways', label: 'Gateways' },
+      { path: '/integracoes', label: 'Integrações' },
       { path: '/configuracoes', label: 'Configurações' },
     ],
   },

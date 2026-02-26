@@ -40,6 +40,7 @@ import LojaPaginas from "./pages/painel/LojaPaginas";
 import LojaRelatorios from "./pages/painel/LojaRelatorios";
 import LojaPacotesAvaliacoes from "./pages/painel/LojaPacotesAvaliacoes";
 import LojaNewsletter from "./pages/painel/LojaNewsletter";
+import LojaIntegracoes from "./pages/painel/LojaIntegracoes";
 
 // Loja demo
 import Index from "./pages/Index";
@@ -140,7 +141,7 @@ const SaaSApp = () => (
                     <Route path="loja/:id/configuracoes" element={<LojaConfiguracoes />} />
                     <Route path="loja/:id/perfil-loja" element={<LojaPerfilLoja />} />
                     <Route path="loja/:id/gateways" element={<LojaGateways />} />
-                    <Route path="loja/:id/integracoes" element={<LojaGateways />} />
+                    <Route path="loja/:id/integracoes" element={<LojaIntegracoes />} />
                     <Route path="assinatura" element={<LojaAssinatura />} />
                     <Route path="perfil" element={<LojaPerfil />} />
                   </Route>
