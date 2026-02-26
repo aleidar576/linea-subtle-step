@@ -650,6 +650,35 @@ module.exports = async function handler(req, res) {
     return res.json(cupons.map(c => ({ _id: c._id, codigo: c.codigo, tipo: c.tipo, valor: c.valor })));
   }
 
+  // === PUBLIC: Appmax Install Webhook (URL de Validação) ===
+  if (scope === 'appmax-install' && method === 'POST') {
+    const crypto = require('crypto');
+    const { app_id, client_id, client_secret, external_key } = req.body;
+
+    if (!external_key || !client_id || !client_secret) {
+      return res.status(400).json({ error: 'Campos obrigatórios: external_key, client_id, client_secret' });
+    }
+
+    try {
+      const lojista = await Lojista.findById(external_key);
+      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
+
+      const external_id = crypto.randomUUID();
+
+      if (!lojista.gateways_config) lojista.gateways_config = {};
+      lojista.gateways_config.appmax = { client_id, client_secret, external_id };
+      lojista.markModified('gateways_config');
+      lojista.gateway_ativo = 'appmax';
+      await lojista.save();
+
+      console.log(`[APPMAX-INSTALL] ✅ Lojista ${lojista.email} conectado à Appmax (external_id: ${external_id})`);
+      return res.status(200).json({ external_id });
+    } catch (err) {
+      console.error('[APPMAX-INSTALL] ❌ Erro:', err.message);
+      return res.status(500).json({ error: 'Erro interno ao processar instalação' });
+    }
+  }
+
   // === AUTH REQUIRED ===
   const user = verifyLojista(req);
   if (!user) return res.status(401).json({ error: 'Não autorizado' });
@@ -662,6 +691,81 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // ==========================================
+    // APPMAX CONNECT (OAuth redirect)
+    // ==========================================
+    if (scope === 'appmax-connect' && method === 'GET') {
+      const APPMAX_APP_ID = process.env.APPMAX_APP_ID;
+      const APPMAX_CLIENT_ID = process.env.APPMAX_CLIENT_ID;
+      const APPMAX_CLIENT_SECRET = process.env.APPMAX_CLIENT_SECRET;
+
+      if (!APPMAX_APP_ID || !APPMAX_CLIENT_ID || !APPMAX_CLIENT_SECRET) {
+        return res.status(500).json({ error: 'Variáveis de ambiente da Appmax não configuradas (APPMAX_APP_ID, APPMAX_CLIENT_ID, APPMAX_CLIENT_SECRET).' });
+      }
+
+      try {
+        const lojista = await Lojista.findById(user.lojista_id);
+        if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
+
+        // Step 1: Get Bearer token
+        const tokenRes = await fetch('https://auth.appmax.com.br/oauth2/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'client_credentials',
+            client_id: APPMAX_CLIENT_ID,
+            client_secret: APPMAX_CLIENT_SECRET,
+          }),
+        });
+
+        if (!tokenRes.ok) {
+          const errBody = await tokenRes.text();
+          console.error('[APPMAX-CONNECT] ❌ Falha ao obter token:', errBody);
+          return res.status(502).json({ error: 'Falha ao autenticar com a Appmax' });
+        }
+
+        const tokenData = await tokenRes.json();
+        const bearerToken = tokenData.access_token;
+
+        // Step 2: Authorize app for this lojista
+        const host = req.headers.host || req.headers['x-forwarded-host'] || 'localhost';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const callbackUrl = `${protocol}://${host}/painel/loja/${lojista._id}/gateways`;
+
+        const authRes = await fetch('https://api.appmax.com.br/app/authorize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${bearerToken}`,
+          },
+          body: JSON.stringify({
+            app_id: APPMAX_APP_ID,
+            external_key: lojista._id.toString(),
+            url_callback: callbackUrl,
+          }),
+        });
+
+        if (!authRes.ok) {
+          const errBody = await authRes.text();
+          console.error('[APPMAX-CONNECT] ❌ Falha ao autorizar app:', errBody);
+          return res.status(502).json({ error: 'Falha ao solicitar autorização na Appmax' });
+        }
+
+        const authData = await authRes.json();
+        const hash = authData.hash || authData.data?.hash;
+
+        if (!hash) {
+          console.error('[APPMAX-CONNECT] ❌ Hash não retornado pela Appmax:', JSON.stringify(authData));
+          return res.status(502).json({ error: 'Resposta inesperada da Appmax (hash ausente)' });
+        }
+
+        return res.json({ redirect_url: `https://admin.appmax.com.br/appstore/integration/${hash}` });
+      } catch (err) {
+        console.error('[APPMAX-CONNECT] ❌ Erro:', err.message);
+        return res.status(500).json({ error: 'Erro interno ao conectar com a Appmax' });
+      }
+    }
+
     // ==========================================
     // SALVAR GATEWAY (lojista)
     // ==========================================

@@ -33,3 +33,34 @@
 - Sheet lateral usado para configuração do lojista
 - Todos os campos da SealPay migrados para dentro do Sheet
 - Checkout bloqueado completamente quando gateway_ativo é nulo
+
+## Fase 16: OAuth Appmax (Instalação de Aplicativo) — ✅ CONCLUÍDO
+
+### Arquitetura
+
+- Fluxo OAuth completo via 2 novos scopes em `api/loja-extras.js` (sem novo arquivo)
+- `appmax-connect` (GET, autenticado): obtém Bearer Token e gera URL de autorização
+- `appmax-install` (POST, público/webhook): recebe credenciais da Appmax e salva no Lojista
+- Frontend Admin exibe URLs de integração read-only no Dialog de edição da Appmax
+- Frontend Lojista exibe estado conectado/desconectado com botão de ação
+
+### Variáveis de Ambiente Necessárias (Vercel)
+
+- `APPMAX_APP_ID`
+- `APPMAX_CLIENT_ID`
+- `APPMAX_CLIENT_SECRET`
+
+### Arquivos Alterados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `api/loja-extras.js` | +2 scopes: `appmax-connect` (GET auth), `appmax-install` (POST público) |
+| `src/pages/AdminGateways.tsx` | Seção condicional de URLs de integração no Dialog (apenas para Appmax) |
+| `src/pages/painel/LojaGateways.tsx` | `AppmaxPlaceholder` → `AppmaxConfig` com estado conectado/desconectado |
+
+### Regras Respeitadas
+
+- `vite.config.mts` NÃO alterado
+- Pasta `api/` permanece com 12 arquivos
+- `crypto.randomUUID()` nativo (sem dependência externa)
+- `markModified('gateways_config')` para Mixed fields no Mongoose

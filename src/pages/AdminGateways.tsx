@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { Loader2, CreditCard, Pencil, Save, Upload, X } from 'lucide-react';
+import { Loader2, CreditCard, Pencil, Save, Upload, X, Copy, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminGateways = () => {
@@ -211,6 +211,43 @@ const AdminGateways = () => {
               <Label className="text-sm font-medium">Descrição</Label>
               <Input placeholder={editGw?.descricao} value={editDescricao} onChange={(e) => setEditDescricao(e.target.value)} />
             </div>
+
+            {/* Appmax-specific: Integration URLs */}
+            {editGw?.id === 'appmax' && (
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Info className="h-4 w-4 text-primary" />
+                  URLs de Integração do App
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Copie estas URLs e cole no painel de desenvolvedor da Appmax ao criar o seu Aplicativo.
+                </p>
+                {[
+                  { label: 'Host (Webhook)', value: `${window.location.origin}/api/loja-extras?scope=appmax-webhook` },
+                  { label: 'URL do Sistema', value: window.location.origin },
+                  { label: 'URL de Validação', value: `${window.location.origin}/api/loja-extras?scope=appmax-install` },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <Label className="text-xs text-muted-foreground">{label}</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input value={value} readOnly className="font-mono text-[11px] h-8 bg-muted" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(value);
+                          toast({ title: 'URL copiada!' });
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditGw(null)}>Cancelar</Button>
