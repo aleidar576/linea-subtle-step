@@ -707,8 +707,28 @@ module.exports = async function handler(req, res) {
         const lojista = await Lojista.findById(user.lojista_id);
         if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
 
+        // Read Appmax URLs from platform settings
+        const Setting = require('../models/Setting');
+        const gwSetting = await Setting.findOne({ key: 'gateways_ativos' });
+        let appmaxConfig = {};
+        if (gwSetting) {
+          try {
+            const parsed = typeof gwSetting.value === 'string' ? JSON.parse(gwSetting.value) : gwSetting.value;
+            appmaxConfig = parsed?.appmax || {};
+          } catch (_) {}
+        }
+
+        const isSandbox = !!appmaxConfig.sandbox;
+        const authUrl = isSandbox ? appmaxConfig.auth_url_sandbox : appmaxConfig.auth_url_prod;
+        const apiUrl = isSandbox ? appmaxConfig.api_url_sandbox : appmaxConfig.api_url_prod;
+        const redirectBase = isSandbox ? appmaxConfig.redirect_url_sandbox : appmaxConfig.redirect_url_prod;
+
+        if (!authUrl || !apiUrl || !redirectBase) {
+          return res.status(500).json({ error: `URLs de ${isSandbox ? 'Sandbox' : 'Produção'} da Appmax não configuradas no painel Admin.` });
+        }
+
         // Step 1: Get Bearer token
-        const tokenRes = await fetch('https://auth.appmax.com.br/oauth2/token', {
+        const tokenRes = await fetch(`${authUrl}/oauth2/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -732,7 +752,7 @@ module.exports = async function handler(req, res) {
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const callbackUrl = `${protocol}://${host}/painel/loja/${lojista._id}/gateways`;
 
-        const authRes = await fetch('https://api.appmax.com.br/app/authorize', {
+        const authRes = await fetch(`${apiUrl}/app/authorize`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -759,7 +779,7 @@ module.exports = async function handler(req, res) {
           return res.status(502).json({ error: 'Resposta inesperada da Appmax (hash ausente)' });
         }
 
-        return res.json({ redirect_url: `https://admin.appmax.com.br/appstore/integration/${hash}` });
+        return res.json({ redirect_url: `${redirectBase}/appstore/integration/${hash}` });
       } catch (err) {
         console.error('[APPMAX-CONNECT] ❌ Erro:', err.message);
         return res.status(500).json({ error: 'Erro interno ao conectar com a Appmax' });

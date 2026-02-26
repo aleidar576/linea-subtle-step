@@ -64,3 +64,26 @@
 - Pasta `api/` permanece com 12 arquivos
 - `crypto.randomUUID()` nativo (sem dependência externa)
 - `markModified('gateways_config')` para Mixed fields no Mongoose
+
+## Fase 16.1: Cofres de URLs Sandbox/Produção — ✅ CONCLUÍDO
+
+### Arquitetura
+
+- Admin cadastra manualmente URLs de Auth, API e Redirect para Sandbox e Produção
+- Toggle Sandbox no Dialog do Admin alterna o ambiente ativo
+- Backend lê URLs do Setting `gateways_ativos.appmax` dinamicamente a cada chamada OAuth
+- Nenhum hardcode de URLs no backend
+
+### Arquivos Alterados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/services/saas-api.ts` | `GatewayPlatformConfig` +7 campos (sandbox, URLs sandbox/prod) |
+| `api/loja-extras.js` | `appmax-connect` lê URLs do Setting em vez de hardcoded |
+| `src/pages/AdminGateways.tsx` | Switch sandbox + 6 inputs de URLs + seção de integração |
+
+### Regras Respeitadas
+
+- `vite.config.mts` NÃO alterado
+- Pasta `api/` permanece com 12 arquivos
+- Fallback `|| ''` em todos os estados do Dialog (sem uncontrolled inputs)
