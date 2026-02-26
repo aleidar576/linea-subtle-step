@@ -86,6 +86,24 @@ export interface TwoFARequiredResponse {
 
 export type LoginResponse = LojistaAuthResponse | TwoFARequiredResponse;
 
+export interface LojaEmpresa {
+  tipo_documento: string;
+  documento: string;
+  razao_social: string;
+  email_suporte: string;
+  telefone: string;
+}
+
+export interface LojaEndereco {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
 export interface Loja {
   _id: string;
   lojista_id: string;
@@ -111,6 +129,8 @@ export interface Loja {
     logo?: LogoConfig | null;
     cart_config?: CartConfig | null;
     checkout_config?: CheckoutConfig | null;
+    empresa?: LojaEmpresa;
+    endereco?: LojaEndereco;
   };
   is_active: boolean;
   criado_em: string;

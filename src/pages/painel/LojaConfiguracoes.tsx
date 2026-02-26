@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ImageUploader from '@/components/ImageUploader';
 
 const LojaConfiguracoes = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,10 +17,6 @@ const LojaConfiguracoes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [nome, setNome] = useState('');
-  const [nomeExibicao, setNomeExibicao] = useState('');
-  const [slogan, setSlogan] = useState('');
-  const [favicon, setFavicon] = useState('');
   const [exigirCadastro, setExigirCadastro] = useState(false);
   const [dominioCustomizado, setDominioCustomizado] = useState('');
   const [saving, setSaving] = useState(false);
@@ -34,10 +29,6 @@ const LojaConfiguracoes = () => {
 
   useEffect(() => {
     if (!loja) return;
-    setNome(loja.nome || '');
-    setNomeExibicao(loja.nome_exibicao || '');
-    setSlogan((loja as any).slogan || '');
-    setFavicon(loja.favicon || '');
     setExigirCadastro(loja.configuracoes?.exigir_cadastro_cliente ?? false);
     setDominioCustomizado(loja.dominio_customizado || '');
   }, [loja]);
@@ -52,10 +43,6 @@ const LojaConfiguracoes = () => {
       await updateLoja.mutateAsync({
         id,
         data: {
-          nome,
-          nome_exibicao: nomeExibicao,
-          slogan,
-          favicon,
           dominio_customizado: dominioCustomizado || null,
           configuracoes: {
             exigir_cadastro_cliente: exigirCadastro,
@@ -85,13 +72,8 @@ const LojaConfiguracoes = () => {
     if (!dominioCustomizado.trim() || !id) return;
     setIsCheckingDomain(true);
     try {
-      // 1. Registrar domínio na Vercel (idempotente)
       await lojasApi.addDomain(id, dominioCustomizado.trim());
-
-      // 2. Respiro para a Vercel processar
       await new Promise(r => setTimeout(r, 2000));
-
-      // 3. Verificação real
       const result = await lojasApi.checkDomain(dominioCustomizado.trim());
       if (result.verified === true && !result.misconfigured) {
         toast({ title: 'Domínio verificado!', description: 'Domínio verificado e propagado com sucesso!' });
@@ -119,24 +101,6 @@ const LojaConfiguracoes = () => {
       <div className="space-y-6">
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <h2 className="font-semibold flex items-center gap-2"><Settings className="h-5 w-5" /> Geral</h2>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Nome Interno da Loja</label>
-            <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome da loja" />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Nome Externo da Loja</label>
-            <Input value={nomeExibicao} onChange={e => setNomeExibicao(e.target.value)} placeholder="Nome exibido na vitrine e aba do navegador" />
-            <p className="text-xs text-muted-foreground mt-1">Este nome aparece no header da loja e na aba do navegador.</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Slogan da Loja</label>
-            <Input value={slogan} onChange={e => setSlogan(e.target.value)} placeholder="Ex: As melhores ofertas para você" />
-            <p className="text-xs text-muted-foreground mt-1">Aparece na aba do navegador junto ao nome da loja.</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Favicon</label>
-            <ImageUploader lojaId={id || ''} value={favicon} onChange={(url) => setFavicon(url)} placeholder="https://..." />
-          </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Exigir cadastro do cliente</p>
