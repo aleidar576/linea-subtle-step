@@ -17,26 +17,43 @@ module.exports = async function handler(req, res) {
   }
 
   await connectDB();
+
+  // CORS headers for ALL responses (not just OPTIONS)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   const { scope } = req.query;
 
   // ── scope=gateways-plataforma: Gateways habilitados (Admin) ──
   if (scope === 'gateways-plataforma') {
     if (req.method === 'GET') {
       const setting = await Setting.findOne({ key: 'gateways_ativos', loja_id: null }).lean();
-      const ativos = setting?.value ? JSON.parse(setting.value) : [];
-      return res.status(200).json(ativos);
+      let config = {};
+      if (setting?.value) {
+        try {
+          const parsed = JSON.parse(setting.value);
+          // Retrocompat: convert old string[] format to Record
+          if (Array.isArray(parsed)) {
+            parsed.forEach(id => { config[id] = { ativo: true }; });
+          } else {
+            config = parsed;
+          }
+        } catch {}
+      }
+      return res.status(200).json(config);
     }
     if (req.method === 'PATCH') {
       const admin = requireAdmin(req);
       if (!admin) return res.status(401).json({ error: 'Não autorizado' });
-      const { gateways_ativos } = req.body;
-      if (!Array.isArray(gateways_ativos)) return res.status(400).json({ error: 'gateways_ativos deve ser um array' });
+      const { gateways_config } = req.body;
+      if (!gateways_config || typeof gateways_config !== 'object') return res.status(400).json({ error: 'gateways_config deve ser um objeto' });
       await Setting.findOneAndUpdate(
         { key: 'gateways_ativos', loja_id: null },
-        { value: JSON.stringify(gateways_ativos) },
+        { value: JSON.stringify(gateways_config) },
         { upsert: true }
       );
-      return res.status(200).json({ success: true, gateways_ativos });
+      return res.status(200).json({ success: true, gateways_config });
     }
     return res.status(405).json({ error: 'Method not allowed' });
   }

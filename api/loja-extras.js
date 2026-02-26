@@ -560,11 +560,22 @@ module.exports = async function handler(req, res) {
     return res.json({ tipo: cupom.tipo, valor: cupom.valor, valor_minimo_pedido: cupom.valor_minimo_pedido, codigo: cupom.codigo, produtos_ids: cupom.produtos_ids || [] });
   }
 
-  // === PUBLIC: Gateways disponíveis na plataforma ===
+  // === PUBLIC: Gateways disponíveis na plataforma (retorna objeto completo com customizações) ===
   if (scope === 'gateways-disponiveis' && method === 'GET') {
     const setting = await Setting.findOne({ key: 'gateways_ativos', loja_id: null }).lean();
-    const ativos = setting?.value ? JSON.parse(setting.value) : [];
-    return res.json(ativos);
+    let config = {};
+    if (setting?.value) {
+      try {
+        const parsed = JSON.parse(setting.value);
+        // Retrocompat: convert old string[] format to Record
+        if (Array.isArray(parsed)) {
+          parsed.forEach(id => { config[id] = { ativo: true }; });
+        } else {
+          config = parsed;
+        }
+      } catch {}
+    }
+    return res.json(config);
   }
 
   // === PUBLIC: Gateway ativo de uma loja (para checkout) ===
