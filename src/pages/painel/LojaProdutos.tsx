@@ -9,7 +9,7 @@ import type { LojaProduct, Variacao, AvaliacaoManual, AvaliacoesConfig, FreteCon
 import { lojaProductsApi } from '@/services/saas-api';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy } from 'lucide-react';
+import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
 import ImageUploader from '@/components/ImageUploader';
 import { CurrencyInput } from '@/components/ui/currency-input';
 
@@ -225,6 +225,9 @@ const LojaProdutos = () => {
   const [bulkEdits, setBulkEdits] = useState<Record<string, Partial<LojaProduct>>>({});
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkColumns, setBulkColumns] = useState<Set<string>>(new Set(['price', 'status', 'categorias']));
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
@@ -1746,28 +1749,85 @@ const LojaProdutos = () => {
     );
   }
 
+  // === Bulk sequential operations (avoids Vercel rate limits) ===
+
+  const handleBulkDelete = async () => {
+    setBulkActionLoading(true);
+    try {
+      let ok = 0, errs = 0;
+      for (const pid of Array.from(selectedIds)) {
+        try { await deleteMut.mutateAsync(pid); ok++; } catch { errs++; }
+      }
+      toast({ title: `${ok} produto(s) excluído(s)${errs ? `, ${errs} erro(s)` : ''}` });
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['loja-products', id] });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setBulkActionLoading(false);
+      setBulkDeleteOpen(false);
+    }
+  };
+
+  const handleBulkToggle = async (activate: boolean) => {
+    setBulkActionLoading(true);
+    try {
+      let ok = 0, errs = 0;
+      for (const pid of Array.from(selectedIds)) {
+        try { await toggleMut.mutateAsync({ id: pid, is_active: activate }); ok++; } catch { errs++; }
+      }
+      toast({ title: `${ok} produto(s) ${activate ? 'ativado(s)' : 'desativado(s)'}${errs ? `, ${errs} erro(s)` : ''}` });
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['loja-products', id] });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleSingleDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteMut.mutateAsync(deleteConfirmId);
+      toast({ title: 'Produto excluído' });
+      queryClient.invalidateQueries({ queryKey: ['loja-products', id] });
+    } catch (err: any) {
+      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleteConfirmId(null);
+    }
+  };
+
   // ============ LIST MODE ============
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Produtos — {loja?.nome}</h1>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2">
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCsv} />
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => csvInputRef.current?.click()} disabled={csvImporting}>
-            {csvImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Importar CSV
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleExportCsv}>
-            <Download className="h-4 w-4" /> Exportar CSV
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleDownloadCsvModel}>
-            <FileSpreadsheet className="h-4 w-4" /> Modelo CSV
-          </Button>
-          {selectedIds.size > 0 && (
-            <Button variant="outline" size="sm" className="gap-1" onClick={openBulkEditor}>
-              <CheckSquare className="h-4 w-4" /> Editar em Lote ({selectedIds.size})
-            </Button>
-          )}
-          <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Produto</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Download className="h-4 w-4" /> Ações CSV <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent align="end" className="z-[100] w-48">
+                <DropdownMenuItem onClick={() => csvInputRef.current?.click()} disabled={csvImporting}>
+                  <Upload className="h-4 w-4 mr-2" /> Importar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCsv}>
+                  <Download className="h-4 w-4 mr-2" /> Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadCsvModel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" /> Modelo CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenu>
+          <Button size="sm" className="gap-1.5" onClick={openNew}><Plus className="h-4 w-4" /> Novo Produto</Button>
         </div>
       </div>
 
@@ -1812,19 +1872,19 @@ const LojaProdutos = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
+                <TableHead className="w-10 px-4 py-3">
                   <Checkbox
                     checked={filtered.length > 0 && filtered.every(p => selectedIds.has(p._id!))}
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Estoque</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Preço</TableHead>
-                <TableHead className="w-[120px]">Ações</TableHead>
+                <TableHead className="w-14 px-4 py-3"></TableHead>
+                <TableHead className="px-4 py-3">Nome</TableHead>
+                <TableHead className="px-4 py-3">Status</TableHead>
+                <TableHead className="px-4 py-3">Estoque</TableHead>
+                <TableHead className="px-4 py-3">Categoria</TableHead>
+                <TableHead className="px-4 py-3">Preço</TableHead>
+                <TableHead className="w-14 px-4 py-3"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1832,48 +1892,52 @@ const LojaProdutos = () => {
                 const catName = categories.find(c => c._id === p.category_id)?.nome || 'Sem categoria';
                 return (
                   <TableRow key={p._id} data-state={selectedIds.has(p._id!) ? 'selected' : undefined}>
-                    <TableCell>
+                    <TableCell className="px-4 py-3">
                       <Checkbox
                         checked={selectedIds.has(p._id!)}
                         onCheckedChange={() => toggleSelectProduct(p._id!)}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-4 py-3">
                       {p.image ? (
-                        <img src={p.image} alt="" className="w-10 h-10 rounded object-cover" />
+                        <img src={p.image} alt="" className="w-12 h-12 rounded-md object-cover border border-border shadow-sm" />
                       ) : (
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center"><ImageIcon className="h-4 w-4 text-muted-foreground" /></div>
+                        <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center border border-border"><ImageIcon className="h-4 w-4 text-muted-foreground" /></div>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={p.is_active ? 'default' : 'secondary'}>{p.is_active ? 'Ativo' : 'Inativo'}</Badge>
+                    <TableCell className="px-4 py-3 text-[13px] font-medium text-foreground">{p.name}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      {p.is_active ? (
+                        <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/15">Ativo</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-muted/50 text-muted-foreground border border-border hover:bg-muted/70">Inativo</Badge>
+                      )}
                     </TableCell>
-                    <TableCell>{p.estoque ?? 0}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{catName}</TableCell>
-                    <TableCell>R$ {(p.price / 100).toFixed(2).replace('.', ',')}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => toggleMut.mutate({ id: p._id!, is_active: !p.is_active })}>
-                          {p.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir produto?</AlertDialogTitle>
-                              <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteMut.mutate(p._id!)}>Excluir</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                    <TableCell className="px-4 py-3">{p.estoque ?? 0}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground">{catName}</TableCell>
+                    <TableCell className="px-4 py-3 font-semibold text-foreground">R$ {(p.price / 100).toFixed(2).replace('.', ',')}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuContent align="end" className="z-[100] w-48">
+                            <DropdownMenuItem onClick={() => openEdit(p)}>
+                              <Edit className="h-4 w-4 mr-2" /> Editar Produto
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleMut.mutate({ id: p._id!, is_active: !p.is_active })}>
+                              <Power className="h-4 w-4 mr-2" /> {p.is_active ? 'Desativar' : 'Ativar'} Produto
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirmId(p._id!)}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir Produto
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
@@ -1882,6 +1946,58 @@ const LojaProdutos = () => {
           </Table>
         </div>
       )}
+
+      {/* Floating Bulk Actions Toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3">
+          <span className="text-sm font-semibold">{selectedIds.size} produto(s) selecionado(s)</span>
+          <div className="h-5 w-px bg-border" />
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={openBulkEditor} disabled={bulkActionLoading}>
+            <CheckSquare className="h-4 w-4" /> Editar em Lote
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleBulkToggle(true)} disabled={bulkActionLoading}>
+            Ativar
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleBulkToggle(false)} disabled={bulkActionLoading}>
+            Desativar
+          </Button>
+          <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => setBulkDeleteOpen(true)} disabled={bulkActionLoading}>
+            <Trash2 className="h-4 w-4" /> Excluir
+          </Button>
+          {bulkActionLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+      )}
+
+      {/* Single Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={open => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir produto?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSingleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedIds.size} produto(s)?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. Todos os produtos selecionados serão removidos permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkActionLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} disabled={bulkActionLoading}>
+              {bulkActionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Excluir {selectedIds.size} produto(s)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
