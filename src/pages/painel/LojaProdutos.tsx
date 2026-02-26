@@ -1175,7 +1175,7 @@ const LojaProdutos = () => {
           <TabsContent value="extras" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
-                <Label>Exibir parcelas</Label>
+                <Label>Parcelas do produto</Label>
                 <Select value={editingProduct.parcelas_fake || '0'} onValueChange={v => setField('parcelas_fake', v === '0' ? null : v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
