@@ -248,9 +248,15 @@ function fireEvent(pixels: TrackingPixel[], event: string, data?: TrackingEventD
 // ==================
 // Provider
 // ==================
+// Routes where pixels should NOT be loaded (internal panels)
+function isInternalRoute(pathname: string): boolean {
+  return pathname.startsWith('/admin') || pathname.startsWith('/painel');
+}
+
 export function TrackingProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const lastPageView = useRef('');
+  const isInternal = isInternalRoute(location.pathname);
 
   const { data: pixels = [] } = useQuery({
     queryKey: ['tracking-pixels'],
@@ -259,6 +265,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       return data as TrackingPixel[];
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isInternal, // Don't fetch pixels on admin/painel routes
   });
 
   const { data: headScripts } = useQuery({
@@ -268,11 +275,12 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       return data[0]?.value || '';
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isInternal,
   });
 
-  // Inject UTMFY / global head scripts
+  // Inject UTMFY / global head scripts (only on public routes)
   useEffect(() => {
-    if (!headScripts) return;
+    if (!headScripts || isInternal) return;
     const container = document.createElement('div');
     container.id = 'global-head-scripts';
     const old = document.getElementById('global-head-scripts');
@@ -292,19 +300,20 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     return () => { const el = document.getElementById('global-head-scripts'); if (el) el.remove(); };
   }, [headScripts]);
 
-  // Initialize all pixel platforms
+  // Initialize all pixel platforms (only on public routes)
   useEffect(() => {
+    if (isInternal) return;
     pixels.forEach(pixel => {
       if (pixel.platform === 'facebook') initFacebookPixel(pixel.pixel_id);
       else if (pixel.platform === 'tiktok') initTikTokPixel(pixel.pixel_id);
       else if (pixel.platform === 'google_ads') initGoogleAds(pixel.pixel_id);
       else if (pixel.platform === 'gtm') initGTM(pixel.pixel_id);
     });
-  }, [pixels]);
+  }, [pixels, isInternal]);
 
-  // Auto PageView on route change
+  // Auto PageView on route change (only on public routes)
   useEffect(() => {
-    if (pixels.length === 0) return;
+    if (pixels.length === 0 || isInternal) return;
     const path = location.pathname + location.search;
     if (lastPageView.current === path) return;
     lastPageView.current = path;
