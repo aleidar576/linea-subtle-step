@@ -201,18 +201,112 @@ function SealPayConfig({
   );
 }
 
-// ── Appmax Placeholder ──
-function AppmaxPlaceholder() {
+// ── Appmax Config Sheet Content ──
+function AppmaxConfig({
+  lojaId,
+  profile,
+  isActive,
+  onSaved,
+}: {
+  lojaId: string;
+  profile: any;
+  isActive: boolean;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [connecting, setConnecting] = useState(false);
+  const [activating, setActivating] = useState(false);
+
+  const appmaxConfig = profile?.gateways_config?.appmax;
+  const isConnected = !!appmaxConfig?.client_id;
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const data = await authRequest<{ redirect_url: string }>('/loja-extras?scope=appmax-connect', { method: 'GET' });
+      window.location.href = data.redirect_url;
+    } catch (err: any) {
+      toast({ title: 'Erro ao conectar', description: err.message, variant: 'destructive' });
+      setConnecting(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    setActivating(true);
+    try {
+      await authRequest('/loja-extras?scope=salvar-gateway', {
+        method: 'POST',
+        body: JSON.stringify({
+          id_gateway: 'appmax',
+          config: {},
+          ativar: true,
+          loja_id: lojaId,
+        }),
+      });
+      toast({ title: 'Appmax ativada como gateway padrão!' });
+      onSaved();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  if (isConnected) {
+    return (
+      <div className="space-y-6">
+        {/* Connected status */}
+        <div className="rounded-lg bg-primary/10 border border-primary/20 p-4 flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-primary">Conta Appmax conectada com sucesso.</p>
+            <p className="text-xs text-muted-foreground mt-1">Sua loja está autorizada a processar pagamentos pela Appmax.</p>
+          </div>
+        </div>
+
+        {/* External ID (read-only) */}
+        {appmaxConfig.external_id && (
+          <div>
+            <Label className="text-sm font-medium mb-1 block">ID de Conexão</Label>
+            <Input value={appmaxConfig.external_id} readOnly className="font-mono text-xs bg-muted" />
+            <p className="text-[10px] text-muted-foreground mt-1">Identificador único desta integração na Appmax.</p>
+          </div>
+        )}
+
+        {/* Activate button */}
+        {!isActive && (
+          <Button onClick={handleActivate} disabled={activating} className="gap-2 w-full">
+            {activating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            Ativar como Gateway Padrão
+          </Button>
+        )}
+
+        {isActive && (
+          <div className="flex items-center gap-2 text-sm text-primary">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="font-medium">Gateway padrão ativo</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Not connected
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+    <div className="flex flex-col items-center justify-center py-12 text-center space-y-5">
       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
         <CreditCard className="h-8 w-8 text-muted-foreground" />
       </div>
-      <h3 className="font-semibold text-lg">Integração Appmax em breve</h3>
-      <p className="text-sm text-muted-foreground max-w-xs">
-        Estamos preparando esta integração. Em breve você poderá receber pagamentos via PIX, Cartão de Crédito e Boleto com a Appmax.
-      </p>
-      <Badge variant="secondary">Em desenvolvimento</Badge>
+      <div className="space-y-2 max-w-xs">
+        <h3 className="font-semibold text-lg">Conectar Appmax</h3>
+        <p className="text-sm text-muted-foreground">
+          Para processar pagamentos com Cartão, PIX e Boleto através da Appmax, autorize o aplicativo.
+        </p>
+      </div>
+      <Button onClick={handleConnect} disabled={connecting} className="gap-2">
+        {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+        {connecting ? 'Redirecionando...' : 'Conectar Conta Appmax'}
+      </Button>
     </div>
   );
 }
@@ -419,7 +513,14 @@ const LojaGateways = () => {
                 />
               )}
 
-              {selectedGateway.id === 'appmax' && <AppmaxPlaceholder />}
+              {selectedGateway.id === 'appmax' && (
+                <AppmaxConfig
+                  lojaId={id!}
+                  profile={profile}
+                  isActive={gatewayAtivo === 'appmax'}
+                  onSaved={() => { fetchData(); }}
+                />
+              )}
 
               {selectedGateway.id !== 'sealpay' && selectedGateway.id !== 'appmax' && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
