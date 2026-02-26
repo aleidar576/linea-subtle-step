@@ -1175,9 +1175,19 @@ const LojaProdutos = () => {
           <TabsContent value="extras" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
-                <Label>Parcelas fake</Label>
-                <Input placeholder='12x de R$ 9,99' value={editingProduct.parcelas_fake || ''} onChange={e => setField('parcelas_fake', e.target.value || null)} />
-                <p className="text-xs text-muted-foreground mt-1">Opcional. Se vazio, será calculado automaticamente.</p>
+                <Label>Exibir parcelas</Label>
+                <Select value={editingProduct.parcelas_fake || '0'} onValueChange={v => setField('parcelas_fake', v === '0' ? null : v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Não exibir</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}x {editingProduct.price ? `de ${(editingProduct.price / 100 / n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Escolha quantas parcelas exibir. O valor será calculado automaticamente.</p>
               </div>
               <div>
                 <Label>Vendas fake (número)</Label>
@@ -1652,12 +1662,15 @@ const LojaProdutos = () => {
                         />
                       )}
                       {col.key === 'parcelas_fake' && (
-                        <Input
-                          className="h-8 text-xs"
-                          value={getBulkValue(p._id!, 'parcelas_fake') || ''}
-                          onChange={e => setBulkField(p._id!, 'parcelas_fake', e.target.value || null)}
-                          placeholder="12x"
-                        />
+                        <Select value={getBulkValue(p._id!, 'parcelas_fake') || '0'} onValueChange={v => setBulkField(p._id!, 'parcelas_fake', v === '0' ? null : v)}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Não exibir</SelectItem>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                              <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                       {col.key === 'vendas_fake' && (
                         <Input

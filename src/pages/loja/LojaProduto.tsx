@@ -446,13 +446,13 @@ const LojaProduto = () => {
                     <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded mb-1">-{discount}%</span>
                   )}
                 </div>
-                {product.parcelas_fake ? (
-                  <p className="text-xs text-muted-foreground mt-1">{product.parcelas_fake}</p>
-                ) : product.price > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ou {Math.min(12, Math.max(2, Math.floor(product.price / 500)))}x de {formatPrice(Math.ceil(product.price / Math.min(12, Math.max(2, Math.floor(product.price / 500)))))} sem juros
-                  </p>
-                )}
+                {(() => {
+                  const parcelas = product.parcelas_fake ? Number(product.parcelas_fake) : 0;
+                  if (parcelas > 0 && product.price > 0) {
+                    return <p className="text-xs text-muted-foreground mt-1">ou {parcelas}x de {formatPrice(Math.ceil(product.price / parcelas))} sem juros</p>;
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Product Name */}
