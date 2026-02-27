@@ -509,6 +509,30 @@ const LojaPedidos = () => {
                   <div className="flex justify-between font-bold text-base border-t pt-2"><span>Total</span><span>{formatPrice(selectedPedido.total)}</span></div>
                 </div>
 
+                {/* PIX / TXID do Pedido */}
+                {selectedPedido.pagamento?.pix_code && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Código PIX</label>
+                    <div className="flex gap-2">
+                      <Input value={selectedPedido.pagamento.pix_code} readOnly className="text-xs font-mono" />
+                      <Button variant="outline" size="sm" onClick={() => copyPix(selectedPedido.pagamento.pix_code!)}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {selectedPedido.pagamento?.txid && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">TXID</label>
+                    <div className="flex gap-2">
+                      <Input value={selectedPedido.pagamento.txid} readOnly className="text-xs font-mono" />
+                      <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(selectedPedido.pagamento.txid!); toast.success('TXID copiado!'); }}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Rastreio */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Código de Rastreio</label>
@@ -675,6 +699,19 @@ const LojaPedidos = () => {
                     <div className="flex gap-2">
                       <Input value={selectedCarrinho.pix_code} readOnly className="text-xs font-mono" />
                       <Button variant="outline" size="sm" onClick={() => copyPix(selectedCarrinho.pix_code!)}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TXID */}
+                {selectedCarrinho.txid && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">TXID</label>
+                    <div className="flex gap-2">
+                      <Input value={selectedCarrinho.txid} readOnly className="text-xs font-mono" />
+                      <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(selectedCarrinho.txid!); toast.success('TXID copiado!'); }}>
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
