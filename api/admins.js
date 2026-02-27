@@ -159,7 +159,52 @@ module.exports = async function handler(req, res) {
 
       if (action === 'tolerancia') {
         const { modo_amigo, tolerancia_extra_dias } = req.body;
-        if (modo_amigo !== undefined) lojista.modo_amigo = modo_amigo;
+
+        // Cenário A: Ativando VIP
+        if (modo_amigo === true && !lojista.modo_amigo) {
+          lojista.modo_amigo = true;
+
+          // Cancelar assinatura Stripe se existir
+          if (lojista.stripe_subscription_id) {
+            try {
+              const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+              if (STRIPE_SECRET_KEY) {
+                const stripe = require('stripe')(STRIPE_SECRET_KEY);
+                await stripe.subscriptions.cancel(lojista.stripe_subscription_id);
+                console.log(`[ADMIN] Assinatura Stripe ${lojista.stripe_subscription_id} cancelada para VIP ${lojista.email}`);
+              }
+            } catch (stripeErr) {
+              console.error(`[ADMIN] Erro ao cancelar assinatura Stripe para ${lojista.email}:`, stripeErr.message);
+            }
+            lojista.stripe_subscription_id = null;
+            lojista.subscription_status = null;
+            lojista.cancel_at_period_end = false;
+            lojista.cancel_at = null;
+          }
+
+          // Zerar taxas residuais
+          lojista.taxas_acumuladas = 0;
+          lojista.status_taxas = 'ok';
+          lojista.tentativas_taxas = 0;
+
+          // Registrar evento
+          lojista.historico_assinatura = lojista.historico_assinatura || [];
+          lojista.historico_assinatura.push({
+            evento: 'Modo Amigo ativado — assinatura cancelada e taxas zeradas pelo administrador',
+            data: new Date(),
+          });
+        } else if (modo_amigo === false && lojista.modo_amigo) {
+          // Cenário B: Revogando VIP
+          lojista.modo_amigo = false;
+          lojista.historico_assinatura = lojista.historico_assinatura || [];
+          lojista.historico_assinatura.push({
+            evento: 'Modo Amigo revogado pelo administrador — lojista precisará assinar manualmente',
+            data: new Date(),
+          });
+        } else if (modo_amigo !== undefined) {
+          lojista.modo_amigo = modo_amigo;
+        }
+
         if (tolerancia_extra_dias !== undefined) lojista.tolerancia_extra_dias = Number(tolerancia_extra_dias) || 0;
         await lojista.save();
         return res.status(200).json({ success: true, modo_amigo: lojista.modo_amigo, tolerancia_extra_dias: lojista.tolerancia_extra_dias });

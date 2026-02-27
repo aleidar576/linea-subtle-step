@@ -92,6 +92,7 @@ module.exports = async function handler(req, res) {
         data_vencimento_taxas: { $lte: now },
         stripe_customer_id: { $ne: null },
         status_taxas: { $ne: 'bloqueado' },
+        modo_amigo: { $ne: true },
       });
 
       console.log(`[CRON-TAXAS] Processando ${lojistas.length} lojistas com taxas pendentes`);

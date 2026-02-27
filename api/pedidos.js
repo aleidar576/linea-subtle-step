@@ -251,7 +251,9 @@ module.exports = async function handler(req, res) {
           const lojaDoc = await Loja.findById(pedido.loja_id).select('lojista_id').lean();
           if (lojaDoc) {
             const lojistaDoc = await Lojista.findById(lojaDoc.lojista_id);
-            if (lojistaDoc && lojistaDoc.plano_id) {
+            if (lojistaDoc && lojistaDoc.modo_amigo) {
+              console.log(`[PEDIDO] Lojista ${lojistaDoc.email} é VIP (modo_amigo) — taxa zerada para pedido ${pedido._id}`);
+            } else if (lojistaDoc && lojistaDoc.plano_id) {
               const plano = await Plano.findById(lojistaDoc.plano_id).lean();
               if (plano) {
                 const taxaPercentual = lojistaDoc.subscription_status === 'trialing'
@@ -259,7 +261,6 @@ module.exports = async function handler(req, res) {
                   : (plano.taxa_transacao_percentual || plano.taxa_transacao || 1.5);
                 const taxaFixa = plano.taxa_transacao_fixa || 0;
                 const valorTaxa = (pedido.total * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
-                // Arredondar para 2 casas decimais
                 const valorTaxaArredondado = Math.round(valorTaxa * 100) / 100;
                 lojistaDoc.taxas_acumuladas = (lojistaDoc.taxas_acumuladas || 0) + valorTaxaArredondado;
                 if (!lojistaDoc.data_vencimento_taxas) {
