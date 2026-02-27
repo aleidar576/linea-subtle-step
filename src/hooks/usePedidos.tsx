@@ -56,3 +56,26 @@ export function useAlterarStatus() {
     },
   });
 }
+
+export function useGerarEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pedidoId, overrideServiceId }: { pedidoId: string; overrideServiceId?: string | number }) =>
+      pedidosApi.gerarEtiqueta(pedidoId, overrideServiceId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pedido'] });
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+  });
+}
+
+export function useCancelarEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pedidoId }: { pedidoId: string }) => pedidosApi.cancelarEtiqueta(pedidoId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pedido'] });
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+  });
+}

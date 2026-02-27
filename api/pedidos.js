@@ -11,6 +11,7 @@ const authPkg = require('../lib/auth.js');
 const { sendEmail, getBranding, emailRastreioHtml, sendReportEmail, emailRelatorioHtml, generateReportFiles } = require('../lib/email.js');
 const Lojista = require('../models/Lojista.js');
 const Plano = require('../models/Plano.js');
+const Product = require('../models/Product.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
@@ -89,6 +90,8 @@ module.exports = async function handler(req, res) {
         cliente: body.cliente || {},
         endereco: body.endereco || null,
         utms: body.utms || {},
+        frete_id: body.frete_id || null,
+        frete_nome: body.frete_nome || null,
       });
 
       return res.status(201).json(pedido);
@@ -472,5 +475,218 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  return res.status(400).json({ error: 'Rota não encontrada. Use scope=pedidos|pedido|carrinhos|carrinho|clientes|cliente|criar-cliente|relatorios' });
+  // ========== GERAR ETIQUETA MELHOR ENVIO ==========
+
+  if (req.method === 'POST' && scope === 'gerar-etiqueta') {
+    try {
+      const { pedidoId, overrideServiceId } = req.body;
+      if (!pedidoId) return res.status(400).json({ error: 'pedidoId obrigatório' });
+
+      const pedido = await Pedido.findById(pedidoId);
+      if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+      const loja = await validateLojaOwnership(pedido.loja_id, lojista.lojista_id);
+      if (!loja) return res.status(403).json({ error: 'Acesso negado' });
+
+      const integracoes = loja.configuracoes?.integracoes?.melhor_envio;
+      if (!integracoes?.ativo || !integracoes?.token) {
+        return res.status(400).json({ error: 'Integração Melhor Envio não configurada' });
+      }
+
+      const meToken = integracoes.token;
+      const isSandbox = integracoes.sandbox;
+      const meBase = isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
+      const meHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${meToken}`,
+        'User-Agent': 'Dusking (suporte@dusking.com.br)',
+      };
+
+      const onlyDigits = (s) => (s || '').replace(/\D/g, '');
+
+      // Idempotent: if already has order, just print
+      if (pedido.melhor_envio_order_id) {
+        const printRes = await fetch(`${meBase}/api/v2/me/shipment/print`, {
+          method: 'POST', headers: meHeaders,
+          body: JSON.stringify({ mode: 'public', orders: [pedido.melhor_envio_order_id] }),
+        });
+        const printData = await printRes.json();
+        const url = printData.url || pedido.etiqueta_url;
+        if (url) { pedido.etiqueta_url = url; await pedido.save(); }
+        return res.status(200).json({ etiqueta_url: url, codigo_rastreio: pedido.codigo_rastreio, already_existed: true });
+      }
+
+      // Determine service_id
+      const serviceId = overrideServiceId || pedido.frete_id;
+      if (!serviceId) return res.status(400).json({ error: 'Nenhum serviço de frete selecionado (frete_id ausente)' });
+
+      // Fetch product dimensions from DB
+      const productIds = pedido.itens.map(i => i.product_id);
+      const products = await Product.find({ product_id: { $in: productIds }, loja_id: pedido.loja_id }).lean();
+      const prodMap = {};
+      products.forEach(p => { prodMap[p.product_id] = p; });
+
+      const endereco = loja.configuracoes?.endereco || {};
+      const empresa = loja.configuracoes?.empresa || {};
+
+      const itemsWithDims = pedido.itens.map(item => {
+        const prod = prodMap[item.product_id];
+        const dims = prod?.dimensoes || {};
+        return {
+          name: item.name,
+          quantity: item.quantity,
+          unitary_value: item.price / 100,
+          weight: dims.peso || 0.3,
+          width: dims.largura || 11,
+          height: dims.altura || 2,
+          length: dims.comprimento || 16,
+        };
+      });
+
+      // Single consolidated volume
+      const volume = {
+        weight: itemsWithDims.reduce((acc, i) => acc + i.weight * i.quantity, 0),
+        width: Math.max(...itemsWithDims.map(i => i.width)),
+        height: itemsWithDims.reduce((acc, i) => acc + i.height * i.quantity, 0),
+        length: Math.max(...itemsWithDims.map(i => i.length)),
+      };
+
+      const cartPayload = {
+        service: Number(serviceId),
+        from: {
+          name: empresa.razao_social || loja.nome || 'Loja',
+          document: onlyDigits(empresa.documento),
+          address: endereco.logradouro || '',
+          number: endereco.numero || 'S/N',
+          complement: endereco.complemento || '',
+          district: endereco.bairro || '',
+          city: endereco.cidade || '',
+          state_abbr: endereco.estado || '',
+          postal_code: onlyDigits(endereco.cep),
+          phone: onlyDigits(empresa.telefone || '11999999999'),
+          email: empresa.email_suporte || 'suporte@dusking.com.br',
+        },
+        to: {
+          name: pedido.cliente?.nome || '',
+          document: onlyDigits(pedido.cliente?.cpf),
+          address: pedido.endereco?.rua || pedido.endereco?.logradouro || '',
+          number: pedido.endereco?.numero || 'S/N',
+          complement: pedido.endereco?.complemento || '',
+          district: pedido.endereco?.bairro || '',
+          city: pedido.endereco?.cidade || '',
+          state_abbr: pedido.endereco?.estado || '',
+          postal_code: onlyDigits(pedido.endereco?.cep),
+          phone: onlyDigits(pedido.cliente?.telefone || '11999999999'),
+          email: pedido.cliente?.email || '',
+        },
+        products: itemsWithDims,
+        volumes: [volume],
+        options: { non_commercial: true, receipt: false, own_hand: false },
+      };
+
+      // 1) POST /cart
+      const cartRes = await fetch(`${meBase}/api/v2/me/cart`, { method: 'POST', headers: meHeaders, body: JSON.stringify(cartPayload) });
+      const cartData = await cartRes.json();
+      if (!cartRes.ok || cartData.error) {
+        console.error('[ME] Cart error:', JSON.stringify(cartData));
+        return res.status(422).json({ error: 'Erro ao adicionar ao carrinho ME', details: cartData.error || cartData.message || cartData });
+      }
+      const orderId = cartData.id;
+      if (!orderId) return res.status(422).json({ error: 'Resposta inesperada do carrinho ME', details: cartData });
+
+      // 2) POST /checkout
+      const checkoutRes = await fetch(`${meBase}/api/v2/me/shipment/checkout`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [orderId] }) });
+      const checkoutData = await checkoutRes.json();
+      if (!checkoutRes.ok) {
+        console.error('[ME] Checkout error:', JSON.stringify(checkoutData));
+        const msg = checkoutData?.message || JSON.stringify(checkoutData);
+        if (msg.toLowerCase().includes('saldo')) return res.status(402).json({ error: 'Saldo insuficiente na carteira do Melhor Envio. Adicione créditos e tente novamente.' });
+        return res.status(422).json({ error: 'Erro no checkout ME', details: msg });
+      }
+
+      // 3) POST /generate
+      const genRes = await fetch(`${meBase}/api/v2/me/shipment/generate`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [orderId] }) });
+      const genData = await genRes.json();
+      if (!genRes.ok) {
+        console.error('[ME] Generate error:', JSON.stringify(genData));
+        return res.status(422).json({ error: 'Erro ao gerar etiqueta ME', details: genData });
+      }
+      // Extract tracking from generate response
+      let trackingCode = null;
+      if (genData && typeof genData === 'object') {
+        const orderGen = genData[orderId] || genData;
+        trackingCode = orderGen.tracking || orderGen.protocol || null;
+      }
+
+      // 4) POST /print
+      const printRes = await fetch(`${meBase}/api/v2/me/shipment/print`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ mode: 'public', orders: [orderId] }) });
+      const printData = await printRes.json();
+      const etiquetaUrl = printData.url || null;
+
+      // Save to DB
+      pedido.melhor_envio_order_id = orderId;
+      pedido.melhor_envio_status = 'generated';
+      pedido.etiqueta_url = etiquetaUrl;
+      pedido.codigo_rastreio = trackingCode;
+      pedido.markModified('melhor_envio_order_id');
+      pedido.markModified('melhor_envio_status');
+      pedido.markModified('etiqueta_url');
+      pedido.markModified('codigo_rastreio');
+      await pedido.save();
+
+      return res.status(200).json({ melhor_envio_order_id: orderId, etiqueta_url: etiquetaUrl, codigo_rastreio: trackingCode });
+    } catch (err) {
+      console.error('[ME] Erro gerar etiqueta:', err.message);
+      return res.status(500).json({ error: 'Erro interno ao gerar etiqueta', details: err.message });
+    }
+  }
+
+  // ========== CANCELAR ETIQUETA MELHOR ENVIO ==========
+
+  if (req.method === 'POST' && scope === 'cancelar-etiqueta') {
+    try {
+      const { pedidoId } = req.body;
+      if (!pedidoId) return res.status(400).json({ error: 'pedidoId obrigatório' });
+
+      const pedido = await Pedido.findById(pedidoId);
+      if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+      const loja = await validateLojaOwnership(pedido.loja_id, lojista.lojista_id);
+      if (!loja) return res.status(403).json({ error: 'Acesso negado' });
+
+      if (!pedido.melhor_envio_order_id) {
+        return res.status(400).json({ error: 'Pedido não possui etiqueta para cancelar' });
+      }
+
+      const integracoes = loja.configuracoes?.integracoes?.melhor_envio;
+      const meToken = integracoes?.token;
+      const isSandbox = integracoes?.sandbox;
+      const meBase = isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
+      const meHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${meToken}`,
+        'User-Agent': 'Dusking (suporte@dusking.com.br)',
+      };
+
+      await fetch(`${meBase}/api/v2/me/shipment/cancel`, {
+        method: 'POST', headers: meHeaders,
+        body: JSON.stringify({ order: { id: pedido.melhor_envio_order_id, reason_id: '2', description: 'Cancelado pelo painel' } }),
+      });
+
+      pedido.melhor_envio_order_id = null;
+      pedido.melhor_envio_status = null;
+      pedido.etiqueta_url = null;
+      pedido.codigo_rastreio = null;
+      pedido.markModified('melhor_envio_order_id');
+      pedido.markModified('melhor_envio_status');
+      pedido.markModified('etiqueta_url');
+      pedido.markModified('codigo_rastreio');
+      await pedido.save();
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('[ME] Erro cancelar etiqueta:', err.message);
+      return res.status(500).json({ error: 'Erro interno ao cancelar etiqueta', details: err.message });
+    }
+  }
+
+  return res.status(400).json({ error: 'Rota não encontrada. Use scope=pedidos|pedido|carrinhos|carrinho|clientes|cliente|criar-cliente|relatorios|gerar-etiqueta|cancelar-etiqueta' });
 };
