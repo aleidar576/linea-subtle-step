@@ -52,6 +52,14 @@ function SealPayConfig({
   const [apiKey, setApiKey] = useState(currentConfig?.api_key || '');
   const [saving, setSaving] = useState(false);
   const [sandboxValor, setSandboxValor] = useState('10.00');
+  const [sandboxNome, setSandboxNome] = useState('Teste Sandbox');
+  const [sandboxEmail, setSandboxEmail] = useState('teste@sandbox.com');
+  const [sandboxTelefone, setSandboxTelefone] = useState('11999999999');
+  const [sandboxDocumento, setSandboxDocumento] = useState('12345678909');
+  const [sandboxDescricao, setSandboxDescricao] = useState('Teste Sandbox - Integração PIX');
+  const [sandboxSrc, setSandboxSrc] = useState('painel_gateway_test');
+  const [sandboxUtmSource, setSandboxUtmSource] = useState('painel-lojista');
+  const [sandboxUtmCampaign, setSandboxUtmCampaign] = useState('teste-gateway');
   const [sandboxLoading, setSandboxLoading] = useState(false);
   const [sandboxLog, setSandboxLog] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -83,10 +91,26 @@ function SealPayConfig({
 
   const handleTestPix = async () => {
     const valorCentavos = Math.round(parseFloat(sandboxValor) * 100);
+    const documentoLimpo = sandboxDocumento.replace(/\D/g, '');
+    const telefoneLimpo = sandboxTelefone.replace(/\D/g, '');
+
     if (isNaN(valorCentavos) || valorCentavos < 1000) {
       toast({ title: 'Valor mínimo: R$ 10,00', variant: 'destructive' });
       return;
     }
+    if (!sandboxNome.trim() || sandboxNome.trim().length < 2) {
+      toast({ title: 'Nome inválido para teste', variant: 'destructive' });
+      return;
+    }
+    if (!sandboxEmail.includes('@')) {
+      toast({ title: 'E-mail inválido para teste', variant: 'destructive' });
+      return;
+    }
+    if (![11, 14].includes(documentoLimpo.length)) {
+      toast({ title: 'CPF/CNPJ deve ter 11 ou 14 dígitos', variant: 'destructive' });
+      return;
+    }
+
     setSandboxLoading(true);
     setSandboxLog('Enviando requisição...');
     try {
@@ -95,8 +119,21 @@ function SealPayConfig({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: valorCentavos,
-          description: 'Teste Sandbox - Integração PIX',
-          customer: { name: 'Teste Sandbox', email: 'teste@sandbox.com', cellphone: '11999999999', taxId: '00000000000' },
+          description: sandboxDescricao.trim() || 'Teste Sandbox - Integração PIX',
+          customer: {
+            name: sandboxNome.trim(),
+            email: sandboxEmail.trim(),
+            cellphone: telefoneLimpo,
+            taxId: documentoLimpo,
+          },
+          tracking: {
+            src: sandboxSrc.trim(),
+            utm: {
+              utm_source: sandboxUtmSource.trim(),
+              utm_campaign: sandboxUtmCampaign.trim(),
+            },
+          },
+          user_agent: navigator.userAgent,
           loja_id: lojaId,
         }),
       });
@@ -165,18 +202,51 @@ function SealPayConfig({
       {/* Sandbox */}
       <div className="border-t border-border pt-4 space-y-3">
         <h3 className="font-semibold flex items-center gap-2 text-sm"><TestTube className="h-4 w-4" /> PIX Sandbox (Teste)</h3>
-        <p className="text-xs text-muted-foreground">Teste a geração de PIX com dados fictícios.</p>
+        <p className="text-xs text-muted-foreground">Preencha os dados que normalmente enviamos no checkout para testar a requisição completa.</p>
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
             <Label className="text-xs">Valor (R$)</Label>
             <Input type="number" min="10" step="0.01" value={sandboxValor} onChange={(e) => setSandboxValor(e.target.value)} placeholder="10.00" />
           </div>
-          <Button onClick={handleTestPix} disabled={sandboxLoading} variant="outline" size="sm" className="gap-1">
-            {sandboxLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
-            Testar
-          </Button>
+          <div>
+            <Label className="text-xs">Descrição</Label>
+            <Input value={sandboxDescricao} onChange={(e) => setSandboxDescricao(e.target.value)} placeholder="Descrição do pagamento" />
+          </div>
+          <div>
+            <Label className="text-xs">Nome do cliente</Label>
+            <Input value={sandboxNome} onChange={(e) => setSandboxNome(e.target.value)} placeholder="Nome completo" />
+          </div>
+          <div>
+            <Label className="text-xs">E-mail</Label>
+            <Input type="email" value={sandboxEmail} onChange={(e) => setSandboxEmail(e.target.value)} placeholder="email@dominio.com" />
+          </div>
+          <div>
+            <Label className="text-xs">Telefone</Label>
+            <Input value={sandboxTelefone} onChange={(e) => setSandboxTelefone(e.target.value)} placeholder="11999999999" />
+          </div>
+          <div>
+            <Label className="text-xs">CPF/CNPJ</Label>
+            <Input value={sandboxDocumento} onChange={(e) => setSandboxDocumento(e.target.value)} placeholder="Somente números" />
+          </div>
+          <div>
+            <Label className="text-xs">tracking.src</Label>
+            <Input value={sandboxSrc} onChange={(e) => setSandboxSrc(e.target.value)} placeholder="painel_gateway_test" />
+          </div>
+          <div>
+            <Label className="text-xs">utm_source</Label>
+            <Input value={sandboxUtmSource} onChange={(e) => setSandboxUtmSource(e.target.value)} placeholder="painel-lojista" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-xs">utm_campaign</Label>
+            <Input value={sandboxUtmCampaign} onChange={(e) => setSandboxUtmCampaign(e.target.value)} placeholder="teste-gateway" />
+          </div>
         </div>
+
+        <Button onClick={handleTestPix} disabled={sandboxLoading} variant="outline" size="sm" className="gap-1 w-full sm:w-auto">
+          {sandboxLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
+          Testar
+        </Button>
 
         {sandboxLog && (
           <pre className="bg-muted rounded-lg p-3 font-mono text-[10px] overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap border border-border">
