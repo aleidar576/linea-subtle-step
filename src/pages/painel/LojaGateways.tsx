@@ -448,7 +448,14 @@ const LojaGateways = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  // Detectar retorno do OAuth Appmax e limpar URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('token') || params.has('hash') || params.has('code')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    fetchData();
+  }, []);
 
   const gatewayAtivo = profile?.gateway_ativo || null;
   const gatewaysConfig = profile?.gateways_config || {};
