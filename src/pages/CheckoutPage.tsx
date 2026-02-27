@@ -196,7 +196,7 @@ const CheckoutPage = () => {
           const statusData = await resStatus.json();
           console.log("🔁 Status recebido:", statusData);
 
-          const status = statusData.status?.toLowerCase();
+          const status = (statusData.status || statusData.data?.status || '').toLowerCase();
 
           if (["paid", "approved", "confirmed", "completed"].includes(status)) {
             if (intervalRef.current) {
