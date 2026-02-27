@@ -151,9 +151,18 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data.message });
-
+    let data;
+    const rawText = await response.text();
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      console.error('[CREATE-PIX] SealPay retornou resposta não-JSON:', response.status, rawText.slice(0, 500));
+      return res.status(502).json({ error: 'Gateway retornou resposta inválida', status: response.status, body: rawText.slice(0, 300) });
+    }
+    if (!response.ok) {
+      console.error('[CREATE-PIX] SealPay erro:', response.status, JSON.stringify(data));
+      return res.status(response.status).json({ error: data.message || data.error || 'Erro no gateway de pagamento', details: data });
+    }
     if (data.pix_qr_code && !data.pix_qr_code.startsWith('data:image')) {
       data.pix_qr_code = `data:image/png;base64,${data.pix_qr_code}`;
     }
