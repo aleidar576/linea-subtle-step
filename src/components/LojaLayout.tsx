@@ -665,6 +665,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [gatewayAtivo, setGatewayAtivo] = useState<string | null>(null);
+  const [gatewayLoading, setGatewayLoading] = useState(true);
 
   // 🔗 Capture UTMs on first load (before any navigation loses them)
   useEffect(() => {
@@ -676,8 +677,8 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     if (!loja?._id) return;
     fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/loja-extras?scope=gateway-loja&loja_id=${loja._id}`)
       .then(r => r.json())
-      .then(d => setGatewayAtivo(d.gateway_ativo || null))
-      .catch(() => {});
+      .then(d => { setGatewayAtivo(d.gateway_ativo || null); setGatewayLoading(false); })
+      .catch(() => { setGatewayLoading(false); });
   }, [loja?._id]);
 
   const metodosSuportados = useMemo(() => {
@@ -867,6 +868,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     slogan: (loja as any).slogan || '',
     cartConfig: config.cart_config || null,
     gatewayAtivo,
+    gatewayLoading,
     metodosSuportados,
     isLoading: false,
     notFound: false,

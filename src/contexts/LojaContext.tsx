@@ -49,6 +49,7 @@ interface LojaContextType {
   slogan: string;
   cartConfig: any | null;
   gatewayAtivo: string | null;
+  gatewayLoading: boolean;
   metodosSuportados: string[];
   isLoading: boolean;
   notFound: boolean;
