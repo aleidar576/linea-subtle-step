@@ -471,7 +471,7 @@ const LojaCheckout = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: finalTotal,
+          amount: Math.round(finalTotal),
           description: desc,
           customer: { name: customerData.name, email: customerData.email, cellphone: customerData.cellphone, taxId: customerData.taxId },
           loja_id: lojaId,
