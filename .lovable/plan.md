@@ -1,31 +1,39 @@
 
 
-# Fix: Flash da tela de bloqueio de gateway no checkout
+# Remover logica de desconto automatico por valor
 
 ## Problema
-
-O `gatewayAtivo` e inicializado como `null` no `LojaLayout.tsx` (linha 667), e a busca ao endpoint `gateway-loja` e assincrona (linhas 676-680). Porem, o contexto `isLoading` ja e `false` quando o `LojaProvider` e montado (linha 871).
-
-Resultado: o `LojaCheckout.tsx` ve `gatewayAtivo === null` antes do fetch terminar e renderiza a tela de bloqueio. Segundos depois, o fetch completa, atualiza o estado, e a tela some. Isso causa o "flash" indesejado.
-
-## Solucao
-
-Adicionar um estado `gatewayLoading` no `LojaLayout.tsx` que comeca como `true` e so vira `false` apos o fetch do gateway completar (sucesso ou erro). No `LojaCheckout.tsx`, usar esse estado para mostrar um loading enquanto o gateway ainda esta sendo consultado, em vez de mostrar a tela de bloqueio.
+O `CartContext.tsx` calcula descontos progressivos automaticos (20%-50%) baseados no valor total do carrinho. Isso precisa ser removido, mantendo intacta a logica de cupons de desconto e fretes.
 
 ## Alteracoes
 
-### 1. `src/contexts/LojaContext.tsx`
+### 1. `src/contexts/CartContext.tsx`
+- Remover as linhas 91-94 (calculo de `totalInReais`, `discountPercent`, `discountAmount`, `finalPrice`).
+- Substituir por valores fixos: `discountPercent = 0`, `discountAmount = 0`, `finalPrice = totalPrice`.
+- Manter a interface `CartContextType` inalterada para nao quebrar consumidores (os campos continuam existindo, apenas sempre retornam 0/totalPrice).
 
-Adicionar `gatewayLoading: boolean` a interface `LojaContextType`.
+### 2. `src/pages/CartPage.tsx`
+- Remover o bloco condicional que exibe "Voce ganhou X% de desconto!" (linhas 173-177).
+- Remover o bloco que sugere "adicione mais para ganhar desconto" (linhas 178-184 aprox.).
+- Remover a exibicao da linha de desconto no resumo (linhas 166-171).
+- Remover o preco riscado no total (linha 188-189).
+- Simplificar o total para exibir apenas `totalPrice` diretamente.
 
-### 2. `src/components/LojaLayout.tsx`
+### 3. `src/pages/CheckoutPage.tsx`
+- Remover a linha condicional que exibe "Desconto (X%)" no resumo (linha 1086-1090).
+- `cartFinalPrice` agora sera igual a `totalPrice`, entao o restante da logica (upsell, frete) continua funcionando sem mudancas.
 
-- Criar estado `const [gatewayLoading, setGatewayLoading] = useState(true)`.
-- No `useEffect` do fetch do gateway (linhas 675-681), chamar `setGatewayLoading(false)` no `.then` e no `.catch`.
-- Passar `gatewayLoading` no objeto do `LojaProvider` value.
+### 4. `src/pages/loja/LojaCart.tsx`
+- Remover o bloco que exibe "Desconto (X%)" (linhas 230-232).
+- Remover o preco riscado no total (linha 237).
+- Exibir `totalPrice` diretamente no total.
 
-### 3. `src/pages/loja/LojaCheckout.tsx`
+### 5. `src/pages/loja/LojaCheckout.tsx`
+- Remover a linha condicional que exibe "Desconto (X%)" (linha 629).
+- A logica de cupons (`cupomDiscountAmount`, `cuponsApplied`) permanece 100% intacta.
+- `cartFinalPrice` (que agora = `totalPrice`) continua sendo a base para calculos de cupom e frete normalmente.
 
-- Extrair `gatewayLoading` do `useLoja()`.
-- No bloco de bloqueio (linha 656), mudar a condicao para: se `gatewayLoading`, mostrar um spinner de carregamento; so mostrar a tela de bloqueio se `!gatewayLoading && !gatewayAtivo`.
-
+## O que NAO sera alterado
+- Logica de cupons de desconto (cuponsApplied, cupomDiscountAmount)
+- Logica de fretes (shippingCost, selectedFrete, calcular-frete)
+- Desconto de produto individual (original_price em LojaProdutos.tsx)
