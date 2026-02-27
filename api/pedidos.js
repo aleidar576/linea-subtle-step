@@ -497,6 +497,7 @@ module.exports = async function handler(req, res) {
       const isSandbox = integracoes.sandbox;
       const meBase = isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
       const meHeaders = {
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${meToken}`,
         'User-Agent': 'Dusking (suporte@dusking.com.br)',
@@ -510,7 +511,7 @@ module.exports = async function handler(req, res) {
           data = text ? JSON.parse(text) : {};
         } catch (e) {
           console.error(`[ME] ${label} retornou não-JSON (Status ${response.status}):`, text.substring(0, 500));
-          throw new Error("ME " + response.status + " Text: " + text.substring(0, 250));
+          throw new Error(`A API do Melhor Envio falhou e retornou um formato inválido (Status: ${response.status}). Tente novamente em instantes.`);
         }
         if (!response.ok) {
           console.error(`[ME] ${label} error:`, JSON.stringify(data));
@@ -675,6 +676,7 @@ module.exports = async function handler(req, res) {
       const isSandbox = integracoes?.sandbox;
       const meBase = isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
       const meHeaders = {
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${meToken}`,
         'User-Agent': 'Dusking (suporte@dusking.com.br)',
