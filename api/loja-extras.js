@@ -444,14 +444,18 @@ module.exports = async function handler(req, res) {
           return res.status(500).json({ error: `URLs de ${isSandbox ? 'Sandbox' : 'Produção'} da Appmax não configuradas no painel Admin.` });
         }
 
+        const tokenParams = new URLSearchParams();
+        tokenParams.append('grant_type', 'client_credentials');
+        tokenParams.append('client_id', APPMAX_CLIENT_ID);
+        tokenParams.append('client_secret', APPMAX_CLIENT_SECRET);
+
         const tokenRes = await fetch(`${authUrl}/oauth2/token`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            grant_type: 'client_credentials',
-            client_id: APPMAX_CLIENT_ID,
-            client_secret: APPMAX_CLIENT_SECRET,
-          }),
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          body: tokenParams,
         });
 
         if (!tokenRes.ok) {
