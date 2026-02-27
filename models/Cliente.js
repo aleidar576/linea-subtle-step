@@ -45,15 +45,10 @@ const ClienteSchema = new mongoose.Schema({
 ClienteSchema.index({ loja_id: 1, email: 1 }, { unique: true });
 
 // Hash password before save
-ClienteSchema.pre('save', async function (next) {
-  if (!this.isModified('senha') || !this.senha) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.senha = await bcrypt.hash(this.senha, salt);
-    next();
-  } catch (err) {
-    next(err);
-  }
+ClienteSchema.pre('save', async function () {
+  if (!this.isModified('senha') || !this.senha) return;
+  const salt = await bcrypt.genSalt(10);
+  this.senha = await bcrypt.hash(this.senha, salt);
 });
 
 ClienteSchema.methods.comparePassword = async function (candidatePassword) {

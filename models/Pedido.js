@@ -67,9 +67,8 @@ const PedidoSchema = new mongoose.Schema({
 // Auto-increment numero per loja
 PedidoSchema.index({ loja_id: 1, numero: -1 });
 
-PedidoSchema.pre('save', function (next) {
+PedidoSchema.pre('save', function () {
   this.atualizado_em = new Date();
-  next();
 });
 
 module.exports = mongoose.models.Pedido || mongoose.model('Pedido', PedidoSchema);
