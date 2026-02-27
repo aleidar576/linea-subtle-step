@@ -59,9 +59,19 @@ export default function LojaIntegracoes() {
   const [sheetData, setSheetData] = useState<any>(null);
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showCepConfirm, setShowCepConfirm] = useState(false);
+  const [showProfileConfirm, setShowProfileConfirm] = useState(false);
 
-  const hasStoreCep = !!loja?.configuracoes?.endereco?.cep;
+  const config = loja?.configuracoes;
+  const hasCompleteProfile = !!(
+    config?.empresa?.documento &&
+    config?.empresa?.telefone &&
+    config?.endereco?.cep &&
+    config?.endereco?.logradouro &&
+    config?.endereco?.numero &&
+    config?.endereco?.bairro &&
+    config?.endereco?.cidade &&
+    config?.endereco?.estado
+  );
 
   // Load integration data into sheet when opening
   useEffect(() => {
@@ -93,8 +103,8 @@ export default function LojaIntegracoes() {
   };
 
   const handleSave = async () => {
-    if (activeSheet === 'melhor_envio' && sheetData?.ativo && !hasStoreCep) {
-      setShowCepConfirm(true);
+    if (activeSheet === 'melhor_envio' && sheetData?.ativo && !hasCompleteProfile) {
+      setShowProfileConfirm(true);
       return;
     }
     await doSave();
@@ -167,11 +177,11 @@ export default function LojaIntegracoes() {
                 </CardDescription>
 
                 {/* Banner CEP ausente no card */}
-                {integration.id === 'melhor_envio' && isActive && !hasStoreCep && (
+                {integration.id === 'melhor_envio' && isActive && !hasCompleteProfile && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Atenção</AlertTitle>
-                    <AlertDescription>Falta o CEP no cadastro da loja. Vá em Perfil da Loja.</AlertDescription>
+                    <AlertDescription>O Perfil da sua loja está incompleto (Faltam dados como CNPJ/CPF, Telefone ou Endereço completo). Vá em Configurações &gt; Perfil da Loja para preencher. A integração de fretes falhará sem essas informações.</AlertDescription>
                   </Alert>
                 )}
               </CardContent>
@@ -229,12 +239,12 @@ export default function LojaIntegracoes() {
                 </div>
 
                 {/* Banner CEP ausente no sheet */}
-                {activeSheet === 'melhor_envio' && sheetData.ativo && !hasStoreCep && (
+                {activeSheet === 'melhor_envio' && sheetData.ativo && !hasCompleteProfile && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Atenção</AlertTitle>
                     <AlertDescription>
-                      Falta o CEP no cadastro da loja (Vá em Perfil da Loja). A integração não calculará fretes sem essa informação.
+                      O Perfil da sua loja está incompleto (Faltam dados como CNPJ/CPF, Telefone ou Endereço completo). Vá em Configurações &gt; Perfil da Loja para preencher. A integração de fretes falhará sem essas informações.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -336,17 +346,17 @@ export default function LojaIntegracoes() {
       </Sheet>
 
       {/* AlertDialog de confirmação CEP ausente */}
-      <AlertDialog open={showCepConfirm} onOpenChange={setShowCepConfirm}>
+      <AlertDialog open={showProfileConfirm} onOpenChange={setShowProfileConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <DialogTitle>CEP de origem não cadastrado</DialogTitle>
+            <DialogTitle>Perfil da loja incompleto</DialogTitle>
             <DialogDescription>
-              O CEP de origem da sua loja não está cadastrado em Perfil da Loja. Deseja ativar a integração mesmo assim? O cálculo automático não funcionará corretamente sem o CEP.
+              O Perfil da sua loja está incompleto (Faltam dados como CNPJ/CPF, Telefone ou Endereço completo). Vá em Configurações &gt; Perfil da Loja para preencher. Deseja ativar a integração mesmo assim? A integração de fretes falhará sem essas informações.
             </DialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowCepConfirm(false); doSave(); }}>
+            <AlertDialogAction onClick={() => { setShowProfileConfirm(false); doSave(); }}>
               Ativar mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
