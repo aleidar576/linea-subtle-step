@@ -317,7 +317,10 @@ const LojaCheckout = () => {
     if (!pixData?.txid) return;
     intervalRef.current = setInterval(async () => {
       try {
-        const r = await fetch(`https://abacate-5eo1.onrender.com/api/payment-status/${pixData.txid}`);
+        const apiBase = window.location.hostname.includes('lovable.app')
+          ? 'https://pandora-five-amber.vercel.app/api'
+          : '/api';
+        const r = await fetch(`${apiBase}/create-pix?scope=status&txid=${pixData.txid}`);
         const d = await r.json();
         if (['paid','approved','confirmed','completed'].includes(d.status?.toLowerCase())) {
           clearInterval(intervalRef.current!);

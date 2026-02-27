@@ -187,8 +187,11 @@ const CheckoutPage = () => {
       
       intervalRef.current = setInterval(async () => {
         try {
+          const apiBase = window.location.hostname.includes('lovable.app')
+            ? 'https://pandora-five-amber.vercel.app/api'
+            : '/api';
           const resStatus = await fetch(
-            `https://abacate-5eo1.onrender.com/api/payment-status/${pixData.txid}`
+            `${apiBase}/create-pix?scope=status&txid=${pixData.txid}`
           );
           const statusData = await resStatus.json();
           console.log("🔁 Status recebido:", statusData);
