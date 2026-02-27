@@ -578,34 +578,52 @@ module.exports = async function handler(req, res) {
         length: Math.max(...itemsWithDims.map(i => i.length)),
       };
 
+      // --- Remetente (from) ---
+      const fromDoc = onlyDigits(empresa.documento);
+      const fromPayload = {
+        name: empresa.razao_social || loja.nome,
+        address: endereco.logradouro,
+        number: endereco.numero || 'S/N',
+        complement: endereco.complemento || '',
+        district: endereco.bairro,
+        city: endereco.cidade,
+        state_abbr: endereco.estado,
+        postal_code: onlyDigits(endereco.cep),
+        phone: onlyDigits(empresa.telefone),
+        email: empresa.email_suporte || '',
+      };
+      if (fromDoc.length > 11) {
+        fromPayload.company_document = fromDoc;
+        fromPayload.state_register = '';
+      } else {
+        fromPayload.document = fromDoc;
+      }
+
+      // --- Destinatario (to) ---
+      const toDoc = onlyDigits(pedido.cliente?.cpf || pedido.cliente?.documento || '');
+      const toPayload = {
+        name: pedido.cliente?.nome || '',
+        address: pedido.endereco?.rua || pedido.endereco?.logradouro || '',
+        number: pedido.endereco?.numero || 'S/N',
+        complement: pedido.endereco?.complemento || '',
+        district: pedido.endereco?.bairro || '',
+        city: pedido.endereco?.cidade || '',
+        state_abbr: pedido.endereco?.estado || '',
+        postal_code: onlyDigits(pedido.endereco?.cep),
+        phone: onlyDigits(pedido.cliente?.telefone || ''),
+        email: pedido.cliente?.email || '',
+      };
+      if (toDoc.length > 11) {
+        toPayload.company_document = toDoc;
+        toPayload.state_register = '';
+      } else {
+        toPayload.document = toDoc;
+      }
+
       const cartPayload = {
         service: Number(serviceId),
-        from: {
-          name: empresa.razao_social || loja.nome,
-          document: onlyDigits(empresa.documento),
-          address: endereco.logradouro,
-          number: endereco.numero || 'S/N',
-          complement: endereco.complemento || '',
-          district: endereco.bairro,
-          city: endereco.cidade,
-          state_abbr: endereco.estado,
-          postal_code: onlyDigits(endereco.cep),
-          phone: onlyDigits(empresa.telefone),
-          email: empresa.email_suporte || '',
-        },
-        to: {
-          name: pedido.cliente?.nome || '',
-          document: onlyDigits(pedido.cliente?.cpf),
-          address: pedido.endereco?.rua || pedido.endereco?.logradouro || '',
-          number: pedido.endereco?.numero || 'S/N',
-          complement: pedido.endereco?.complemento || '',
-          district: pedido.endereco?.bairro || '',
-          city: pedido.endereco?.cidade || '',
-          state_abbr: pedido.endereco?.estado || '',
-          postal_code: onlyDigits(pedido.endereco?.cep),
-          phone: onlyDigits(pedido.cliente?.telefone || '11999999999'),
-          email: pedido.cliente?.email || '',
-        },
+        from: fromPayload,
+        to: toPayload,
         products: itemsWithDims,
         volumes: [volume],
         options: { non_commercial: true, receipt: false, own_hand: false },
