@@ -73,6 +73,8 @@ function initFBPixel(pixelId: string) {
     const s = document.createElement('script'); s.async = true;
     s.src = 'https://connect.facebook.net/en_US/fbevents.js'; document.head.appendChild(s);
   }
+  // Disable automatic events (SubscribedButtonClick, etc.) — we fire events manually
+  w.fbq('set', 'autoConfig', false, pixelId);
   w.fbq('init', pixelId);
 }
 
