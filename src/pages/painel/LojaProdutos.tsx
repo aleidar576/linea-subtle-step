@@ -494,11 +494,18 @@ const LojaProdutos = () => {
 
   const [pesoDisplay, setPesoDisplay] = useState('');
 
+  // Format kg number to gram-explicit display: 1.3 → "1,300", 0.3 → "0,300"
+  const formatPesoDisplay = (kg: number): string => {
+    if (kg <= 0) return '';
+    // Always show 3 decimal places (grams)
+    return kg.toFixed(3).replace('.', ',');
+  };
+
   // Sync pesoDisplay when editingProduct changes (open editor)
   useEffect(() => {
     if (editingProduct) {
       const p = editingProduct.dimensoes?.peso || 0;
-      setPesoDisplay(p > 0 ? String(p).replace('.', ',') : '');
+      setPesoDisplay(formatPesoDisplay(p));
     }
   }, [editingProduct?._id]);
 
@@ -514,18 +521,17 @@ const LojaProdutos = () => {
       setDimensao('peso', 0);
       return;
     }
-    // If no comma, treat as grams (e.g. "1300" → 1.3 kg → display "1,300")
+    let kg: number;
     if (!display.includes(',')) {
+      // No comma → treat as grams: "1300" → 1.3 kg
       const grams = parseInt(display, 10) || 0;
-      const kg = grams / 1000;
-      setDimensao('peso', kg);
-      setPesoDisplay(kg > 0 ? String(kg).replace('.', ',') : '');
+      kg = grams / 1000;
     } else {
-      // Has comma, treat as BR decimal (e.g. "1,300" → 1.3 kg)
-      const kg = parseFloat(display.replace(',', '.')) || 0;
-      setDimensao('peso', kg);
-      setPesoDisplay(kg > 0 ? String(kg).replace('.', ',') : '');
+      // Has comma → treat as BR kg decimal: "1,300" → 1.3 kg
+      kg = parseFloat(display.replace(',', '.')) || 0;
     }
+    setDimensao('peso', kg);
+    setPesoDisplay(formatPesoDisplay(kg));
   };
 
   const setDimensao = (key: string, value: number | string) => {
