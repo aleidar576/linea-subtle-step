@@ -70,8 +70,10 @@ function initFacebookPixel(pixelId: string) {
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     document.head.appendChild(script);
   }
+  // Disable automatic events (SubscribedButtonClick, etc.) — we fire events manually
+  window.fbq('set', 'autoConfig', false, pixelId);
   window.fbq('init', pixelId);
-  console.log(`📊 Facebook Pixel ${pixelId} initialized`);
+  console.log(`📊 Facebook Pixel ${pixelId} initialized (autoConfig disabled)`);
 }
 
 // ==================
