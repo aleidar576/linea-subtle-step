@@ -626,7 +626,7 @@ const LojaCheckout = () => {
       </div>
       <div className="border-t border-border pt-3 space-y-1.5">
         <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal</span><span>{formatPrice(totalPrice)}</span></div>
-        {discountPercent > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto ({discountPercent}%)</span><span>-{formatPrice(discountAmount)}</span></div>}
+        
         {cuponsApplied.filter(c => c.tipo !== 'frete_gratis').map(c => (
           <div key={c.codigo} className="flex justify-between text-sm text-primary">
             <span>Cupom {c.codigo}</span>

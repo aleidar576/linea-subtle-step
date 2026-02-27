@@ -1083,12 +1083,6 @@ const CheckoutPage = () => {
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="font-medium text-foreground">{formatPrice(totalPrice)}</span>
                 </div>
-                {discountPercent > 0 && (
-                  <div className="mt-1 flex justify-between text-sm">
-                    <span className="font-semibold text-primary">Desconto ({discountPercent}%)</span>
-                    <span className="font-bold text-primary">-{formatPrice(discountAmount)}</span>
-                  </div>
-                )}
                 {acceptedUpsell && upsellProduct && (
                   <div className="mt-1 flex justify-between text-sm">
                     <span className="text-muted-foreground">Oferta ({upsellDiscountPct}% off)</span>

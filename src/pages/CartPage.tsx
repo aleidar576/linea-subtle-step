@@ -7,7 +7,7 @@ import { formatPrice } from '@/data/products';
 import { UtmLink } from '@/components/UtmLink';
 
 const CartPage = () => {
-  const { items, updateQuantity, removeFromCart, totalPrice, discountPercent, discountAmount, finalPrice } = useCart();
+  const { items, updateQuantity, removeFromCart, totalPrice } = useCart();
 
   if (items.length === 0) {
     return (
@@ -163,33 +163,12 @@ const CartPage = () => {
                 <span className="text-muted-foreground">Frete</span>
                 <span className="font-medium text-primary">Grátis</span>
               </div>
-              {discountPercent > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="font-semibold text-primary">Desconto ({discountPercent}%)</span>
-                  <span className="font-bold text-primary">-{formatPrice(discountAmount)}</span>
-                </div>
-              )}
             </div>
-            {discountPercent > 0 && (
-              <div className="mt-3 rounded-xl bg-primary/10 p-3 text-center">
-                <span className="text-xs font-bold text-primary">🎉 Você ganhou {discountPercent}% de desconto!</span>
-              </div>
-            )}
-            {discountPercent === 0 && totalPrice > 0 && (
-              <div className="mt-3 rounded-xl bg-secondary p-3 text-center">
-                <span className="text-xs text-muted-foreground">
-                  💡 Compre acima de R$ 100 e ganhe <span className="font-bold text-primary">20% OFF</span>!
-                </span>
-              </div>
-            )}
             <div className="mt-4 flex items-center justify-between">
               <span className="font-semibold">Total</span>
               <div className="text-right">
-                {discountPercent > 0 && (
-                  <span className="block text-sm text-muted-foreground line-through">{formatPrice(totalPrice)}</span>
-                )}
                 <span className="text-2xl font-bold text-primary">
-                  {formatPrice(finalPrice)}
+                  {formatPrice(totalPrice)}
                 </span>
               </div>
             </div>

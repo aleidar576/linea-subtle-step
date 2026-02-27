@@ -227,15 +227,11 @@ const LojaCart = () => {
                 <span className="text-muted-foreground">Frete</span>
                 <span className="text-xs text-muted-foreground italic">Calculado na finalização</span>
               </div>
-              {discountPercent > 0 && (
-                <div className="flex justify-between text-sm"><span className="font-semibold text-primary">Desconto ({discountPercent}%)</span><span className="font-bold text-primary">-{formatPrice(discountAmount)}</span></div>
-              )}
             </div>
             <div className="flex items-center justify-between">
               <span className="font-semibold">Total</span>
               <div className="text-right">
-                {discountPercent > 0 && <span className="block text-sm text-muted-foreground line-through">{formatPrice(totalPrice)}</span>}
-                <span className="text-2xl font-bold text-primary">{formatPrice(finalPrice)}</span>
+                <span className="text-2xl font-bold text-primary">{formatPrice(totalPrice)}</span>
               </div>
             </div>
             <Button asChild size="lg" className="w-full gap-2 rounded-full font-bold"><Link to="/checkout">Finalizar Compra <ArrowRight className="h-4 w-4" /></Link></Button>
