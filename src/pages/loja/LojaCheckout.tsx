@@ -1,19 +1,20 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Copy, Check, Ticket, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Check, Ticket, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useCart } from '@/contexts/CartContext';
 import { useLoja } from '@/contexts/LojaContext';
 import { firePixelEvent } from '@/components/LojaLayout';
-import { pedidosApi, carrinhosApi, cuponsApi } from '@/services/saas-api';
-import { useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';
+import { pedidosApi, carrinhosApi, cuponsApi, lojaPublicaApi } from '@/services/saas-api';
+import type { CalculatedFreight } from '@/services/saas-api';
+import { useLojaPublicaProducts } from '@/hooks/useLojaPublica';
 import { useClienteAuth } from '@/hooks/useClienteAuth';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { toast } from 'sonner';
-
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -107,7 +108,6 @@ const LojaCheckout = () => {
     document.title = parts.join(' · ');
   }, [nomeExibicao, slogan]);
   const { cliente, isLoggedIn, isLoading: authLoading, enderecoPadrao } = useClienteAuth();
-  const { data: lojaFretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allCheckoutProducts = [] } = useLojaPublicaProducts(lojaId);
 
   const [currentStep, setCurrentStep] = useState<Step>(() => {
@@ -126,46 +126,65 @@ const LojaCheckout = () => {
   const [transitionProgress, setTransitionProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Freight selection
-  const [selectedFrete, setSelectedFrete] = useState<{ nome: string; valor: number; prazo: string } | null>(null);
-  const activeFretes = lojaFretes.filter((f: any) => f.is_active);
+  // Freight selection — dynamic from API
+  const [selectedFrete, setSelectedFrete] = useState<CalculatedFreight | null>(null);
+  const [shippingOptions, setShippingOptions] = useState<CalculatedFreight[]>([]);
+  const [isCalculatingFreight, setIsCalculatingFreight] = useState(false);
+  const [freightError, setFreightError] = useState<string | null>(null);
 
-  // Compute freights based on cart items' fretes_vinculados (majoritarian rule: most expensive)
-  const computedFretes = useMemo(() => {
-    const cartProductIds = items.map(item => (item.product as any)?.product_id || (item.product as any)?._id || item.product?.id).filter(Boolean);
-    const cartProducts = allCheckoutProducts.filter((p: any) => cartProductIds.includes(p.product_id) || cartProductIds.includes(p._id));
-    const hasVinculados = cartProducts.some((p: any) => p.fretes_vinculados && p.fretes_vinculados.length > 0);
-
-    if (!hasVinculados) {
-      return activeFretes.map((f: any) => ({
-        nome: f.nome,
-        valor: f.valor || 0,
-        prazo_dias_min: f.prazo_dias_min || 3,
-        prazo_dias_max: f.prazo_dias_max || 7,
-      }));
-    }
-
-    const freteMap = new Map<string, { nome: string; valor: number; prazo_dias_min: number; prazo_dias_max: number }>();
-    for (const frete of activeFretes) {
-      const freteId = frete._id;
-      let maxValor = -1;
-      for (const product of cartProducts) {
-        const vinculados = (product as any).fretes_vinculados || [];
-        const vinculo = vinculados.find((v: any) => v.frete_id === freteId);
-        if (vinculo) {
-          const valor = vinculo.valor_personalizado != null ? vinculo.valor_personalizado : (frete.valor || 0);
-          if (valor > maxValor) maxValor = valor;
-        }
-      }
-      if (maxValor >= 0) {
-        freteMap.set(freteId, { nome: frete.nome, valor: maxValor, prazo_dias_min: frete.prazo_dias_min || 3, prazo_dias_max: frete.prazo_dias_max || 7 });
-      }
-    }
-    return Array.from(freteMap.values());
-  }, [items, allCheckoutProducts, activeFretes]);
-
-  const shippingCost = selectedFrete?.valor || 0;
+  const shippingCost = selectedFrete?.price || 0;
   const addressFilled = shippingData.street.length >= 3 && shippingData.neighborhood.length >= 2 && shippingData.city.length >= 2 && shippingData.state.length === 2;
+
+  // ── Dynamic freight calculation ──
+  const fetchDynamicFreights = useCallback(async (cep: string) => {
+    if (!lojaId || items.length === 0) return;
+    setIsCalculatingFreight(true);
+    setFreightError(null);
+    setShippingOptions([]);
+    setSelectedFrete(null);
+    try {
+      const itemsPayload = items.map(item => {
+        const realProduct = allCheckoutProducts.find(
+          (p: any) => p._id === item.product.id || p.product_id === item.product.id
+        );
+        return {
+          id: item.product.id,
+          price: item.product.price,
+          quantity: item.quantity,
+          weight: realProduct?.dimensoes?.peso || 0,
+          dimensions: {
+            height: realProduct?.dimensoes?.altura || 0,
+            width: realProduct?.dimensoes?.largura || 0,
+            length: realProduct?.dimensoes?.comprimento || 0,
+          },
+        };
+      });
+      const result = await lojaPublicaApi.calcularFrete({
+        loja_id: lojaId,
+        to_postal_code: cep,
+        items: itemsPayload,
+      });
+      if (result.fretes.length === 0) {
+        setFreightError('Não foi possível calcular o frete para este CEP.');
+      } else {
+        setShippingOptions(result.fretes);
+      }
+    } catch {
+      setFreightError('Não foi possível calcular o frete para este CEP no momento.');
+    } finally {
+      setIsCalculatingFreight(false);
+    }
+  }, [lojaId, items, allCheckoutProducts]);
+
+  // Auto-trigger freight calc when CEP reaches 8 digits (independent of ViaCEP)
+  const lastCalcCepRef = useRef('');
+  useEffect(() => {
+    const cleanCep = shippingData.zipCode.replace(/\D/g, '');
+    if (cleanCep.length >= 8 && cleanCep !== lastCalcCepRef.current) {
+      lastCalcCepRef.current = cleanCep;
+      fetchDynamicFreights(cleanCep);
+    }
+  }, [shippingData.zipCode, fetchDynamicFreights]);
 
   // Inline login state
   const [loginForm, setLoginForm] = useState({ email: '', senha: '' });
@@ -381,7 +400,7 @@ const LojaCheckout = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentStep === 'shipping') {
       if (!validate('shipping')) return;
-      if (activeFretes.length > 0 && !selectedFrete) {
+      if (shippingOptions.length > 0 && !selectedFrete) {
         toast.error('Selecione uma opção de frete para continuar');
         return;
       }
@@ -456,7 +475,10 @@ const LojaCheckout = () => {
         subtotal: totalPrice,
         desconto: discountAmount + cupomDiscountAmount + (hasFreteGratisCupom ? shippingCost : 0),
         frete: effectiveShippingCost,
-        frete_nome: selectedFrete?.nome || null,
+        frete_nome: selectedFrete?.name || null,
+        frete_valor: selectedFrete?.price || 0,
+        frete_prazo: selectedFrete?.delivery_time || 0,
+        frete_id: selectedFrete?.id || null,
         total: finalTotal,
         cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
         pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
@@ -613,11 +635,11 @@ const LojaCheckout = () => {
         ))}
         {selectedFrete !== null && (
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Frete ({selectedFrete.nome})</span>
+            <span>Frete ({selectedFrete.name})</span>
             <span className={effectiveShippingCost === 0 ? 'text-primary font-semibold' : ''}>
               {effectiveShippingCost === 0 ? 'Grátis' : formatPrice(effectiveShippingCost)}
-              {hasFreteGratisCupom && selectedFrete.valor > 0 && (
-                <span className="line-through text-muted-foreground ml-1 text-xs">{formatPrice(selectedFrete.valor)}</span>
+              {hasFreteGratisCupom && selectedFrete.price > 0 && (
+                <span className="line-through text-muted-foreground ml-1 text-xs">{formatPrice(selectedFrete.price)}</span>
               )}
             </span>
           </div>
@@ -802,34 +824,78 @@ const LojaCheckout = () => {
                 </div>
 
                 {/* Freight Selection */}
-                {addressFilled && computedFretes.length > 0 && (
-                  <div className="space-y-3">
-                    <Label className="flex items-center gap-1.5 font-semibold"><Truck className="h-4 w-4" /> Opções de Entrega</Label>
-                    {computedFretes.map((f: any, i: number) => {
-                      const freteName = f.nome || `Frete ${i + 1}`;
-                      const isSelected = selectedFrete?.nome === freteName;
-                      const deliveryText = getDeliveryDateRange(f.prazo_dias_min || 3, f.prazo_dias_max || 7);
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => setSelectedFrete({ nome: freteName, valor: f.valor || 0, prazo: `${f.prazo_dias_min || 3}-${f.prazo_dias_max || 7} dias` })}
-                          className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-background hover:border-primary/50'}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isSelected ? <CheckCircle2 className="h-5 w-5 text-primary shrink-0" /> : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />}
-                            <div className="text-left">
-                              <p className="text-sm font-medium text-foreground">{freteName}</p>
-                              <p className="text-xs text-muted-foreground">{deliveryText}</p>
-                            </div>
-                          </div>
-                          <span className={`text-sm ${f.valor === 0 ? 'text-primary font-bold' : 'text-foreground font-semibold'}`}>
-                            {f.valor === 0 ? 'Grátis' : formatPrice(f.valor)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-1.5 font-semibold"><Truck className="h-4 w-4" /> Opções de Entrega</Label>
+
+                  {/* Manual recalc button */}
+                  {shippingData.zipCode.replace(/\D/g, '').length >= 8 && !isCalculatingFreight && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        lastCalcCepRef.current = '';
+                        fetchDynamicFreights(shippingData.zipCode.replace(/\D/g, ''));
+                      }}
+                      className="text-xs gap-1.5"
+                    >
+                      <Truck className="h-3.5 w-3.5" /> Recalcular frete
+                    </Button>
+                  )}
+
+                  {/* Loading skeletons */}
+                  {isCalculatingFreight && (
+                    <div className="space-y-3">
+                      <Skeleton className="h-[72px] w-full rounded-xl" />
+                      <Skeleton className="h-[72px] w-full rounded-xl" />
+                      <Skeleton className="h-[72px] w-full rounded-xl" />
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {freightError && !isCalculatingFreight && (
+                    <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                      <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                      <p className="text-sm text-destructive">{freightError}</p>
+                    </div>
+                  )}
+
+                  {/* Options */}
+                  {!isCalculatingFreight && shippingOptions.map((option) => {
+                    const isSelected = selectedFrete?.id === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setSelectedFrete(option)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-background hover:border-primary/50'}`}
+                      >
+                        <div className="shrink-0">
+                          {isSelected ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />}
+                        </div>
+                        {option.picture ? (
+                          <img src={option.picture} alt={option.name} className="h-8 w-auto object-contain shrink-0" />
+                        ) : (
+                          <Truck className="h-5 w-5 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="text-left flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">{option.name}</p>
+                          {option.delivery_time > 0 && (
+                            <p className="text-xs text-muted-foreground">Chega em até {option.delivery_time} dias úteis</p>
+                          )}
+                        </div>
+                        <span className={`text-sm shrink-0 ${option.price === 0 ? 'text-primary font-bold' : 'text-foreground font-semibold'}`}>
+                          {option.price === 0 ? 'Grátis' : formatPrice(option.price)}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  {/* No options and no error — CEP not yet entered */}
+                  {!isCalculatingFreight && !freightError && shippingOptions.length === 0 && shippingData.zipCode.replace(/\D/g, '').length < 8 && (
+                    <p className="text-sm text-muted-foreground">Preencha o CEP para ver as opções de entrega.</p>
+                  )}
+                </div>
 
                 <div className="lg:hidden">{orderSummaryJSX}</div>
                 <div className="flex gap-3">
