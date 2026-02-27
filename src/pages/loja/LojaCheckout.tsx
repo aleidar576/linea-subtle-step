@@ -824,8 +824,8 @@ const LojaCheckout = () => {
                 </div>
 
                 {/* Freight Selection */}
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-1.5 font-semibold"><Truck className="h-4 w-4" /> Opções de Entrega</Label>
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-1.5 font-semibold text-lg mb-4"><Truck className="h-4 w-4" /> Opções de Entrega</Label>
 
                   {/* Manual recalc button */}
                   {shippingData.zipCode.replace(/\D/g, '').length >= 8 && !isCalculatingFreight && (
@@ -845,10 +845,10 @@ const LojaCheckout = () => {
 
                   {/* Loading skeletons */}
                   {isCalculatingFreight && (
-                    <div className="space-y-3">
-                      <Skeleton className="h-[72px] w-full rounded-xl" />
-                      <Skeleton className="h-[72px] w-full rounded-xl" />
-                      <Skeleton className="h-[72px] w-full rounded-xl" />
+                    <div className="grid grid-cols-1 gap-4">
+                      <Skeleton className="h-[80px] w-full rounded-xl" />
+                      <Skeleton className="h-[80px] w-full rounded-xl" />
+                      <Skeleton className="h-[80px] w-full rounded-xl" />
                     </div>
                   )}
 
@@ -861,35 +861,41 @@ const LojaCheckout = () => {
                   )}
 
                   {/* Options */}
-                  {!isCalculatingFreight && shippingOptions.map((option) => {
-                    const isSelected = selectedFrete?.id === option.id;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setSelectedFrete(option)}
-                        className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-background hover:border-primary/50'}`}
-                      >
-                        <div className="shrink-0">
-                          {isSelected ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />}
-                        </div>
-                        {option.picture ? (
-                          <img src={option.picture} alt={option.name} className="h-8 w-auto object-contain shrink-0" />
-                        ) : (
-                          <Truck className="h-5 w-5 text-muted-foreground shrink-0" />
-                        )}
-                        <div className="text-left flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">{option.name}</p>
-                          {option.delivery_time > 0 && (
-                            <p className="text-xs text-muted-foreground">Chega em até {option.delivery_time} dias úteis</p>
-                          )}
-                        </div>
-                        <span className={`text-sm shrink-0 ${option.price === 0 ? 'text-primary font-bold' : 'text-foreground font-semibold'}`}>
-                          {option.price === 0 ? 'Grátis' : formatPrice(option.price)}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {!isCalculatingFreight && shippingOptions.length > 0 && (
+                    <div className="grid grid-cols-1 gap-4">
+                      {shippingOptions.map((option) => {
+                        const isSelected = selectedFrete?.id === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setSelectedFrete(option)}
+                            className={`w-full flex items-center gap-5 p-5 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/50'}`}
+                          >
+                            <div className="shrink-0">
+                              {isSelected ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />}
+                            </div>
+                            <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center p-2 border rounded-lg bg-white overflow-hidden">
+                              {option.picture ? (
+                                <img src={option.picture} alt={option.name} className="max-w-full max-h-full object-contain" />
+                              ) : (
+                                <Truck className="h-6 w-6 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-base font-semibold text-foreground">{option.name}</p>
+                              {option.delivery_time > 0 && (
+                                <p className="text-sm text-muted-foreground mt-0.5">Chega em até {option.delivery_time} dias úteis</p>
+                              )}
+                            </div>
+                            <span className={`text-base shrink-0 ${option.price === 0 ? 'text-emerald-600 font-bold' : 'font-bold text-foreground'}`}>
+                              {option.price === 0 ? 'Grátis' : formatPrice(option.price)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* No options and no error — CEP not yet entered */}
                   {!isCalculatingFreight && !freightError && shippingOptions.length === 0 && shippingData.zipCode.replace(/\D/g, '').length < 8 && (
