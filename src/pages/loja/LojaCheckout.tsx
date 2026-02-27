@@ -534,7 +534,10 @@ const LojaCheckout = () => {
         }
       }
 
-      const r = await fetch('/api/process-payment', {
+      const apiBase = window.location.hostname.includes('lovable.app')
+        ? 'https://pandora-five-amber.vercel.app/api'
+        : '/api';
+      const r = await fetch(`${apiBase}/process-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -617,7 +620,7 @@ const LojaCheckout = () => {
       } catch (firstErr) {
         console.warn('[PEDIDO] Primeira tentativa falhou, retentando...', firstErr);
         try {
-          const retryRes = await fetch('/api/pedidos?scope=pedido', {
+          const retryRes = await fetch(`${apiBase}/pedidos?scope=pedido`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(pedidoPayload),
