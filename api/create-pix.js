@@ -44,8 +44,8 @@ module.exports = async function handler(req, res) {
       const result = await paymentService.handleWebhook({ txid, status, req });
       return res.status(200).json(result);
     } catch (err) {
-      console.error('[WEBHOOK] Erro:', err.message);
-      return res.status(200).json({ ok: true });
+      console.error('[WEBHOOK] Erro CRÍTICO ao processar webhook:', err.message, err.stack);
+      return res.status(500).json({ ok: false, error: err.message });
     }
   }
 
