@@ -8,9 +8,10 @@ const API_BASE = window.location.hostname.includes('lovable.app')
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('auth_token');
+  const skipAuth = path.includes('/process-payment');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(!skipAuth && token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options?.headers as Record<string, string> || {}),
   };
 
