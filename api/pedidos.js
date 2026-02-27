@@ -510,7 +510,7 @@ module.exports = async function handler(req, res) {
           data = text ? JSON.parse(text) : {};
         } catch (e) {
           console.error(`[ME] ${label} retornou não-JSON (Status ${response.status}):`, text.substring(0, 500));
-          throw new Error(`A API do Melhor Envio falhou e retornou um formato inválido (Status: ${response.status}). Tente novamente em instantes.`);
+          throw new Error("ME " + response.status + " Text: " + text.substring(0, 250));
         }
         if (!response.ok) {
           console.error(`[ME] ${label} error:`, JSON.stringify(data));
