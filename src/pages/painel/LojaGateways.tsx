@@ -42,11 +42,13 @@ function SealPayConfig({
   currentConfig,
   isActive,
   onSaved,
+  onDisconnect,
 }: {
   lojaId: string;
   currentConfig: any;
   isActive: boolean;
   onSaved: () => void;
+  onDisconnect: () => Promise<void>;
 }) {
   const { toast } = useToast();
   const [apiKey, setApiKey] = useState(currentConfig?.api_key || '');
@@ -63,6 +65,7 @@ function SealPayConfig({
   const [sandboxLoading, setSandboxLoading] = useState(false);
   const [sandboxLog, setSandboxLog] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const hasKey = !!apiKey.trim();
   const webhookUrl = `https://${window.location.hostname}/api/process-payment?scope=webhook`;
@@ -267,6 +270,25 @@ function SealPayConfig({
           O webhook espera um POST com <code className="bg-muted px-1 rounded">{'{ txid, status }'}</code>.
         </p>
       </div>
+
+      {/* Desconectar */}
+      {hasKey && (
+        <div className="border-t border-border pt-4">
+          <Button
+            variant="outline"
+            className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            disabled={disconnecting}
+            onClick={async () => {
+              setDisconnecting(true);
+              try { await onDisconnect(); } finally { setDisconnecting(false); }
+            }}
+          >
+            {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
+            Desconectar Gateway
+          </Button>
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">Remove a chave e desativa este gateway.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -277,15 +299,18 @@ function AppmaxConfig({
   profile,
   isActive,
   onSaved,
+  onDisconnect,
 }: {
   lojaId: string;
   profile: any;
   isActive: boolean;
   onSaved: () => void;
+  onDisconnect: () => Promise<void>;
 }) {
   const { toast } = useToast();
   const [connecting, setConnecting] = useState(false);
   const [activating, setActivating] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const appmaxConfig = profile?.gateways_config?.appmax;
   const isConnected = !!appmaxConfig?.client_id;
@@ -357,6 +382,23 @@ function AppmaxConfig({
             <span className="font-medium">Gateway padrão ativo</span>
           </div>
         )}
+
+        {/* Desconectar */}
+        <div className="border-t border-border pt-4">
+          <Button
+            variant="outline"
+            className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            disabled={disconnecting}
+            onClick={async () => {
+              setDisconnecting(true);
+              try { await onDisconnect(); } finally { setDisconnecting(false); }
+            }}
+          >
+            {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unplug className="h-4 w-4" />}
+            Desconectar Gateway
+          </Button>
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">Remove as credenciais e desativa este gateway.</p>
+        </div>
       </div>
     );
   }
@@ -580,6 +622,7 @@ const LojaGateways = () => {
                   currentConfig={gatewaysConfig.sealpay || {}}
                   isActive={gatewayAtivo === 'sealpay'}
                   onSaved={() => { fetchData(); }}
+                  onDisconnect={async () => { await handleDisconnect('sealpay'); setSheetOpen(false); }}
                 />
               )}
 
@@ -589,6 +632,7 @@ const LojaGateways = () => {
                   profile={profile}
                   isActive={gatewayAtivo === 'appmax'}
                   onSaved={() => { fetchData(); }}
+                  onDisconnect={async () => { await handleDisconnect('appmax'); setSheetOpen(false); }}
                 />
               )}
 
