@@ -492,19 +492,55 @@ const LojaProdutos = () => {
     });
   };
 
-  const setDimensao = (key: string, raw: string, isFloat = false) => {
-    let value: number;
-    if (raw === '' || raw === undefined) {
-      value = 0;
-    } else if (isFloat) {
-      value = Math.max(0, parseFloat(raw.replace(',', '.')) || 0);
-    } else {
-      value = Math.max(0, parseInt(raw, 10) || 0);
+  const [pesoDisplay, setPesoDisplay] = useState('');
+
+  // Sync pesoDisplay when editingProduct changes (open editor)
+  useEffect(() => {
+    if (editingProduct) {
+      const p = editingProduct.dimensoes?.peso || 0;
+      setPesoDisplay(p > 0 ? String(p).replace('.', ',') : '');
     }
-    if (isNaN(value)) value = 0;
+  }, [editingProduct?._id]);
+
+  const handlePesoChange = (raw: string) => {
+    // Allow only digits and comma
+    const cleaned = raw.replace(/[^0-9,]/g, '');
+    setPesoDisplay(cleaned);
+  };
+
+  const handlePesoBlur = () => {
+    let display = pesoDisplay.trim();
+    if (!display) {
+      setDimensao('peso', 0);
+      return;
+    }
+    // If no comma, treat as grams (e.g. "1300" → 1.3 kg → display "1,300")
+    if (!display.includes(',')) {
+      const grams = parseInt(display, 10) || 0;
+      const kg = grams / 1000;
+      setDimensao('peso', kg);
+      setPesoDisplay(kg > 0 ? String(kg).replace('.', ',') : '');
+    } else {
+      // Has comma, treat as BR decimal (e.g. "1,300" → 1.3 kg)
+      const kg = parseFloat(display.replace(',', '.')) || 0;
+      setDimensao('peso', kg);
+      setPesoDisplay(kg > 0 ? String(kg).replace('.', ',') : '');
+    }
+  };
+
+  const setDimensao = (key: string, value: number | string) => {
+    let num: number;
+    if (typeof value === 'number') {
+      num = value;
+    } else if (value === '' || value === undefined) {
+      num = 0;
+    } else {
+      num = Math.max(0, parseInt(value, 10) || 0);
+    }
+    if (isNaN(num)) num = 0;
     setEditingProduct(prev => prev ? {
       ...prev,
-      dimensoes: { ...(prev.dimensoes || { peso: 0, altura: 0, largura: 0, comprimento: 0 }), [key]: value }
+      dimensoes: { ...(prev.dimensoes || { peso: 0, altura: 0, largura: 0, comprimento: 0 }), [key]: num }
     } : prev);
   };
 
@@ -1166,7 +1202,7 @@ const LojaProdutos = () => {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <Label className="text-xs">Peso (kg)</Label>
-                      <Input type="text" inputMode="decimal" value={dims.peso || ''} onChange={e => setDimensao('peso', e.target.value, true)} placeholder="ex: 0,300" />
+                      <Input type="text" inputMode="decimal" value={pesoDisplay} onChange={e => handlePesoChange(e.target.value)} onBlur={handlePesoBlur} placeholder="ex: 300 (gramas) ou 1,300 (kg)" />
                     </div>
                     <div>
                       <Label className="text-xs">Altura (cm)</Label>
