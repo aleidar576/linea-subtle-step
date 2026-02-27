@@ -502,6 +502,32 @@ module.exports = async function handler(req, res) {
         'User-Agent': 'Dusking (suporte@dusking.com.br)',
       };
 
+      // Safe JSON parser for ME responses (handles HTML error pages)
+      async function safeMeJson(response, label) {
+        const text = await response.text();
+        let data;
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (e) {
+          console.error(`[ME] ${label} retornou não-JSON (Status ${response.status}):`, text.substring(0, 500));
+          throw new Error(`A API do Melhor Envio falhou e retornou um formato inválido (Status: ${response.status}). Tente novamente em instantes.`);
+        }
+        if (!response.ok) {
+          console.error(`[ME] ${label} error:`, JSON.stringify(data));
+          const msg = data?.message || data?.error || `Erro interno no Melhor Envio (Status: ${response.status})`;
+          if (typeof msg === 'string' && msg.toLowerCase().includes('saldo')) {
+            const err = new Error('Saldo insuficiente na carteira do Melhor Envio. Adicione créditos e tente novamente.');
+            err.statusCode = 402;
+            throw err;
+          }
+          const err = new Error(msg);
+          err.statusCode = 422;
+          err.details = data;
+          throw err;
+        }
+        return data;
+      }
+
       const onlyDigits = (s) => (s || '').replace(/\D/g, '');
 
       // Idempotent: if already has order, just print
@@ -510,7 +536,7 @@ module.exports = async function handler(req, res) {
           method: 'POST', headers: meHeaders,
           body: JSON.stringify({ mode: 'public', orders: [pedido.melhor_envio_order_id] }),
         });
-        const printData = await printRes.json();
+        const printData = await safeMeJson(printRes, 'Print (idempotent)');
         const url = printData.url || pedido.etiqueta_url;
         if (url) { pedido.etiqueta_url = url; await pedido.save(); }
         return res.status(200).json({ etiqueta_url: url, codigo_rastreio: pedido.codigo_rastreio, already_existed: true });
@@ -586,31 +612,17 @@ module.exports = async function handler(req, res) {
 
       // 1) POST /cart
       const cartRes = await fetch(`${meBase}/api/v2/me/cart`, { method: 'POST', headers: meHeaders, body: JSON.stringify(cartPayload) });
-      const cartData = await cartRes.json();
-      if (!cartRes.ok || cartData.error) {
-        console.error('[ME] Cart error:', JSON.stringify(cartData));
-        return res.status(422).json({ error: 'Erro ao adicionar ao carrinho ME', details: cartData.error || cartData.message || cartData });
-      }
+      const cartData = await safeMeJson(cartRes, 'Cart');
       const orderId = cartData.id;
       if (!orderId) return res.status(422).json({ error: 'Resposta inesperada do carrinho ME', details: cartData });
 
       // 2) POST /checkout
       const checkoutRes = await fetch(`${meBase}/api/v2/me/shipment/checkout`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [orderId] }) });
-      const checkoutData = await checkoutRes.json();
-      if (!checkoutRes.ok) {
-        console.error('[ME] Checkout error:', JSON.stringify(checkoutData));
-        const msg = checkoutData?.message || JSON.stringify(checkoutData);
-        if (msg.toLowerCase().includes('saldo')) return res.status(402).json({ error: 'Saldo insuficiente na carteira do Melhor Envio. Adicione créditos e tente novamente.' });
-        return res.status(422).json({ error: 'Erro no checkout ME', details: msg });
-      }
+      await safeMeJson(checkoutRes, 'Checkout');
 
       // 3) POST /generate
       const genRes = await fetch(`${meBase}/api/v2/me/shipment/generate`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [orderId] }) });
-      const genData = await genRes.json();
-      if (!genRes.ok) {
-        console.error('[ME] Generate error:', JSON.stringify(genData));
-        return res.status(422).json({ error: 'Erro ao gerar etiqueta ME', details: genData });
-      }
+      const genData = await safeMeJson(genRes, 'Generate');
       // Extract tracking from generate response
       let trackingCode = null;
       if (genData && typeof genData === 'object') {
@@ -620,7 +632,7 @@ module.exports = async function handler(req, res) {
 
       // 4) POST /print
       const printRes = await fetch(`${meBase}/api/v2/me/shipment/print`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ mode: 'public', orders: [orderId] }) });
-      const printData = await printRes.json();
+      const printData = await safeMeJson(printRes, 'Print');
       const etiquetaUrl = printData.url || null;
 
       // Save to DB
@@ -637,7 +649,8 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ melhor_envio_order_id: orderId, etiqueta_url: etiquetaUrl, codigo_rastreio: trackingCode });
     } catch (err) {
       console.error('[ME] Erro gerar etiqueta:', err.message);
-      return res.status(500).json({ error: 'Erro interno ao gerar etiqueta', details: err.message });
+      const status = err.statusCode || 500;
+      return res.status(status).json({ error: err.message || 'Erro interno ao gerar etiqueta', details: err.details || err.message });
     }
   }
 
@@ -667,10 +680,21 @@ module.exports = async function handler(req, res) {
         'User-Agent': 'Dusking (suporte@dusking.com.br)',
       };
 
-      await fetch(`${meBase}/api/v2/me/shipment/cancel`, {
+      const cancelRes = await fetch(`${meBase}/api/v2/me/shipment/cancel`, {
         method: 'POST', headers: meHeaders,
         body: JSON.stringify({ order: { id: pedido.melhor_envio_order_id, reason_id: '2', description: 'Cancelado pelo painel' } }),
       });
+
+      // Safe parse — cancel pode falhar mas não deve travar
+      const cancelText = await cancelRes.text();
+      let cancelData;
+      try { cancelData = cancelText ? JSON.parse(cancelText) : {}; } catch (e) {
+        console.error(`[ME] Cancel retornou não-JSON (Status ${cancelRes.status}):`, cancelText.substring(0, 500));
+      }
+      if (!cancelRes.ok) {
+        console.error('[ME] Cancel error:', cancelData || cancelText);
+        // Não bloqueia — limpa campos locais mesmo se ME falhar
+      }
 
       pedido.melhor_envio_order_id = null;
       pedido.melhor_envio_status = null;
