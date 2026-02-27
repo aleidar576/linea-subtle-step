@@ -1,67 +1,61 @@
 
-# Blindagem Financeira do Modo Amigo - 3 Camadas
+
+# Refatoração do Recálculo de Frete Automático no Checkout
 
 ## Resumo
-Proteger lojistas VIP (`modo_amigo: true`) contra qualquer cobranca Stripe, atuando em 3 pontos criticos do fluxo financeiro.
+Remover o botão manual "Recalcular frete" e implementar recálculo automático quando o carrinho ou CEP mudam, com skeletons durante o carregamento.
 
 ---
 
-## 1. Cron de Taxas (`api/loja-extras.js`, linha ~90)
+## 1. Remover botão manual (linhas 841-855)
 
-Adicionar `modo_amigo: { $ne: true }` na query do `Lojista.find()` que busca lojistas com taxas pendentes.
+Deletar completamente o bloco JSX do botão "Recalcular frete":
 
-**Antes:**
-```javascript
-const lojistas = await Lojista.find({
-  taxas_acumuladas: { $gt: 0 },
-  data_vencimento_taxas: { $lte: now },
-  stripe_customer_id: { $ne: null },
-  status_taxas: { $ne: 'bloqueado' },
-});
-```
-
-**Depois:**
-```javascript
-const lojistas = await Lojista.find({
-  taxas_acumuladas: { $gt: 0 },
-  data_vencimento_taxas: { $lte: now },
-  stripe_customer_id: { $ne: null },
-  status_taxas: { $ne: 'bloqueado' },
-  modo_amigo: { $ne: true },
-});
+```jsx
+// REMOVER ESTE BLOCO INTEIRO:
+{shippingData.zipCode.replace(/\D/g, '').length >= 8 && !isCalculatingFreight && (
+  <Button type="button" variant="outline" size="sm" onClick={...}>
+    <Truck /> Recalcular frete
+  </Button>
+)}
 ```
 
 ---
 
-## 2. Acumulo de Taxas (`api/pedidos.js`, linhas ~249-275)
+## 2. Adicionar recálculo automático por mudança no carrinho (após linha 187)
 
-Dentro do bloco `if (novoStatus === 'pago' && pedido.total > 0)`, apos buscar o `lojistaDoc`, verificar `lojistaDoc.modo_amigo === true`. Se for VIP, pular todo o calculo e salvar zero taxas.
+Criar um `useEffect` que monitora mudanças nas quantidades/itens do carrinho e dispara `fetchDynamicFreights` automaticamente quando o CEP já está preenchido:
 
-**Alteracao:** Adicionar `if (lojistaDoc.modo_amigo) { ... skip ... }` antes do calculo da taxa, com log informativo.
+```javascript
+// Fingerprint do carrinho (id + quantidade de cada item)
+const cartFingerprint = useMemo(
+  () => items.map(i => `${i.product.id}:${i.quantity}`).join(','),
+  [items]
+);
+const lastCartFingerprintRef = useRef(cartFingerprint);
+
+useEffect(() => {
+  const cleanCep = shippingData.zipCode.replace(/\D/g, '');
+  if (cleanCep.length >= 8 && cartFingerprint !== lastCartFingerprintRef.current) {
+    lastCartFingerprintRef.current = cartFingerprint;
+    lastCalcCepRef.current = cleanCep;
+    fetchDynamicFreights(cleanCep);
+  }
+}, [cartFingerprint, shippingData.zipCode, fetchDynamicFreights]);
+```
+
+O efeito existente (CEP) continua funcionando normalmente — este novo efeito cobre apenas o cenário de mudança no carrinho.
 
 ---
 
-## 3. Toggle Modo Amigo com Cancelamento Stripe (`api/admins.js`, linhas ~160-165)
+## 3. Skeletons de carregamento (já existentes)
 
-Expandir o handler `action === 'tolerancia'` para:
-
-**Cenario A (Ativando VIP, `modo_amigo: true`):**
-- Se o lojista tem `stripe_subscription_id`, cancelar a assinatura via `stripe.subscriptions.cancel()`
-- Limpar `stripe_subscription_id` e `stripe_price_id` (manter `stripe_customer_id`)
-- Zerar `taxas_acumuladas` para evitar cobracas residuais
-- Registrar evento no `historico_assinatura`
-
-**Cenario B (Revogando VIP, `modo_amigo: false`):**
-- Apenas salvar `modo_amigo: false`
-- NAO recriar assinatura (lojista tera que assinar manualmente)
-- Os middlewares existentes (`lib/auth.js`, `api/lojas.js`) bloqueiam automaticamente
+Os skeletons já estão implementados corretamente nas linhas 858-864. Nenhuma alteração necessária — eles aparecem automaticamente quando `isCalculatingFreight` é `true`, ocultando valores antigos (pois `setShippingOptions([])` e `setSelectedFrete(null)` são chamados no início de `fetchDynamicFreights`).
 
 ---
 
-## Arquivos Modificados
+## Arquivos modificados
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---|---|
-| `api/loja-extras.js` | +1 filtro na query do cron |
-| `api/pedidos.js` | +guard `modo_amigo` no acumulo de taxas |
-| `api/admins.js` | Cancelamento Stripe ao ativar VIP, limpeza de taxas |
+| `src/pages/loja/LojaCheckout.tsx` | -botão manual, +useEffect de recálculo por carrinho |
