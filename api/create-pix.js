@@ -6,19 +6,39 @@ const connectDB = require('../lib/mongodb');
 const Setting = require('../models/Setting.js');
 
 module.exports = async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    return res.status(200).end();
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  await connectDB();
+
+  const scope = req.query?.scope || req.body?.scope;
+
+  // ── scope=status: Proxy de consulta de status de pagamento ──
+  if (scope === 'status' && req.method === 'GET') {
+    const { txid } = req.query;
+    if (!txid) return res.status(400).json({ error: 'txid é obrigatório' });
+
+    const settings = await Setting.find({ key: 'sealpay_api_url' }).lean();
+    const sealpayUrl = settings[0]?.value || 'https://abacate-5eo1.onrender.com/create-pix';
+    // Derive base URL: remove trailing path like /create-pix
+    const baseUrl = sealpayUrl.replace(/\/create-pix\/?$/, '');
+
+    try {
+      const statusRes = await fetch(`${baseUrl}/api/payment-status/${txid}`);
+      const statusData = await statusRes.json();
+      return res.status(statusRes.status).json(statusData);
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao consultar status', details: err.message });
+    }
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  await connectDB();
 
   // ── Webhook scope ──
-  const scope = req.query?.scope || req.body?.scope;
   if (scope === 'webhook') {
     const { txid, status } = req.body || {};
     if (!txid) return res.status(400).json({ error: 'txid é obrigatório' });
