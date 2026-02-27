@@ -98,7 +98,7 @@ interface AppliedCoupon {
 const LojaCheckout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart } = useCart();
-  const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, metodosSuportados } = useLoja();
+  const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, gatewayLoading, metodosSuportados } = useLoja();
 
   // Gateway blocking is rendered at the end, after all hooks
 
@@ -653,6 +653,17 @@ const LojaCheckout = () => {
   );
 
   // ── BLOQUEIO DE CHECKOUT: Gateway não configurado ──
+  if (gatewayLoading) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando checkout…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!gatewayAtivo) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
