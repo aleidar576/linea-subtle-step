@@ -239,6 +239,8 @@ function LojaFooter({ footer, nome, slug, lojaId, logo, icone }: { footer: Foote
       await leadsApi.subscribe(lojaId, nlEmail, 'FOOTER');
       toast.success('Inscrito com sucesso!');
       setNlEmail('');
+      // Disparar evento Lead para pixels (newsletter footer)
+      firePixelEvent('Lead', { content_name: 'Newsletter Footer' });
     } catch { toast.error('Erro ao inscrever'); }
     finally { setNlLoading(false); }
   };
@@ -577,7 +579,16 @@ function WelcomePopup({ config, lojaId }: { config: any; lojaId: string }) {
                     backgroundColor: btnBg || 'hsl(var(--primary))',
                     color: btnText || 'hsl(var(--primary-foreground))',
                   }}
-                  onClick={() => { handleClose(); }}
+                  onClick={async () => {
+                    if (email) {
+                      try {
+                        await leadsApi.subscribe(lojaId, email, 'POPUP');
+                        toast.success('Inscrito com sucesso!');
+                        firePixelEvent('Lead', { content_name: 'Newsletter Popup' });
+                      } catch { toast.error('Erro ao inscrever'); }
+                    }
+                    handleClose();
+                  }}
                 >
                   {config.texto_botao || 'Quero participar!'}
                 </button>
