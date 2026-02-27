@@ -1,42 +1,43 @@
 
-# Implementacao Appmax — CONCLUÍDA ✅
+## Correcao: Token OAuth Appmax - URLSearchParams
 
-## Status: Todos os 5 pontos implementados
+### Problema
+A API `/oauth2/token` da Appmax exige `application/x-www-form-urlencoded`, mas o codigo envia `application/json` em **dois arquivos**:
 
-### 1. Motor de Pagamento (`lib/services/pagamentos/appmax.js`) ✅
-- OAuth2 token via `getToken(lojista)` com sandbox/prod dinâmico
-- `createPayment()` suporta PIX, credit_card e boleto
-- SKU obrigatório com fallback: `item.sku || item.product_id`
-- Installments (1-12) obrigatório para cartão
-- `getStatus()` com DB-first + fallback API
-- `handleWebhook()` com mapeamento rigoroso v3: approved→pago, declined→recusado, etc.
+1. `api/loja-extras.js` (linhas 447-455) - fluxo de conexao `appmax-connect`
+2. `lib/services/pagamentos/appmax.js` (linhas 54-62) - fluxo de pagamento `getToken()`
 
-### 2. Roteamento Strategy (`lib/services/pagamentos/index.js`) ✅
-- Factory ativada: `case 'appmax': return appmax`
+### Correcao
 
-### 3. Endpoint Renomeado (`api/process-payment.js`) ✅
-- Roteamento dinâmico por `loja_id → gateway_ativo`
-- `api/create-pix.js` mantido como alias
-- `vercel.json` atualizado com nova rota
+Nos dois arquivos, substituir:
 
-### 4. Webhook Appmax (`api/loja-extras.js`) ✅
-- Scope público `appmax-webhook` antes do auth gate
-- Delega para `appmaxService.handleWebhook()`
+```javascript
+// DE (JSON - incorreto):
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+  grant_type: 'client_credentials',
+  client_id: ...,
+  client_secret: ...,
+}),
+```
 
-### 5. Checkout Multi-Método (`src/pages/loja/LojaCheckout.tsx`) ✅
-- Injeção dinâmica do script `appmax.min.js`
-- RadioGroup para PIX / Cartão / Boleto
-- Formulário de cartão com máscaras + Select de parcelas (1-12x)
-- Tokenização PCI via `window.Appmax.tokenize()`
-- Fluxo unificado `handlePayment()` com tratamento por método
-- Polling para PIX + Boleto, redirect direto para cartão aprovado
+```javascript
+// PARA (URLSearchParams - correto):
+const tokenParams = new URLSearchParams();
+tokenParams.append('grant_type', 'client_credentials');
+tokenParams.append('client_id', ...);
+tokenParams.append('client_secret', ...);
 
-### 6. Campo SKU ✅
-- `models/Product.js`: campo `sku` adicionado
-- `src/pages/painel/LojaProdutos.tsx`: input na aba Básico
-- `src/services/saas-api.ts`: tipo `sku` adicionado a `LojaProduct`
+// No fetch:
+headers: {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'Accept': 'application/json',
+},
+body: tokenParams,
+```
 
-### 7. Referências Frontend Atualizadas ✅
-- `CheckoutPage.tsx`: polling → `process-payment`
-- `api.ts`: `paymentsApi.createPix` → `/process-payment`
-- `LojaGateways.tsx`: webhook URL + sandbox test URL
+### Arquivos Afetados
+- `api/loja-extras.js` - linhas 447-455
+- `lib/services/pagamentos/appmax.js` - linhas 54-62
+
+Nenhuma outra alteracao necessaria. O restante do fluxo permanece intacto.
