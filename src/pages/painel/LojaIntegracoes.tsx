@@ -10,7 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle as DialogTitle,
+  AlertDialogDescription as DialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet';
@@ -55,6 +59,9 @@ export default function LojaIntegracoes() {
   const [sheetData, setSheetData] = useState<any>(null);
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showCepConfirm, setShowCepConfirm] = useState(false);
+
+  const hasStoreCep = !!loja?.configuracoes?.endereco?.cep;
 
   // Load integration data into sheet when opening
   useEffect(() => {
@@ -65,7 +72,7 @@ export default function LojaIntegracoes() {
     }
   }, [activeSheet, loja]);
 
-  const handleSave = async () => {
+  const doSave = async () => {
     if (!activeSheet || !id) return;
     setSaving(true);
     try {
@@ -83,6 +90,14 @@ export default function LojaIntegracoes() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    if (activeSheet === 'melhor_envio' && sheetData?.ativo && !hasStoreCep) {
+      setShowCepConfirm(true);
+      return;
+    }
+    await doSave();
   };
 
   const getStatus = (integrationId: IntegrationId) => {
@@ -152,6 +167,15 @@ export default function LojaIntegracoes() {
                 </CardDescription>
               </CardContent>
 
+              {/* Banner CEP ausente no card */}
+              {integration.id === 'melhor_envio' && isActive && !hasStoreCep && (
+                <Alert variant="destructive" className="mx-6 mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Atenção</AlertTitle>
+                  <AlertDescription>Falta o CEP no cadastro da loja. Vá em Perfil da Loja.</AlertDescription>
+                </Alert>
+              )}
+
               <CardFooter>
                 <Button
                   variant="outline"
@@ -203,6 +227,17 @@ export default function LojaIntegracoes() {
                     onCheckedChange={(v) => setSheetData({ ...sheetData, ativo: v })}
                   />
                 </div>
+
+                {/* Banner CEP ausente no sheet */}
+                {activeSheet === 'melhor_envio' && sheetData.ativo && !hasStoreCep && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Atenção</AlertTitle>
+                    <AlertDescription>
+                      Falta o CEP no cadastro da loja (Vá em Perfil da Loja). A integração não calculará fretes sem essa informação.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* Melhor Envio: Sandbox toggle */}
                 {activeSheet === 'melhor_envio' && (
@@ -299,6 +334,24 @@ export default function LojaIntegracoes() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* AlertDialog de confirmação CEP ausente */}
+      <AlertDialog open={showCepConfirm} onOpenChange={setShowCepConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <DialogTitle>CEP de origem não cadastrado</DialogTitle>
+            <DialogDescription>
+              O CEP de origem da sua loja não está cadastrado em Perfil da Loja. Deseja ativar a integração mesmo assim? O cálculo automático não funcionará corretamente sem o CEP.
+            </DialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowCepConfirm(false); doSave(); }}>
+              Ativar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
