@@ -712,6 +712,12 @@ export interface Pedido {
   utms: Record<string, string>;
   criado_em: string;
   atualizado_em: string;
+  frete_id: string | null;
+  frete_nome: string | null;
+  melhor_envio_order_id: string | null;
+  melhor_envio_status: string | null;
+  etiqueta_url: string | null;
+  codigo_rastreio: string | null;
 }
 
 export interface PedidosListResponse {
@@ -768,6 +774,12 @@ export const pedidosApi = {
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=observacao`, { method: 'PATCH', body: JSON.stringify({ texto }) }),
   alterarStatus: (id: string, status: string) =>
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  gerarEtiqueta: (pedidoId: string, overrideServiceId?: string | number) =>
+    request<{ melhor_envio_order_id?: string; etiqueta_url?: string; codigo_rastreio?: string; already_existed?: boolean; error?: string }>(
+      '/pedidos?scope=gerar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId, overrideServiceId }) }
+    ),
+  cancelarEtiqueta: (pedidoId: string) =>
+    request<{ success: boolean }>('/pedidos?scope=cancelar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId }) }),
 };
 
 // === Carrinhos API ===

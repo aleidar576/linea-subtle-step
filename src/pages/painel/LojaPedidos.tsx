@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
-import { usePedidos, useCarrinhosAbandonados, usePedido, useAddRastreio, useAddObservacao, useAlterarStatus } from '@/hooks/usePedidos';
-import { ShoppingCart, Search, Filter, Package, Eye, Truck, Copy, Check, X, ChevronLeft, ChevronRight, ExternalLink, Tag } from 'lucide-react';
+import { usePedidos, useCarrinhosAbandonados, usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta } from '@/hooks/usePedidos';
+import { ShoppingCart, Search, Filter, Package, Eye, Truck, Copy, Check, X, ChevronLeft, ChevronRight, ExternalLink, Tag, Printer, XCircle, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { lojaPublicaApi } from '@/services/saas-api';
 import type { Pedido, CarrinhoAbandonado } from '@/services/saas-api';
 
 // === STATUS UNIVERSAL (BYOG-ready) ===
@@ -97,6 +100,14 @@ const LojaPedidos = () => {
   const addRastreio = useAddRastreio();
   const addObservacao = useAddObservacao();
   const alterarStatus = useAlterarStatus();
+  const gerarEtiqueta = useGerarEtiqueta();
+  const cancelarEtiqueta = useCancelarEtiqueta();
+
+  // Carrier selection dialog state
+  const [carrierDialogOpen, setCarrierDialogOpen] = useState(false);
+  const [carrierOptions, setCarrierOptions] = useState<any[]>([]);
+  const [carrierLoading, setCarrierLoading] = useState(false);
+  const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
 
   const [rastreioInput, setRastreioInput] = useState('');
   const [obsInput, setObsInput] = useState('');
@@ -135,7 +146,69 @@ const LojaPedidos = () => {
     });
   };
 
-  // CSV Export for carrinhos
+  // Melhor Envio logistics handlers
+  const isMEActive = !!(loja as any)?.configuracoes?.integracoes?.melhor_envio?.ativo;
+
+  const handleGerarEtiqueta = async () => {
+    if (!selectedPedido || !selectedPedidoId) return;
+    const freteId = selectedPedido.frete_id;
+    // If frete_id is a valid ME service number, generate directly
+    if (freteId && !isNaN(Number(freteId))) {
+      gerarEtiqueta.mutate({ pedidoId: selectedPedidoId }, {
+        onSuccess: (data) => {
+          if (data.etiqueta_url) window.open(data.etiqueta_url, '_blank');
+          toast.success('Etiqueta gerada com sucesso!');
+        },
+        onError: (e: any) => toast.error(e.message || 'Erro ao gerar etiqueta'),
+      });
+    } else {
+      // Need carrier selection
+      if (!selectedPedido.endereco?.cep) return toast.error('Pedido sem CEP de entrega');
+      setCarrierLoading(true);
+      setCarrierDialogOpen(true);
+      try {
+        const cepOrigem = (loja as any)?.configuracoes?.endereco?.cep;
+        if (!cepOrigem) { toast.error('CEP de origem da loja não configurado'); setCarrierDialogOpen(false); return; }
+        const items = selectedPedido.itens.map(i => ({ id: i.product_id, quantity: i.quantity, price: i.price, weight: 0.3, dimensions: { width: 11, height: 2, length: 16 } }));
+        const result = await lojaPublicaApi.calcularFrete({ loja_id: selectedPedido.loja_id, to_postal_code: selectedPedido.endereco.cep, items });
+        // Filter only numeric IDs (ME services)
+        const meOptions = (result?.fretes || []).filter((f: any) => f.id && !isNaN(Number(f.id)));
+        setCarrierOptions(meOptions);
+      } catch (e: any) {
+        toast.error(e.message || 'Erro ao buscar transportadoras');
+        setCarrierDialogOpen(false);
+      } finally {
+        setCarrierLoading(false);
+      }
+    }
+  };
+
+  const handleConfirmCarrier = () => {
+    if (!selectedPedidoId || !selectedCarrierId) return;
+    setCarrierDialogOpen(false);
+    gerarEtiqueta.mutate({ pedidoId: selectedPedidoId, overrideServiceId: selectedCarrierId }, {
+      onSuccess: (data) => {
+        if (data.etiqueta_url) window.open(data.etiqueta_url, '_blank');
+        toast.success('Etiqueta gerada com sucesso!');
+        setSelectedCarrierId(null);
+        setCarrierOptions([]);
+      },
+      onError: (e: any) => toast.error(e.message || 'Erro ao gerar etiqueta'),
+    });
+  };
+
+  const handleCancelarEtiqueta = () => {
+    if (!selectedPedidoId) return;
+    cancelarEtiqueta.mutate({ pedidoId: selectedPedidoId }, {
+      onSuccess: () => toast.success('Etiqueta cancelada!'),
+      onError: (e: any) => toast.error(e.message || 'Erro ao cancelar etiqueta'),
+    });
+  };
+
+  const copyTrackingCode = async (code: string) => {
+    await navigator.clipboard.writeText(code);
+    toast.success('Código de rastreio copiado!');
+  };
   const exportCarrinhosCSV = () => {
     if (!carrinhos.length) return toast.error('Nenhum dado para exportar');
     const header = 'Data,Nome,Email,Celular,Etapa,Valor,PIX Code,UTMs\n';
@@ -447,7 +520,55 @@ const LojaPedidos = () => {
                   </div>
                 </div>
 
-                {/* Observações */}
+                {/* Logística / Melhor Envio */}
+                {isMEActive && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-1">
+                      <Truck className="h-4 w-4" /> Logística — Melhor Envio
+                    </h4>
+                    {selectedPedido.melhor_envio_order_id ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => selectedPedido.etiqueta_url && window.open(selectedPedido.etiqueta_url, '_blank')}>
+                            <Printer className="h-4 w-4" /> Imprimir Etiqueta
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="destructive" className="gap-1" disabled={cancelarEtiqueta.isPending}>
+                                <XCircle className="h-4 w-4" /> Cancelar Etiqueta
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancelar etiqueta?</AlertDialogTitle>
+                                <AlertDialogDescription>Esta ação cancelará a etiqueta no Melhor Envio. O valor pode ser estornado para sua carteira.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Voltar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCancelarEtiqueta}>Confirmar Cancelamento</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                        {selectedPedido.codigo_rastreio && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">Rastreio ME:</span>
+                            <code className="bg-background px-2 py-0.5 rounded text-xs font-mono">{selectedPedido.codigo_rastreio}</code>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyTrackingCode(selectedPedido.codigo_rastreio!)}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Button size="sm" className="gap-1" onClick={handleGerarEtiqueta} disabled={gerarEtiqueta.isPending}>
+                        {gerarEtiqueta.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+                        Gerar Etiqueta via Melhor Envio
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações Internas</label>
                   <Textarea
@@ -590,6 +711,46 @@ const LojaPedidos = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Carrier Selection Dialog */}
+      <Dialog open={carrierDialogOpen} onOpenChange={setCarrierDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Escolha a Transportadora</DialogTitle>
+          </DialogHeader>
+          {carrierLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : carrierOptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Nenhuma transportadora do Melhor Envio disponível para este CEP.</p>
+          ) : (
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {carrierOptions.map((opt: any) => (
+                <div
+                  key={opt.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedCarrierId === String(opt.id) ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}
+                  onClick={() => setSelectedCarrierId(String(opt.id))}
+                >
+                  <div className="flex items-center gap-3">
+                    {opt.picture && <img src={opt.picture} alt={opt.name} className="h-8 w-8 object-contain" />}
+                    <div>
+                      <p className="text-sm font-medium">{opt.name}</p>
+                      <p className="text-xs text-muted-foreground">{opt.delivery_time} dias úteis</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold">{formatPrice(opt.price)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCarrierDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmCarrier} disabled={!selectedCarrierId || gerarEtiqueta.isPending}>
+              {gerarEtiqueta.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Comprar Etiqueta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
