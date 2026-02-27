@@ -1,61 +1,63 @@
-# Redesign Menu Lateral + Split Configuracoes — IMPLEMENTADO
 
-## Status: ✅ Concluído
+# Aviso de CEP Ausente na Integracao Melhor Envio
 
-## Alteracoes Realizadas
+## Objetivo
 
-### 1. `models/Loja.js` — Novos campos empresa e endereco
-- Adicionados `empresa` e `endereco` dentro de `configuracoes`
+Proteger o lojista contra falhas silenciosas no calculo de frete adicionando verificacao e avisos visuais quando o CEP de origem da loja nao esta cadastrado.
 
-### 2. `api/lojas.js` — Bug fix slogan
-- Adicionado `slogan` ao array `allowed` no PUT (linha 290)
+---
 
-### 3. `src/services/saas-api.ts` — Novas interfaces
-- Criadas `LojaEmpresa` e `LojaEndereco`
-- Adicionadas à interface `Loja.configuracoes`
+## Alteracoes no arquivo `src/pages/painel/LojaIntegracoes.tsx`
 
-### 4. `src/pages/painel/LojaPerfilLoja.tsx` — Nova tela
-- Card 1: Identidade (nome, nome_exibicao, slogan, favicon)
-- Card 2: Empresa (tipo CPF/CNPJ com mascara, telefone, email suporte)
-- Card 3: Endereco (CEP com ViaCEP, UF com Select de 27 estados)
-- Mascaras: CPF, CNPJ, telefone, CEP
-- Salva via useUpdateLoja com merge correto de configuracoes
+### 1. Variavel derivada
 
-### 5. `src/pages/painel/LojaConfiguracoes.tsx` — Limpeza
-- Removidos campos de identidade (nome, slogan, favicon)
-- Mantidos: exigir_cadastro, subdominio, dominio customizado
+Adicionar apos a linha 57:
 
-### 6. `src/components/layout/PainelLayout.tsx` — Redesign sidebar
-- Menu agrupado com Collapsible: Produtos, Vendas, Loja Virtual, Marketing, Administracao
-- Perfil da Loja adicionado ao grupo Administracao
-- Grupo ativo abre automaticamente (defaultOpen)
+```text
+const hasStoreCep = !!loja?.configuracoes?.endereco?.cep;
+```
 
-### 7. `src/App.tsx` — Nova rota
-- Adicionada rota `/painel/loja/:id/perfil-loja`
+### 2. Import do AlertTitle
 
-# Redesign Editor de Produtos — IMPLEMENTADO
+Adicionar `AlertTitle` ao import existente do `@/components/ui/alert` (linha 13), e adicionar um estado `showCepConfirm` para o dialog de confirmacao.
 
-## Status: ✅ Concluído
+### 3. Interceptacao no handleSave
 
-## Alteracoes Realizadas
+Modificar `handleSave` para verificar, antes de salvar, se o activeSheet e `melhor_envio`, `sheetData.ativo` e `true`, e `hasStoreCep` e `false`. Nesse caso, setar `showCepConfirm = true` e retornar (abortando o save). O save real sera chamado por uma funcao `confirmSave()` quando o usuario confirmar no AlertDialog.
 
-### 1. `models/Product.js` — Campo dimensoes (strict schema)
-- Adicionado `dimensoes: { peso, altura, largura, comprimento }` com tipos Number e defaults 0
-- Schema estrito (não Mixed) para segurança na futura integração de fretes
+Usar o componente `AlertDialog` do shadcn para a confirmacao, com:
+- Titulo: "CEP de origem nao cadastrado"
+- Descricao: "O CEP de origem da sua loja nao esta cadastrado em Perfil da Loja. Deseja ativar a integracao mesmo assim? O calculo automatico nao funcionara corretamente sem o CEP."
+- Botao cancelar: "Cancelar" (fecha o dialog)
+- Botao confirmar: "Ativar mesmo assim" (chama o save real)
 
-### 2. `src/services/saas-api.ts` — Interface atualizada
-- Adicionado `dimensoes?: { peso: number; altura: number; largura: number; comprimento: number }` na interface `LojaProduct`
+### 4. Banner de aviso no Card (listagem)
 
-### 3. `src/pages/painel/LojaProdutos.tsx` — Redesign completo do Editor
-- **Sticky Header**: `position: sticky top-0 z-50` com backdrop-blur, contendo:
-  - Botão Voltar + Nome do produto
-  - Switch "Produto Ativo" (migrado da aba Extras)
-  - Dropdown "Opções" (Duplicar, JSON Import/Export, JSON Exemplo)
-  - Único botão "Salvar" primário
-- **Barra inferior removida**: Sem mais duplicação de botões Salvar/Cancelar
-- **Background**: `bg-muted/30` com conteúdo em Cards shadcn
-- **Aba Básico**: 3 Cards (Info Gerais, Preço/Promoção, Categorias/Destaques) + Card Imagens na lateral
-- **Aba Variações**: Card único com variações em grid horizontal `grid-cols-6`
-- **Aba Avaliações**: Accordion shadcn com auto-expand ao criar nova avaliação via `expandedReviews` state
-- **Aba Frete**: Card "Dimensões e Peso" (4 inputs numéricos) + Card "Frete Manual"
-- **Aba Extras**: 3 Cards semânticos (Escassez, Prova Social, Upsell/Exibição)
+Dentro do `.map` dos cards de integracao, apos o `CardContent`, adicionar condicao: se `integration.id === 'melhor_envio'` e `isActive` e `!hasStoreCep`, renderizar:
+
+```text
+<Alert variant="destructive" className="mx-6 mb-4">
+  <AlertTriangle className="h-4 w-4" />
+  <AlertTitle>Atencao</AlertTitle>
+  <AlertDescription>Falta o CEP no cadastro da loja. Va em Perfil da Loja.</AlertDescription>
+</Alert>
+```
+
+### 5. Banner de aviso no Sheet
+
+Dentro do Sheet de configuracao do Melhor Envio, apos o switch "Ativar Integracao", adicionar a mesma condicao (`activeSheet === 'melhor_envio' && sheetData.ativo && !hasStoreCep`), renderizando o mesmo Alert destructive com mensagem completa.
+
+---
+
+## Imports adicionais necessarios
+
+- `AlertTitle` de `@/components/ui/alert`
+- `AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction` de `@/components/ui/alert-dialog`
+
+## Resumo
+
+| Local | Comportamento |
+|---|---|
+| Card Melhor Envio (listagem) | Banner vermelho se ativo + sem CEP |
+| Sheet Melhor Envio (config) | Banner vermelho se ativo + sem CEP |
+| Botao Salvar | Intercepta com AlertDialog se ativando sem CEP |
