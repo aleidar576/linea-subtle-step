@@ -603,15 +603,62 @@ module.exports = async function handler(req, res) {
       const lojaDoc = await Loja.findById(bodyLojaId).lean();
       if (!lojaDoc) return res.status(404).json({ error: 'Loja não encontrada' });
 
-      // 1. Fretes manuais ativos
+      // 1. Fretes manuais ativos (com soma por produto via fretes_vinculados)
       const fretesDb = await Frete.find({ loja_id: bodyLojaId, is_active: true }).sort({ ordem_exibicao: 1 }).lean();
-      const manuais = fretesDb.map((f, i) => ({
-        id: f._id.toString(),
-        name: f.nome,
-        price: Number(f.valor) || 0,
-        delivery_time: f.prazo_dias_max || f.prazo_dias_min || 0,
-        picture: '',
-      }));
+
+      // Buscar produtos reais do carrinho para acessar fretes_vinculados
+      const productIds = (items || []).map(i => i.id).filter(Boolean);
+      const productsDb = productIds.length ? await Product.find({
+        $or: [
+          { product_id: { $in: productIds } },
+          { _id: { $in: productIds.filter(id => /^[a-f0-9]{24}$/i.test(id)) } },
+        ],
+        loja_id: bodyLojaId,
+      }).lean() : [];
+
+      const manuais = [];
+      for (const f of fretesDb) {
+        const freteIdStr = f._id.toString();
+        let totalPrice = 0;
+        let isValid = true;
+
+        for (const item of (items || [])) {
+          const qty = Number(item.quantity) || 1;
+          const prod = productsDb.find(p =>
+            p.product_id === item.id || p._id.toString() === item.id
+          );
+
+          if (prod && Array.isArray(prod.fretes_vinculados)) {
+            const vinculo = prod.fretes_vinculados.find(v =>
+              v.frete_id && v.frete_id.toString() === freteIdStr
+            );
+            if (vinculo) {
+              if (vinculo.exibir_no_produto === false) {
+                isValid = false;
+                break;
+              }
+              const val = (vinculo.valor_personalizado !== null && vinculo.valor_personalizado !== undefined)
+                ? vinculo.valor_personalizado
+                : Number(f.valor) || 0;
+              totalPrice += val * qty;
+            } else {
+              totalPrice += (Number(f.valor) || 0) * qty;
+            }
+          } else {
+            totalPrice += (Number(f.valor) || 0) * qty;
+          }
+        }
+
+        if (isValid) {
+          manuais.push({
+            id: freteIdStr,
+            name: f.nome,
+            price: totalPrice,
+            delivery_time: f.prazo_dias_max || f.prazo_dias_min || 0,
+            picture: '',
+          });
+        }
+      }
 
       // 2. Melhor Envio (try/catch resiliente)
       let melhorEnvioOpcoes = [];
