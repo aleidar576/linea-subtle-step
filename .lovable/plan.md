@@ -1,27 +1,83 @@
 
 
-# Correção dos Headers da API Melhor Envio
+# Correção: Trava de Perfil Completo e Remoção de Fallbacks
 
-## Problema
-A API do Melhor Envio retorna HTML (Status 200) porque falta o header `Accept: application/json`. Sem ele, o Laravel do Melhor Envio serve a View do SPA em vez de JSON.
+## 1. Front-end: LojaIntegracoes.tsx
 
-## Alterações em `api/pedidos.js`
+### Substituir `hasStoreCep` por `hasCompleteProfile`
 
-### 1. Adicionar `Accept` header nos dois blocos de `meHeaders`
+**Linha 64**: Trocar a variável por uma validação completa:
+```javascript
+const config = loja?.configuracoes;
+const hasCompleteProfile = !!(
+  config?.empresa?.documento &&
+  config?.empresa?.telefone &&
+  config?.endereco?.cep &&
+  config?.endereco?.logradouro &&
+  config?.endereco?.numero &&
+  config?.endereco?.bairro &&
+  config?.endereco?.cidade &&
+  config?.endereco?.estado
+);
+```
 
-**Bloco `gerar-etiqueta` (linha ~499)** e **Bloco `cancelar-etiqueta` (linha ~677)**:
-Adicionar `'Accept': 'application/json'` ao objeto `meHeaders` em ambos os locais.
+### Atualizar todas as referências (4 locais)
 
-### 2. Remover debug temporário
+- **Linha 96** (`handleSave`): `!hasStoreCep` -> `!hasCompleteProfile`
+- **Linha 170** (Banner no card): `!hasStoreCep` -> `!hasCompleteProfile`
+- **Linha 232** (Banner no sheet): `!hasStoreCep` -> `!hasCompleteProfile`
 
-**Linha 513**: Substituir `throw new Error("ME " + response.status + " Text: " + text.substring(0, 250))` pelo texto de erro definitivo:
-`throw new Error("A API do Melhor Envio falhou e retornou um formato inválido (Status: " + response.status + "). Tente novamente em instantes.");`
+### Renomear estado e dialog
 
-### 3. Verificação de URLs
-As URLs ja estao corretas: `${meBase}/api/v2/me/cart`, `/checkout`, `/generate`, `/print`, `/cancel` -- nenhuma alteração necessária.
+- Renomear `showCepConfirm` para `showProfileConfirm` (linhas 62, 96-97, e no AlertDialog)
 
-### Resumo
-- 2 objetos `meHeaders` atualizados com `Accept: application/json`
-- 1 linha de debug removida e substituída pela mensagem de erro definitiva
-- URLs já estão corretas, sem alteração
+### Atualizar textos dos alertas
 
+Todos os banners e o AlertDialog passam a exibir:
+> "O Perfil da sua loja esta incompleto (Faltam dados como CNPJ/CPF, Telefone ou Endereco completo). Va em Configuracoes > Perfil da Loja para preencher. A integracao de fretes falhara sem essas informacoes."
+
+---
+
+## 2. Back-end: api/pedidos.js (scope gerar-etiqueta)
+
+### Remover fallbacks do payload `from` (linhas 584-594)
+
+Substituir:
+```javascript
+from: {
+  name: empresa.razao_social || loja.nome || 'Loja',
+  document: onlyDigits(empresa.documento),
+  address: endereco.logradouro || '',
+  number: endereco.numero || 'S/N',
+  complement: endereco.complemento || '',
+  district: endereco.bairro || '',
+  city: endereco.cidade || '',
+  state_abbr: endereco.estado || '',
+  postal_code: onlyDigits(endereco.cep),
+  phone: onlyDigits(empresa.telefone || '11999999999'),
+  email: empresa.email_suporte || 'suporte@dusking.com.br',
+},
+```
+
+Por (sem fallbacks de dados da plataforma):
+```javascript
+from: {
+  name: empresa.razao_social || loja.nome,
+  document: onlyDigits(empresa.documento),
+  address: endereco.logradouro,
+  number: endereco.numero || 'S/N',
+  complement: endereco.complemento || '',
+  district: endereco.bairro,
+  city: endereco.cidade,
+  state_abbr: endereco.estado,
+  postal_code: onlyDigits(endereco.cep),
+  phone: onlyDigits(empresa.telefone),
+  email: empresa.email_suporte || '',
+},
+```
+
+Campos obrigatorios sem fallback: `document`, `address`, `district`, `city`, `state_abbr`, `postal_code`, `phone`. Se vazios, a API do Melhor Envio retornara 422 naturalmente.
+
+### Arquivos alterados
+- `src/pages/painel/LojaIntegracoes.tsx`
+- `api/pedidos.js`
