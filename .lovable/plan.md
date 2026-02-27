@@ -1,39 +1,117 @@
 
 
-# Remover logica de desconto automatico por valor
+# Motor de Gestao de Etiquetas - Melhor Envio (Plano Final)
 
-## Problema
-O `CartContext.tsx` calcula descontos progressivos automaticos (20%-50%) baseados no valor total do carrinho. Isso precisa ser removido, mantendo intacta a logica de cupons de desconto e fretes.
+## Resumo
 
-## Alteracoes
+Implementar o fluxo completo e idempotente de geracao, compra, impressao e cancelamento de etiquetas do Melhor Envio no painel do lojista. Inclui todas as correcoes de payload (telefone/email, volumes como 1 pacote unico, options, CPF sem pontuacao, endereco completo do remetente, codigo de rastreio).
 
-### 1. `src/contexts/CartContext.tsx`
-- Remover as linhas 91-94 (calculo de `totalInReais`, `discountPercent`, `discountAmount`, `finalPrice`).
-- Substituir por valores fixos: `discountPercent = 0`, `discountAmount = 0`, `finalPrice = totalPrice`.
-- Manter a interface `CartContextType` inalterada para nao quebrar consumidores (os campos continuam existindo, apenas sempre retornam 0/totalPrice).
+---
 
-### 2. `src/pages/CartPage.tsx`
-- Remover o bloco condicional que exibe "Voce ganhou X% de desconto!" (linhas 173-177).
-- Remover o bloco que sugere "adicione mais para ganhar desconto" (linhas 178-184 aprox.).
-- Remover a exibicao da linha de desconto no resumo (linhas 166-171).
-- Remover o preco riscado no total (linha 188-189).
-- Simplificar o total para exibir apenas `totalPrice` diretamente.
+## 1. `models/Pedido.js` -- Adicionar campos ao schema
 
-### 3. `src/pages/CheckoutPage.tsx`
-- Remover a linha condicional que exibe "Desconto (X%)" no resumo (linha 1086-1090).
-- `cartFinalPrice` agora sera igual a `totalPrice`, entao o restante da logica (upsell, frete) continua funcionando sem mudancas.
+Novos campos:
+- `frete_id` (String, default: null)
+- `frete_nome` (String, default: null)
+- `melhor_envio_order_id` (String, default: null)
+- `melhor_envio_status` (String, default: null)
+- `etiqueta_url` (String, default: null)
+- `codigo_rastreio` (String, default: null)
 
-### 4. `src/pages/loja/LojaCart.tsx`
-- Remover o bloco que exibe "Desconto (X%)" (linhas 230-232).
-- Remover o preco riscado no total (linha 237).
-- Exibir `totalPrice` diretamente no total.
+Tambem salvar `frete_id` e `frete_nome` na criacao do pedido (scope=pedido, ja existente).
 
-### 5. `src/pages/loja/LojaCheckout.tsx`
-- Remover a linha condicional que exibe "Desconto (X%)" (linha 629).
-- A logica de cupons (`cupomDiscountAmount`, `cuponsApplied`) permanece 100% intacta.
-- `cartFinalPrice` (que agora = `totalPrice`) continua sendo a base para calculos de cupom e frete normalmente.
+---
 
-## O que NAO sera alterado
-- Logica de cupons de desconto (cuponsApplied, cupomDiscountAmount)
-- Logica de fretes (shippingCost, selectedFrete, calcular-frete)
-- Desconto de produto individual (original_price em LojaProdutos.tsx)
+## 2. `api/pedidos.js` -- 2 novos scopes autenticados
+
+### A) `scope = 'gerar-etiqueta'` (POST)
+
+Recebe: `{ pedidoId, overrideServiceId }`
+
+Fluxo idempotente:
+1. Valida ownership do pedido
+2. Busca loja (token ME, sandbox flag, endereco completo, empresa)
+3. Se ja tem `melhor_envio_order_id`: apenas POST `/shipment/print` e retorna URL
+4. Se nao tem:
+   - Busca produtos do DB para dimensoes reais (fallback 0.3kg, 11x2x16cm)
+   - Monta payload `/cart`:
+
+```text
+from: {
+  name, document (sem pontuacao), address, number, complement,
+  district, city, state_abbr, postal_code, phone, email
+}
+to: {
+  name, document (CPF sem pontuacao), address, number, complement,
+  district, city, state_abbr, postal_code, phone, email
+}
+products: [{ name, quantity, unitary_value, weight, width, height, length }]
+volumes: [{
+  weight: soma(peso * qty),
+  width: max(larguras),
+  height: soma(alturas * qty),
+  length: max(comprimentos)
+}]
+options: { non_commercial: true, receipt: false, own_hand: false }
+```
+
+   - POST `/cart`, `/checkout` (trata "saldo insuficiente"), `/generate` (extrai tracking), `/print`
+   - Salva `melhor_envio_order_id`, `etiqueta_url`, `codigo_rastreio`
+
+Header obrigatorio: `User-Agent: Dusking (suporte@dusking.com.br)`
+
+### B) `scope = 'cancelar-etiqueta'` (POST)
+
+- POST `/shipment/cancel` com reason_id "2"
+- Limpa todos os campos de logistica no pedido
+
+---
+
+## 3. `src/services/saas-api.ts` -- Interface + 2 metodos
+
+- Adicionar campos a interface `Pedido`: `frete_id`, `frete_nome`, `melhor_envio_order_id`, `melhor_envio_status`, `etiqueta_url`, `codigo_rastreio`
+- Adicionar ao `pedidosApi`:
+  - `gerarEtiqueta(pedidoId, overrideServiceId?)`
+  - `cancelarEtiqueta(pedidoId)`
+
+---
+
+## 4. `src/hooks/usePedidos.tsx` -- 2 novos hooks
+
+- `useGerarEtiqueta()` -- mutation com invalidacao de queries `['pedido']` e `['pedidos']`
+- `useCancelarEtiqueta()` -- mutation idem
+
+---
+
+## 5. `src/pages/painel/LojaPedidos.tsx` -- Secao de logistica
+
+Nova secao "Logistica / Melhor Envio" no Sheet de detalhes, entre Rastreio e Observacoes. So aparece se loja tem integracao ME ativa.
+
+**Cena 1 (tem etiqueta):**
+- Botao "Imprimir Etiqueta" (abre URL nova aba)
+- Botao "Cancelar Etiqueta" (AlertDialog de confirmacao)
+- Exibe `codigo_rastreio` com botao copiar
+
+**Cena 2 (sem etiqueta):**
+- Botao "Gerar Etiqueta via Melhor Envio"
+- Se `frete_id` numerico: gera direto
+- Se nao: Dialog com opcoes via `calcularFrete` (filtra so ME)
+
+---
+
+## 6. Salvar frete_id na criacao do pedido
+
+No scope=pedido existente, salvar `body.frete_id` e `body.frete_nome`.
+
+---
+
+## Arquivos modificados
+
+| Arquivo | Alteracao |
+|---|---|
+| `models/Pedido.js` | +6 campos |
+| `api/pedidos.js` | +2 scopes + salvar frete_id |
+| `src/services/saas-api.ts` | Interface + 2 metodos |
+| `src/hooks/usePedidos.tsx` | +2 hooks |
+| `src/pages/painel/LojaPedidos.tsx` | Secao logistica no Sheet |
+
