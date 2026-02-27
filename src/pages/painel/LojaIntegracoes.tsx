@@ -161,20 +161,20 @@ export default function LojaIntegracoes() {
                 </Badge>
               </CardHeader>
 
-              <CardContent className="pb-4">
+              <CardContent className="pb-4 space-y-3">
                 <CardDescription className="text-sm leading-relaxed">
                   {integration.description}
                 </CardDescription>
-              </CardContent>
 
-              {/* Banner CEP ausente no card */}
-              {integration.id === 'melhor_envio' && isActive && !hasStoreCep && (
-                <Alert variant="destructive" className="mx-4 mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Atenção</AlertTitle>
-                  <AlertDescription>Falta o CEP no cadastro da loja. Vá em Perfil da Loja.</AlertDescription>
-                </Alert>
-              )}
+                {/* Banner CEP ausente no card */}
+                {integration.id === 'melhor_envio' && isActive && !hasStoreCep && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Atenção</AlertTitle>
+                    <AlertDescription>Falta o CEP no cadastro da loja. Vá em Perfil da Loja.</AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
 
               <CardFooter>
                 <Button
