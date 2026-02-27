@@ -1,61 +1,27 @@
 
 
-# Refatoração do Recálculo de Frete Automático no Checkout
+# Correção dos Headers da API Melhor Envio
 
-## Resumo
-Remover o botão manual "Recalcular frete" e implementar recálculo automático quando o carrinho ou CEP mudam, com skeletons durante o carregamento.
+## Problema
+A API do Melhor Envio retorna HTML (Status 200) porque falta o header `Accept: application/json`. Sem ele, o Laravel do Melhor Envio serve a View do SPA em vez de JSON.
 
----
+## Alterações em `api/pedidos.js`
 
-## 1. Remover botão manual (linhas 841-855)
+### 1. Adicionar `Accept` header nos dois blocos de `meHeaders`
 
-Deletar completamente o bloco JSX do botão "Recalcular frete":
+**Bloco `gerar-etiqueta` (linha ~499)** e **Bloco `cancelar-etiqueta` (linha ~677)**:
+Adicionar `'Accept': 'application/json'` ao objeto `meHeaders` em ambos os locais.
 
-```jsx
-// REMOVER ESTE BLOCO INTEIRO:
-{shippingData.zipCode.replace(/\D/g, '').length >= 8 && !isCalculatingFreight && (
-  <Button type="button" variant="outline" size="sm" onClick={...}>
-    <Truck /> Recalcular frete
-  </Button>
-)}
-```
+### 2. Remover debug temporário
 
----
+**Linha 513**: Substituir `throw new Error("ME " + response.status + " Text: " + text.substring(0, 250))` pelo texto de erro definitivo:
+`throw new Error("A API do Melhor Envio falhou e retornou um formato inválido (Status: " + response.status + "). Tente novamente em instantes.");`
 
-## 2. Adicionar recálculo automático por mudança no carrinho (após linha 187)
+### 3. Verificação de URLs
+As URLs ja estao corretas: `${meBase}/api/v2/me/cart`, `/checkout`, `/generate`, `/print`, `/cancel` -- nenhuma alteração necessária.
 
-Criar um `useEffect` que monitora mudanças nas quantidades/itens do carrinho e dispara `fetchDynamicFreights` automaticamente quando o CEP já está preenchido:
+### Resumo
+- 2 objetos `meHeaders` atualizados com `Accept: application/json`
+- 1 linha de debug removida e substituída pela mensagem de erro definitiva
+- URLs já estão corretas, sem alteração
 
-```javascript
-// Fingerprint do carrinho (id + quantidade de cada item)
-const cartFingerprint = useMemo(
-  () => items.map(i => `${i.product.id}:${i.quantity}`).join(','),
-  [items]
-);
-const lastCartFingerprintRef = useRef(cartFingerprint);
-
-useEffect(() => {
-  const cleanCep = shippingData.zipCode.replace(/\D/g, '');
-  if (cleanCep.length >= 8 && cartFingerprint !== lastCartFingerprintRef.current) {
-    lastCartFingerprintRef.current = cartFingerprint;
-    lastCalcCepRef.current = cleanCep;
-    fetchDynamicFreights(cleanCep);
-  }
-}, [cartFingerprint, shippingData.zipCode, fetchDynamicFreights]);
-```
-
-O efeito existente (CEP) continua funcionando normalmente — este novo efeito cobre apenas o cenário de mudança no carrinho.
-
----
-
-## 3. Skeletons de carregamento (já existentes)
-
-Os skeletons já estão implementados corretamente nas linhas 858-864. Nenhuma alteração necessária — eles aparecem automaticamente quando `isCalculatingFreight` é `true`, ocultando valores antigos (pois `setShippingOptions([])` e `setSelectedFrete(null)` são chamados no início de `fetchDynamicFreights`).
-
----
-
-## Arquivos modificados
-
-| Arquivo | Alteração |
-|---|---|
-| `src/pages/loja/LojaCheckout.tsx` | -botão manual, +useEffect de recálculo por carrinho |
