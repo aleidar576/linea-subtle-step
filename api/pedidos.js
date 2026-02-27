@@ -314,12 +314,14 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // Atualizar dados no pedido
+      // Atualizar dados no pedido (Mixed types require markModified)
       if (clienteData) {
         pedido.cliente = { ...pedido.cliente, ...clienteData };
+        pedido.markModified('cliente');
       }
       if (enderecoData) {
         pedido.endereco = { ...pedido.endereco, ...enderecoData };
+        pedido.markModified('endereco');
       }
       await pedido.save();
 
