@@ -780,6 +780,8 @@ export const pedidosApi = {
     ),
   cancelarEtiqueta: (pedidoId: string) =>
     request<{ success: boolean }>('/pedidos?scope=cancelar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId }) }),
+  updateDados: (id: string, data: { cliente?: Record<string, string>; endereco?: Record<string, string>; atualizar_cadastro?: boolean }) =>
+    request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=dados`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 // === Carrinhos API ===

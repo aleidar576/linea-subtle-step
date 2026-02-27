@@ -283,6 +283,64 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(pedido);
     }
 
+    if (action === 'dados') {
+      const { cliente: clienteData, endereco: enderecoData, atualizar_cadastro } = req.body;
+      const onlyDigits = (s) => (s || '').replace(/\D/g, '');
+
+      // Validação server-side
+      if (clienteData) {
+        if (clienteData.cpf) {
+          const cpfDigits = onlyDigits(clienteData.cpf);
+          if (cpfDigits.length !== 11 && cpfDigits.length !== 14) {
+            return res.status(400).json({ error: 'CPF deve ter 11 dígitos ou CNPJ 14 dígitos' });
+          }
+        }
+        if (clienteData.telefone) {
+          const telDigits = onlyDigits(clienteData.telefone);
+          if (telDigits.length < 10) {
+            return res.status(400).json({ error: 'Telefone deve ter no mínimo 10 dígitos' });
+          }
+        }
+        if (clienteData.nome !== undefined && !clienteData.nome.trim()) {
+          return res.status(400).json({ error: 'Nome é obrigatório' });
+        }
+      }
+      if (enderecoData) {
+        if (enderecoData.cep) {
+          const cepDigits = onlyDigits(enderecoData.cep);
+          if (cepDigits.length !== 8) {
+            return res.status(400).json({ error: 'CEP deve ter 8 dígitos' });
+          }
+        }
+      }
+
+      // Atualizar dados no pedido
+      if (clienteData) {
+        pedido.cliente = { ...pedido.cliente, ...clienteData };
+      }
+      if (enderecoData) {
+        pedido.endereco = { ...pedido.endereco, ...enderecoData };
+      }
+      await pedido.save();
+
+      // Atualizar cadastro global do cliente se solicitado
+      if (atualizar_cadastro && pedido.cliente_id) {
+        try {
+          const clienteDoc = await Cliente.findById(pedido.cliente_id);
+          if (clienteDoc) {
+            if (clienteData?.nome) clienteDoc.nome = clienteData.nome;
+            if (clienteData?.telefone) clienteDoc.telefone = clienteData.telefone;
+            if (clienteData?.cpf) clienteDoc.cpf = clienteData.cpf;
+            await clienteDoc.save();
+          }
+        } catch (e) {
+          console.error('[PEDIDO] Erro ao atualizar cadastro do cliente:', e.message);
+        }
+      }
+
+      return res.status(200).json(pedido);
+    }
+
     return res.status(400).json({ error: 'action inválida' });
   }
 

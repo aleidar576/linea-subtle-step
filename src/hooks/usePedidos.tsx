@@ -79,3 +79,15 @@ export function useCancelarEtiqueta() {
     },
   });
 }
+
+export function useUpdatePedidoDados() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { cliente?: Record<string, string>; endereco?: Record<string, string>; atualizar_cadastro?: boolean } }) =>
+      pedidosApi.updateDados(id, data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['pedido', vars.id] });
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+  });
+}

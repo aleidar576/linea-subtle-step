@@ -1,20 +1,17 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
-import { usePedidos, useCarrinhosAbandonados, usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta } from '@/hooks/usePedidos';
-import { ShoppingCart, Search, Filter, Package, Eye, Truck, Copy, Check, X, ChevronLeft, ChevronRight, ExternalLink, Tag, Printer, XCircle, Loader2 } from 'lucide-react';
+import { usePedidos, useCarrinhosAbandonados } from '@/hooks/usePedidos';
+import { ShoppingCart, Search, Eye, Truck, Copy, Check, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { lojaPublicaApi } from '@/services/saas-api';
 import type { Pedido, CarrinhoAbandonado } from '@/services/saas-api';
+import PedidoDetailModal from '@/components/pedido/PedidoDetailModal';
 
 // === STATUS UNIVERSAL (BYOG-ready) ===
 const STATUS_MAP: Record<string, { label: string; classes: string }> = {
@@ -24,7 +21,6 @@ const STATUS_MAP: Record<string, { label: string; classes: string }> = {
   recusado:   { label: 'Cancelado / Recusado',  classes: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
   estornado:  { label: 'Reembolsado',           classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400' },
   chargeback: { label: 'Chargeback',            classes: 'bg-red-200 text-red-900 border border-red-300 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700' },
-  // Legados (fallback visual)
   enviado:    { label: 'Enviado (legado)',       classes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
   entregue:   { label: 'Entregue (legado)',      classes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
   cancelado:  { label: 'Cancelado (legado)',     classes: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
@@ -33,7 +29,6 @@ const STATUS_MAP: Record<string, { label: string; classes: string }> = {
 function getStatusBadge(status: string) {
   const mapped = STATUS_MAP[status];
   if (mapped) return mapped;
-  // Fallback para qualquer status desconhecido
   return { label: status.charAt(0).toUpperCase() + status.slice(1), classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
 }
 
@@ -70,11 +65,10 @@ const LojaPedidos = () => {
   const { data: pedidosData, isLoading } = usePedidos(id, filters);
   const { data: carrinhos = [] } = useCarrinhosAbandonados(id);
 
-  // Detail panel
+  // Detail modal
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
-  const { data: selectedPedido } = usePedido(selectedPedidoId || undefined);
 
-  // Abandoned cart detail
+  // Abandoned cart detail (keeps Sheet)
   const [selectedCarrinho, setSelectedCarrinho] = useState<CarrinhoAbandonado | null>(null);
 
   // Carrinhos search & filter
@@ -97,130 +91,6 @@ const LojaPedidos = () => {
     return filtered;
   }, [carrinhos, carrinhoSearch, carrinhoEtapaFilter]);
 
-  const addRastreio = useAddRastreio();
-  const addObservacao = useAddObservacao();
-  const alterarStatus = useAlterarStatus();
-  const gerarEtiqueta = useGerarEtiqueta();
-  const cancelarEtiqueta = useCancelarEtiqueta();
-
-  // Carrier selection dialog state
-  const [carrierDialogOpen, setCarrierDialogOpen] = useState(false);
-  const [carrierOptions, setCarrierOptions] = useState<any[]>([]);
-  const [carrierLoading, setCarrierLoading] = useState(false);
-  const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
-
-  const [rastreioInput, setRastreioInput] = useState('');
-  const [obsInput, setObsInput] = useState('');
-  const obsDebounceRef = useRef<NodeJS.Timeout>();
-
-  useEffect(() => {
-    if (selectedPedido) {
-      setRastreioInput(selectedPedido.rastreio || '');
-      setObsInput(selectedPedido.observacoes_internas || '');
-    }
-  }, [selectedPedido?._id]);
-
-  const handleObsChange = useCallback((text: string) => {
-    setObsInput(text);
-    if (obsDebounceRef.current) clearTimeout(obsDebounceRef.current);
-    obsDebounceRef.current = setTimeout(() => {
-      if (selectedPedidoId) {
-        addObservacao.mutate({ id: selectedPedidoId, texto: text });
-      }
-    }, 1500);
-  }, [selectedPedidoId, addObservacao]);
-
-  const handleSaveRastreio = () => {
-    if (!selectedPedidoId || !rastreioInput.trim()) return;
-    addRastreio.mutate({ id: selectedPedidoId, codigo: rastreioInput.trim() }, {
-      onSuccess: () => toast.success('Rastreio salvo e cliente notificado!'),
-      onError: (e: any) => toast.error(e.message),
-    });
-  };
-
-  const handleStatusChange = (newStatus: string) => {
-    if (!selectedPedidoId) return;
-    alterarStatus.mutate({ id: selectedPedidoId, status: newStatus }, {
-      onSuccess: () => toast.success('Status atualizado!'),
-      onError: (e: any) => toast.error(e.message),
-    });
-  };
-
-  // Melhor Envio logistics handlers
-  const isMEActive = !!(loja as any)?.configuracoes?.integracoes?.melhor_envio?.ativo;
-
-  const handleGerarEtiqueta = async () => {
-    if (!selectedPedido || !selectedPedidoId) return;
-    const freteId = selectedPedido.frete_id;
-    // If frete_id is a valid ME service number, generate directly
-    if (freteId && !isNaN(Number(freteId))) {
-      gerarEtiqueta.mutate({ pedidoId: selectedPedidoId }, {
-        onSuccess: (data) => {
-          if (data.etiqueta_url) window.open(data.etiqueta_url, '_blank');
-          toast.success('Etiqueta gerada com sucesso!');
-        },
-        onError: (e: any) => toast.error(e.message || 'Erro ao gerar etiqueta'),
-      });
-    } else {
-      // Need carrier selection
-      if (!selectedPedido.endereco?.cep) return toast.error('Pedido sem CEP de entrega');
-      setCarrierLoading(true);
-      setCarrierDialogOpen(true);
-      try {
-        const cepOrigem = (loja as any)?.configuracoes?.endereco?.cep;
-        if (!cepOrigem) { toast.error('CEP de origem da loja não configurado'); setCarrierDialogOpen(false); return; }
-        const items = selectedPedido.itens.map(i => ({ id: i.product_id, quantity: i.quantity, price: i.price, weight: 0.3, dimensions: { width: 11, height: 2, length: 16 } }));
-        const result = await lojaPublicaApi.calcularFrete({ loja_id: selectedPedido.loja_id, to_postal_code: selectedPedido.endereco.cep, items });
-        // Filter only numeric IDs (ME services)
-        const meOptions = (result?.fretes || []).filter((f: any) => f.id && !isNaN(Number(f.id)));
-        setCarrierOptions(meOptions);
-      } catch (e: any) {
-        toast.error(e.message || 'Erro ao buscar transportadoras');
-        setCarrierDialogOpen(false);
-      } finally {
-        setCarrierLoading(false);
-      }
-    }
-  };
-
-  const handleConfirmCarrier = () => {
-    if (!selectedPedidoId || !selectedCarrierId) return;
-    setCarrierDialogOpen(false);
-    gerarEtiqueta.mutate({ pedidoId: selectedPedidoId, overrideServiceId: selectedCarrierId }, {
-      onSuccess: (data) => {
-        if (data.etiqueta_url) window.open(data.etiqueta_url, '_blank');
-        toast.success('Etiqueta gerada com sucesso!');
-        setSelectedCarrierId(null);
-        setCarrierOptions([]);
-      },
-      onError: (e: any) => toast.error(e.message || 'Erro ao gerar etiqueta'),
-    });
-  };
-
-  const handleCancelarEtiqueta = () => {
-    if (!selectedPedidoId) return;
-    cancelarEtiqueta.mutate({ pedidoId: selectedPedidoId }, {
-      onSuccess: () => toast.success('Etiqueta cancelada!'),
-      onError: (e: any) => toast.error(e.message || 'Erro ao cancelar etiqueta'),
-    });
-  };
-
-  const copyTrackingCode = async (code: string) => {
-    await navigator.clipboard.writeText(code);
-    toast.success('Código de rastreio copiado!');
-  };
-  const exportCarrinhosCSV = () => {
-    if (!carrinhos.length) return toast.error('Nenhum dado para exportar');
-    const header = 'Data,Nome,Email,Celular,Etapa,Valor,PIX Code,UTMs\n';
-    const rows = carrinhos.map((c: CarrinhoAbandonado) =>
-      `"${formatDate(c.criado_em)}","${c.cliente?.nome || ''}","${c.cliente?.email || ''}","${c.cliente?.telefone || ''}","${ETAPA_LABELS[c.etapa] || c.etapa}","${formatPrice(c.total)}","${c.pix_code || ''}","${JSON.stringify(c.utms || {})}"`
-    ).join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'carrinhos-abandonados.csv'; a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const [copiedPix, setCopiedPix] = useState<string | null>(null);
   const copyPix = async (code: string) => {
     await navigator.clipboard.writeText(code);
@@ -229,7 +99,18 @@ const LojaPedidos = () => {
     setTimeout(() => setCopiedPix(null), 2000);
   };
 
-  // Generate recovery link for abandoned cart
+  const exportCarrinhosCSV = () => {
+    if (!carrinhos.length) return toast.error('Nenhum dado para exportar');
+    const header = 'Data,Nome,Email,Celular,Etapa,Valor,PIX Code,UTMs\n';
+    const rows = carrinhos.map((c: CarrinhoAbandonado) =>
+      `\"${formatDate(c.criado_em)}\",\"${c.cliente?.nome || ''}\",\"${c.cliente?.email || ''}\",\"${c.cliente?.telefone || ''}\",\"${ETAPA_LABELS[c.etapa] || c.etapa}\",\"${formatPrice(c.total)}\",\"${c.pix_code || ''}\",\"${JSON.stringify(c.utms || {})}\"`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'carrinhos-abandonados.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getRecoveryLink = (c: CarrinhoAbandonado) => {
     const productIds = c.itens?.map(i => `${i.product_id}:${i.quantity}`).join(',') || '';
     return `/checkout?recovery=${encodeURIComponent(productIds)}`;
@@ -421,207 +302,24 @@ const LojaPedidos = () => {
                         <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  }
                 </tbody>
               </table>
             </div>
-          )}
+          )
+          }
         </TabsContent>
       </Tabs>
 
-      {/* ====== PEDIDO DETAIL SHEET ====== */}
-      <Sheet open={!!selectedPedidoId} onOpenChange={open => !open && setSelectedPedidoId(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          {selectedPedido && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Pedido #{selectedPedido.numero}
-                </SheetTitle>
-              </SheetHeader>
+      {/* ====== PEDIDO DETAIL MODAL ====== */}
+      <PedidoDetailModal
+        pedidoId={selectedPedidoId}
+        loja={loja}
+        onClose={() => setSelectedPedidoId(null)}
+      />
 
-              <div className="mt-6 space-y-6">
-                {/* Status */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
-                  <Select value={selectedPedido.status} onValueChange={handleStatusChange}>
-                    <SelectTrigger><SelectValue>{getStatusBadge(selectedPedido.status).label}</SelectValue></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pendente">Aguardando Pagamento</SelectItem>
-                      <SelectItem value="em_analise">Em Análise</SelectItem>
-                      <SelectItem value="pago">Pago</SelectItem>
-                      <SelectItem value="recusado">Cancelado / Recusado</SelectItem>
-                      <SelectItem value="estornado">Reembolsado</SelectItem>
-                      <SelectItem value="chargeback">Chargeback</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Cliente */}
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <h4 className="font-semibold text-sm mb-2">Cliente</h4>
-                  <div className="text-sm space-y-1">
-                    <p>{selectedPedido.cliente?.nome || '—'}</p>
-                    <p className="text-muted-foreground">{selectedPedido.cliente?.email}</p>
-                    <p className="text-muted-foreground">{selectedPedido.cliente?.telefone}</p>
-                    <p className="text-muted-foreground">CPF: {selectedPedido.cliente?.cpf}</p>
-                  </div>
-                </div>
-
-                {/* Endereço */}
-                {selectedPedido.endereco && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-sm mb-2">Endereço</h4>
-                    <p className="text-sm">
-                      {selectedPedido.endereco.rua}, {selectedPedido.endereco.numero}
-                      {selectedPedido.endereco.complemento ? ` - ${selectedPedido.endereco.complemento}` : ''}
-                      <br />{selectedPedido.endereco.bairro} - {selectedPedido.endereco.cidade}/{selectedPedido.endereco.estado}
-                      <br />CEP: {selectedPedido.endereco.cep}
-                    </p>
-                  </div>
-                )}
-
-                {/* Itens */}
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Itens</h4>
-                  <div className="space-y-2">
-                    {selectedPedido.itens.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-muted/30 rounded-lg p-2">
-                        {item.image && <img src={item.image} alt={item.name} className="h-10 w-8 rounded object-cover" />}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{item.name}</p>
-                          {item.variacao && <p className="text-xs text-muted-foreground">{item.variacao}</p>}
-                          <p className="text-xs text-muted-foreground">Qtd: {item.quantity}</p>
-                        </div>
-                        <p className="text-sm font-semibold">{formatPrice(item.price * item.quantity)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Totais */}
-                <div className="border-t pt-3 space-y-1 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatPrice(selectedPedido.subtotal)}</span></div>
-                  {selectedPedido.desconto > 0 && <div className="flex justify-between text-primary"><span>Desconto</span><span>-{formatPrice(selectedPedido.desconto)}</span></div>}
-                  <div className="flex justify-between"><span className="text-muted-foreground">Frete</span><span>{selectedPedido.frete === 0 ? 'Grátis' : formatPrice(selectedPedido.frete)}</span></div>
-                  {selectedPedido.cupom && <div className="flex justify-between text-primary"><span>Cupom: {selectedPedido.cupom.codigo}</span><span>-{formatPrice(selectedPedido.cupom.valor)}</span></div>}
-                  <div className="flex justify-between font-bold text-base border-t pt-2"><span>Total</span><span>{formatPrice(selectedPedido.total)}</span></div>
-                </div>
-
-                {/* PIX / TXID do Pedido */}
-                {selectedPedido.pagamento?.pix_code && (
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Código PIX</label>
-                    <div className="flex gap-2">
-                      <Input value={selectedPedido.pagamento.pix_code} readOnly className="text-xs font-mono" />
-                      <Button variant="outline" size="sm" onClick={() => copyPix(selectedPedido.pagamento.pix_code!)}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {selectedPedido.pagamento?.txid && (
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">TXID</label>
-                    <div className="flex gap-2">
-                      <Input value={selectedPedido.pagamento.txid} readOnly className="text-xs font-mono" />
-                      <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(selectedPedido.pagamento.txid!); toast.success('TXID copiado!'); }}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Rastreio */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Código de Rastreio</label>
-                  <div className="flex gap-2">
-                    <Input value={rastreioInput} onChange={e => setRastreioInput(e.target.value)} placeholder="BR123456789XX" />
-                    <Button size="sm" onClick={handleSaveRastreio} disabled={addRastreio.isPending}>
-                      {addRastreio.isPending ? '...' : 'Salvar e Notificar'}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Logística / Melhor Envio */}
-                {isMEActive && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-1">
-                      <Truck className="h-4 w-4" /> Logística — Melhor Envio
-                    </h4>
-                    {selectedPedido.melhor_envio_order_id ? (
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" variant="outline" className="gap-1" onClick={() => selectedPedido.etiqueta_url && window.open(selectedPedido.etiqueta_url, '_blank')}>
-                            <Printer className="h-4 w-4" /> Imprimir Etiqueta
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="destructive" className="gap-1" disabled={cancelarEtiqueta.isPending}>
-                                <XCircle className="h-4 w-4" /> Cancelar Etiqueta
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Cancelar etiqueta?</AlertDialogTitle>
-                                <AlertDialogDescription>Esta ação cancelará a etiqueta no Melhor Envio. O valor pode ser estornado para sua carteira.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Voltar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCancelarEtiqueta}>Confirmar Cancelamento</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                        {selectedPedido.codigo_rastreio && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">Rastreio ME:</span>
-                            <code className="bg-background px-2 py-0.5 rounded text-xs font-mono">{selectedPedido.codigo_rastreio}</code>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyTrackingCode(selectedPedido.codigo_rastreio!)}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <Button size="sm" className="gap-1" onClick={handleGerarEtiqueta} disabled={gerarEtiqueta.isPending}>
-                        {gerarEtiqueta.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
-                        Gerar Etiqueta via Melhor Envio
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações Internas</label>
-                  <Textarea
-                    value={obsInput}
-                    onChange={e => handleObsChange(e.target.value)}
-                    placeholder="Notas internas sobre este pedido..."
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Salvo automaticamente</p>
-                </div>
-
-                {/* UTMs */}
-                {selectedPedido.utms && Object.keys(selectedPedido.utms).length > 0 && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-1"><Tag className="h-4 w-4" /> UTMs</h4>
-                    <div className="text-xs space-y-1 font-mono">
-                      {Object.entries(selectedPedido.utms).map(([k, v]) => (
-                        <p key={k}><span className="text-muted-foreground">{k}:</span> {String(v)}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      {/* ====== CARRINHO ABANDONADO DETAIL SHEET ====== */}
+      {/* ====== CARRINHO ABANDONADO DETAIL SHEET (mantido) ====== */}
       <Sheet open={!!selectedCarrinho} onOpenChange={open => !open && setSelectedCarrinho(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {selectedCarrinho && (
@@ -634,13 +332,11 @@ const LojaPedidos = () => {
               </SheetHeader>
 
               <div className="mt-6 space-y-6">
-                {/* Etapa */}
                 <div>
                   <Badge variant="outline" className="text-xs">{ETAPA_LABELS[selectedCarrinho.etapa] || selectedCarrinho.etapa}</Badge>
                   <span className="text-xs text-muted-foreground ml-2">{formatDate(selectedCarrinho.criado_em)}</span>
                 </div>
 
-                {/* Cliente */}
                 <div className="bg-muted/50 rounded-lg p-4">
                   <h4 className="font-semibold text-sm mb-2">Cliente</h4>
                   <div className="text-sm space-y-1">
@@ -651,7 +347,6 @@ const LojaPedidos = () => {
                   </div>
                 </div>
 
-                {/* Endereço (if available) */}
                 {selectedCarrinho.endereco && (
                   <div className="bg-muted/50 rounded-lg p-4">
                     <h4 className="font-semibold text-sm mb-2">Endereço</h4>
@@ -664,7 +359,6 @@ const LojaPedidos = () => {
                   </div>
                 )}
 
-                {/* Itens */}
                 <div>
                   <h4 className="font-semibold text-sm mb-2">Produtos Abandonados</h4>
                   {selectedCarrinho.itens?.length > 0 ? (
@@ -684,7 +378,6 @@ const LojaPedidos = () => {
                   )}
                 </div>
 
-                {/* Total */}
                 <div className="border-t pt-3">
                   <div className="flex justify-between font-bold text-base">
                     <span>Total</span>
@@ -692,7 +385,6 @@ const LojaPedidos = () => {
                   </div>
                 </div>
 
-                {/* PIX */}
                 {selectedCarrinho.pix_code && (
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Código PIX</label>
@@ -705,7 +397,6 @@ const LojaPedidos = () => {
                   </div>
                 )}
 
-                {/* TXID */}
                 {selectedCarrinho.txid && (
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">TXID</label>
@@ -718,7 +409,6 @@ const LojaPedidos = () => {
                   </div>
                 )}
 
-                {/* UTMs */}
                 {selectedCarrinho.utms && Object.keys(selectedCarrinho.utms).length > 0 && (
                   <div className="bg-muted/50 rounded-lg p-4">
                     <h4 className="font-semibold text-sm mb-2 flex items-center gap-1"><Tag className="h-4 w-4" /> UTMs</h4>
@@ -730,7 +420,6 @@ const LojaPedidos = () => {
                   </div>
                 )}
 
-                {/* Recovery Link */}
                 {selectedCarrinho.itens?.length > 0 && (
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Link de Recuperação</label>
@@ -748,46 +437,6 @@ const LojaPedidos = () => {
           )}
         </SheetContent>
       </Sheet>
-
-      {/* Carrier Selection Dialog */}
-      <Dialog open={carrierDialogOpen} onOpenChange={setCarrierDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Escolha a Transportadora</DialogTitle>
-          </DialogHeader>
-          {carrierLoading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : carrierOptions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">Nenhuma transportadora do Melhor Envio disponível para este CEP.</p>
-          ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {carrierOptions.map((opt: any) => (
-                <div
-                  key={opt.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedCarrierId === String(opt.id) ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}
-                  onClick={() => setSelectedCarrierId(String(opt.id))}
-                >
-                  <div className="flex items-center gap-3">
-                    {opt.picture && <img src={opt.picture} alt={opt.name} className="h-8 w-8 object-contain" />}
-                    <div>
-                      <p className="text-sm font-medium">{opt.name}</p>
-                      <p className="text-xs text-muted-foreground">{opt.delivery_time} dias úteis</p>
-                    </div>
-                  </div>
-                  <p className="text-sm font-semibold">{formatPrice(opt.price)}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCarrierDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleConfirmCarrier} disabled={!selectedCarrierId || gerarEtiqueta.isPending}>
-              {gerarEtiqueta.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-              Comprar Etiqueta
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
