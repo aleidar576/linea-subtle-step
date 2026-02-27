@@ -186,6 +186,21 @@ const LojaCheckout = () => {
     }
   }, [shippingData.zipCode, fetchDynamicFreights]);
 
+  // Auto-trigger freight recalc when cart items change (and CEP is valid)
+  const cartFingerprint = useMemo(
+    () => items.map(i => `${i.product.id}:${i.quantity}`).join(','),
+    [items]
+  );
+  const lastCartFingerprintRef = useRef(cartFingerprint);
+  useEffect(() => {
+    const cleanCep = shippingData.zipCode.replace(/\D/g, '');
+    if (cleanCep.length >= 8 && cartFingerprint !== lastCartFingerprintRef.current) {
+      lastCartFingerprintRef.current = cartFingerprint;
+      lastCalcCepRef.current = cleanCep;
+      fetchDynamicFreights(cleanCep);
+    }
+  }, [cartFingerprint, shippingData.zipCode, fetchDynamicFreights]);
+
   // Inline login state
   const [loginForm, setLoginForm] = useState({ email: '', senha: '' });
   const [loginLoading, setLoginLoading] = useState(false);
@@ -837,22 +852,6 @@ const LojaCheckout = () => {
                 {/* Freight Selection */}
                 <div className="space-y-4">
                   <Label className="flex items-center gap-1.5 font-semibold text-lg mb-4"><Truck className="h-4 w-4" /> Opções de Entrega</Label>
-
-                  {/* Manual recalc button */}
-                  {shippingData.zipCode.replace(/\D/g, '').length >= 8 && !isCalculatingFreight && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        lastCalcCepRef.current = '';
-                        fetchDynamicFreights(shippingData.zipCode.replace(/\D/g, ''));
-                      }}
-                      className="text-xs gap-1.5"
-                    >
-                      <Truck className="h-3.5 w-3.5" /> Recalcular frete
-                    </Button>
-                  )}
 
                   {/* Loading skeletons */}
                   {isCalculatingFreight && (
