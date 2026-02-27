@@ -1,69 +1,19 @@
 
 
-# Correção: Trava de Perfil Completo e Remoção de Fallbacks
+# Correção: Documento Dinâmico (CPF vs CNPJ) no Payload do Melhor Envio
 
-## 1. Front-end: LojaIntegracoes.tsx
+## Problema
+O Melhor Envio exige CPF no campo `document` e CNPJ no campo `company_document`. O código atual envia qualquer documento no campo `document`, causando erro 422 para lojistas PJ.
 
-### Substituir `hasStoreCep` por `hasCompleteProfile`
+## Alteração em `api/pedidos.js` (linhas 581-612)
 
-**Linha 64**: Trocar a variável por uma validação completa:
+Substituir os objetos literais `from` e `to` dentro de `cartPayload` pela lógica dinâmica abaixo:
+
 ```javascript
-const config = loja?.configuracoes;
-const hasCompleteProfile = !!(
-  config?.empresa?.documento &&
-  config?.empresa?.telefone &&
-  config?.endereco?.cep &&
-  config?.endereco?.logradouro &&
-  config?.endereco?.numero &&
-  config?.endereco?.bairro &&
-  config?.endereco?.cidade &&
-  config?.endereco?.estado
-);
-```
-
-### Atualizar todas as referências (4 locais)
-
-- **Linha 96** (`handleSave`): `!hasStoreCep` -> `!hasCompleteProfile`
-- **Linha 170** (Banner no card): `!hasStoreCep` -> `!hasCompleteProfile`
-- **Linha 232** (Banner no sheet): `!hasStoreCep` -> `!hasCompleteProfile`
-
-### Renomear estado e dialog
-
-- Renomear `showCepConfirm` para `showProfileConfirm` (linhas 62, 96-97, e no AlertDialog)
-
-### Atualizar textos dos alertas
-
-Todos os banners e o AlertDialog passam a exibir:
-> "O Perfil da sua loja esta incompleto (Faltam dados como CNPJ/CPF, Telefone ou Endereco completo). Va em Configuracoes > Perfil da Loja para preencher. A integracao de fretes falhara sem essas informacoes."
-
----
-
-## 2. Back-end: api/pedidos.js (scope gerar-etiqueta)
-
-### Remover fallbacks do payload `from` (linhas 584-594)
-
-Substituir:
-```javascript
-from: {
-  name: empresa.razao_social || loja.nome || 'Loja',
-  document: onlyDigits(empresa.documento),
-  address: endereco.logradouro || '',
-  number: endereco.numero || 'S/N',
-  complement: endereco.complemento || '',
-  district: endereco.bairro || '',
-  city: endereco.cidade || '',
-  state_abbr: endereco.estado || '',
-  postal_code: onlyDigits(endereco.cep),
-  phone: onlyDigits(empresa.telefone || '11999999999'),
-  email: empresa.email_suporte || 'suporte@dusking.com.br',
-},
-```
-
-Por (sem fallbacks de dados da plataforma):
-```javascript
-from: {
+// --- Remetente (from) ---
+const fromDoc = onlyDigits(empresa.documento);
+const fromPayload = {
   name: empresa.razao_social || loja.nome,
-  document: onlyDigits(empresa.documento),
   address: endereco.logradouro,
   number: endereco.numero || 'S/N',
   complement: endereco.complemento || '',
@@ -73,11 +23,48 @@ from: {
   postal_code: onlyDigits(endereco.cep),
   phone: onlyDigits(empresa.telefone),
   email: empresa.email_suporte || '',
-},
+};
+if (fromDoc.length > 11) {
+  fromPayload.company_document = fromDoc;
+  fromPayload.state_register = '';
+} else {
+  fromPayload.document = fromDoc;
+}
+
+// --- Destinatario (to) ---
+const toDoc = onlyDigits(pedido.cliente?.cpf || pedido.cliente?.documento || '');
+const toPayload = {
+  name: pedido.cliente?.nome || '',
+  address: pedido.endereco?.rua || pedido.endereco?.logradouro || '',
+  number: pedido.endereco?.numero || 'S/N',
+  complement: pedido.endereco?.complemento || '',
+  district: pedido.endereco?.bairro || '',
+  city: pedido.endereco?.cidade || '',
+  state_abbr: pedido.endereco?.estado || '',
+  postal_code: onlyDigits(pedido.endereco?.cep),
+  phone: onlyDigits(pedido.cliente?.telefone || ''),
+  email: pedido.cliente?.email || '',
+};
+if (toDoc.length > 11) {
+  toPayload.company_document = toDoc;
+  toPayload.state_register = '';
+} else {
+  toPayload.document = toDoc;
+}
+
+const cartPayload = {
+  service: Number(serviceId),
+  from: fromPayload,
+  to: toPayload,
+  products: itemsWithDims,
+  volumes: [volume],
+  options: { non_commercial: true, receipt: false, own_hand: false },
+};
 ```
 
-Campos obrigatorios sem fallback: `document`, `address`, `district`, `city`, `state_abbr`, `postal_code`, `phone`. Se vazios, a API do Melhor Envio retornara 422 naturalmente.
+### Resumo
+- CPF (<=11 digitos) vai em `document`
+- CNPJ (>11 digitos) vai em `company_document` + `state_register: ''`
+- Aplica-se tanto ao remetente (from) quanto ao destinatario (to)
+- Arquivo alterado: `api/pedidos.js` (linhas 581-612)
 
-### Arquivos alterados
-- `src/pages/painel/LojaIntegracoes.tsx`
-- `api/pedidos.js`
