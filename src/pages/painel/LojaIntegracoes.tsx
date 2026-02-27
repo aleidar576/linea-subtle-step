@@ -169,7 +169,7 @@ export default function LojaIntegracoes() {
 
               {/* Banner CEP ausente no card */}
               {integration.id === 'melhor_envio' && isActive && !hasStoreCep && (
-                <Alert variant="destructive" className="mx-6 mb-4">
+                <Alert variant="destructive" className="mx-4 mb-4">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Atenção</AlertTitle>
                   <AlertDescription>Falta o CEP no cadastro da loja. Vá em Perfil da Loja.</AlertDescription>
