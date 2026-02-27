@@ -19,6 +19,9 @@ const Lead = require('../models/Lead.js');
 const Lojista = require('../models/Lojista.js');
 const Plano = require('../models/Plano.js');
 
+// Services (Strategy Pattern)
+const { getSubscriptionService } = require('../lib/services/assinaturas');
+const { getShippingService } = require('../lib/services/fretes');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) console.error('[LOJA-EXTRAS] FATAL: JWT_SECRET não configurado nas variáveis de ambiente.');
@@ -39,8 +42,6 @@ async function verifyOwnership(user, lojaId) {
   return loja.lojista_id.toString() === user.lojista_id;
 }
 
-
-
 function slugify(text) {
   return text.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -50,7 +51,6 @@ function slugify(text) {
 // Desabilitar bodyParser da Vercel para receber raw body (necessário para webhook Stripe)
 module.exports.config = { api: { bodyParser: false } };
 
-// Helper: lê o raw body como string a partir dos chunks da request
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -73,6 +73,8 @@ module.exports = async function handler(req, res) {
   const { scope, id, loja_id, codigo } = req.query;
   const method = req.method;
 
+  const stripeService = getSubscriptionService('stripe');
+
   // === CRON: Cobrança Semanal de Taxas ===
   if (scope === 'cron-taxas' && method === 'GET') {
     const cronSecret = process.env.CRON_SECRET;
@@ -82,83 +84,9 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
-      const stripe = require('stripe')(STRIPE_SECRET_KEY);
-
-      const now = new Date();
-      const lojistas = await Lojista.find({
-        taxas_acumuladas: { $gt: 0 },
-        data_vencimento_taxas: { $lte: now },
-        stripe_customer_id: { $ne: null },
-        status_taxas: { $ne: 'bloqueado' },
-        modo_amigo: { $ne: true },
-      });
-
-      console.log(`[CRON-TAXAS] Processando ${lojistas.length} lojistas com taxas pendentes`);
-
-      let sucesso = 0, falha = 0;
-      for (const lojista of lojistas) {
-        try {
-          const amountCents = Math.round(lojista.taxas_acumuladas * 100);
-          if (amountCents <= 0) continue;
-
-          // Create InvoiceItem
-          await stripe.invoiceItems.create({
-            customer: lojista.stripe_customer_id,
-            amount: amountCents,
-            currency: 'brl',
-            description: `Taxas de transação acumuladas — R$ ${lojista.taxas_acumuladas.toFixed(2)}`,
-          });
-
-          // Create and pay invoice
-          const invoice = await stripe.invoices.create({
-            customer: lojista.stripe_customer_id,
-            auto_advance: true,
-          });
-          await stripe.invoices.pay(invoice.id);
-
-          // Success: reset and advance cycle
-          const valorCobrado = lojista.taxas_acumuladas;
-          lojista.taxas_acumuladas = 0;
-          lojista.tentativas_taxas = 0;
-          lojista.status_taxas = 'ok';
-          lojista.data_vencimento_taxas = new Date(lojista.data_vencimento_taxas.getTime() + 7 * 24 * 60 * 60 * 1000);
-          lojista.historico_assinatura.push({
-            evento: 'cobranca_taxas_sucesso',
-            data: new Date(),
-            detalhes: `Cobrança semanal de taxas processada e paga: R$ ${valorCobrado.toFixed(2)}`,
-          });
-          await lojista.save();
-          sucesso++;
-          console.log(`[CRON-TAXAS] ✅ Cobrado R$ ${valorCobrado.toFixed(2)} de ${lojista.email}`);
-        } catch (err) {
-          lojista.tentativas_taxas = (lojista.tentativas_taxas || 0) + 1;
-
-          if (lojista.tentativas_taxas >= 3) {
-            lojista.status_taxas = 'bloqueado';
-            lojista.historico_assinatura.push({
-              evento: 'cobranca_taxas_falha',
-              data: new Date(),
-              detalhes: `Falha na cobrança de R$ ${lojista.taxas_acumuladas.toFixed(2)}. Limite de tentativas atingido. Aguardando pagamento manual.`,
-            });
-          } else {
-            lojista.status_taxas = 'falha';
-            lojista.data_vencimento_taxas = new Date(Date.now() + 24 * 60 * 60 * 1000);
-            lojista.historico_assinatura.push({
-              evento: 'cobranca_taxas_falha',
-              data: new Date(),
-              detalhes: `Falha na cobrança de R$ ${lojista.taxas_acumuladas.toFixed(2)}. Tentativa ${lojista.tentativas_taxas}/3. Nova tentativa agendada para amanhã.`,
-            });
-          }
-
-          await lojista.save();
-          falha++;
-          console.error(`[CRON-TAXAS] ❌ Falha para ${lojista.email} (tentativa ${lojista.tentativas_taxas}/3):`, err.message);
-        }
-      }
-
-      return res.json({ processados: lojistas.length, sucesso, falha });
+      const result = await stripeService.processarCronTaxas();
+      if (result.error) return res.status(result.httpStatus || 500).json({ error: result.error });
+      return res.json(result.data);
     } catch (err) {
       console.error('[CRON-TAXAS] Erro geral:', err);
       return res.status(500).json({ error: 'Erro ao processar cron de taxas' });
@@ -171,43 +99,9 @@ module.exports = async function handler(req, res) {
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
     try {
-      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
-      const stripe = require('stripe')(STRIPE_SECRET_KEY);
-
-      const lojista = await Lojista.findById(user.lojista_id);
-      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
-      if (!lojista.stripe_customer_id) return res.status(400).json({ error: 'Sem cliente Stripe vinculado' });
-      if (lojista.taxas_acumuladas <= 0) return res.status(400).json({ error: 'Nenhuma taxa pendente' });
-
-      const amountCents = Math.round(lojista.taxas_acumuladas * 100);
-
-      await stripe.invoiceItems.create({
-        customer: lojista.stripe_customer_id,
-        amount: amountCents,
-        currency: 'brl',
-        description: `Regularização manual de taxas — R$ ${lojista.taxas_acumuladas.toFixed(2)}`,
-      });
-
-      const invoice = await stripe.invoices.create({
-        customer: lojista.stripe_customer_id,
-        auto_advance: true,
-      });
-      await stripe.invoices.pay(invoice.id);
-
-      const valorCobrado = lojista.taxas_acumuladas;
-      lojista.taxas_acumuladas = 0;
-      lojista.tentativas_taxas = 0;
-      lojista.status_taxas = 'ok';
-      lojista.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      lojista.historico_assinatura.push({
-        evento: 'cobranca_taxas_manual_sucesso',
-        data: new Date(),
-        detalhes: `Pagamento manual de taxas realizado com sucesso: R$ ${valorCobrado.toFixed(2)}`,
-      });
-      await lojista.save();
-
-      return res.json({ success: true, message: `Pagamento de R$ ${valorCobrado.toFixed(2)} processado com sucesso` });
+      const result = await stripeService.pagarTaxasManual({ user });
+      if (result.error) return res.status(result.httpStatus || 500).json({ error: result.error });
+      return res.json(result.data);
     } catch (err) {
       console.error('[PAGAR-TAXAS-MANUAL] ❌ Falha:', err.message);
       return res.status(400).json({ error: 'Cartão recusado. Atualize seu método de pagamento no portal Stripe e tente novamente.' });
@@ -220,7 +114,6 @@ module.exports = async function handler(req, res) {
     : null;
 
   // Para o webhook, NÃO fazemos parse — usamos o rawBody bruto
-  // Para todos os outros scopes, parseamos o body normalmente
   if (scope !== 'stripe-webhook' && rawBody) {
     try {
       req.body = JSON.parse(rawBody);
@@ -234,41 +127,10 @@ module.exports = async function handler(req, res) {
     const user = verifyLojista(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
-    const { plano_id } = req.body;
-    if (!plano_id) return res.status(400).json({ error: 'plano_id é obrigatório' });
-
     try {
-      const plano = await Plano.findById(plano_id);
-      if (!plano) return res.status(404).json({ error: 'Plano não encontrado' });
-
-      const lojista = await Lojista.findById(user.lojista_id);
-      if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
-
-      if (!lojista.cpf_cnpj || !lojista.telefone) {
-        return res.status(400).json({ error: 'Complete seus dados pessoais (CPF/CNPJ e Telefone) antes de assinar.' });
-      }
-
-      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
-
-      const stripe = require('stripe')(STRIPE_SECRET_KEY);
-
-      const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173';
-
-      const sessionParams = {
-        mode: 'subscription',
-        line_items: [{ price: plano.stripe_price_id, quantity: 1 }],
-        subscription_data: { trial_period_days: 7 },
-        client_reference_id: lojista._id.toString(),
-        customer_email: lojista.email,
-        success_url: `${baseUrl}/painel/assinatura?success=true`,
-        cancel_url: `${baseUrl}/painel/assinatura?canceled=true`,
-      };
-
-      const session = await stripe.checkout.sessions.create(sessionParams);
-      return res.json({ url: session.url });
+      const result = await stripeService.createCheckoutSession({ user, plano_id: req.body.plano_id });
+      if (result.error) return res.status(result.httpStatus || 500).json({ error: result.error });
+      return res.json(result.data);
     } catch (error) {
       console.error('[STRIPE-CHECKOUT]', error);
       return res.status(500).json({ error: 'Erro ao criar sessão de checkout', details: error.message });
@@ -285,12 +147,10 @@ module.exports = async function handler(req, res) {
     }
 
     const stripe = require('stripe')(STRIPE_SECRET_KEY);
-    const { sendEmail, getBranding, getBaseUrl } = require('../lib/email.js');
 
     let event;
     try {
       const sig = req.headers['stripe-signature'];
-      // rawBody já foi lido como string bruta (sem JSON.parse) — exatamente o que o Stripe exige
       event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
       console.log(`[STRIPE-WEBHOOK] ✅ Evento recebido: ${event.type} (id: ${event.id})`);
     } catch (err) {
@@ -298,226 +158,8 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Webhook signature verification failed' });
     }
 
-    try {
-      // === checkout.session.completed ===
-      if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const lojistaId = session.client_reference_id;
-        const subscriptionId = session.subscription;
-        const customerId = session.customer;
-        console.log(`[STRIPE-WEBHOOK] 📋 checkout.session.completed — lojistaId=${lojistaId}, customerId=${customerId}, subscriptionId=${subscriptionId}`);
-
-        const lojista = await Lojista.findById(lojistaId);
-        if (!lojista) {
-          console.error(`[STRIPE-WEBHOOK] ❌ Lojista não encontrado: ${lojistaId}`);
-        } else {
-          console.log(`[STRIPE-WEBHOOK] ✅ Lojista encontrado: ${lojista.email} (id: ${lojista._id})`);
-
-          lojista.stripe_customer_id = customerId;
-          lojista.stripe_subscription_id = subscriptionId;
-          lojista.subscription_status = 'trialing';
-
-          // Buscar plano pelo price_id da subscription
-          const sub = await stripe.subscriptions.retrieve(subscriptionId);
-          const priceId = sub.items?.data?.[0]?.price?.id;
-          console.log(`[STRIPE-WEBHOOK] 🔍 Price ID da subscription: ${priceId}`);
-
-          if (priceId) {
-            const plano = await Plano.findOne({ stripe_price_id: priceId });
-            if (plano) {
-              lojista.plano_id = plano._id;
-              lojista.plano = plano.nome.toLowerCase();
-              console.log(`[STRIPE-WEBHOOK] ✅ Plano encontrado: ${plano.nome} (id: ${plano._id})`);
-            } else {
-              console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum plano encontrado com stripe_price_id=${priceId}`);
-            }
-          }
-
-          // Data de vencimento = fim do trial
-          if (sub.trial_end) {
-            lojista.data_vencimento = new Date(sub.trial_end * 1000);
-          }
-
-          // Inicializar ciclo de taxas semanais
-          if (!lojista.data_vencimento_taxas) {
-            lojista.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          }
-
-          // Auditoria
-          lojista.historico_assinatura.push({
-            evento: 'checkout.session.completed',
-            data: new Date(),
-            detalhes: 'Assinatura ativada (Checkout concluído).',
-          });
-
-          await lojista.save();
-          console.log(`[STRIPE-WEBHOOK] ✅ Lojista atualizado no banco: status=${lojista.subscription_status}, plano=${lojista.plano}`);
-
-          // Email de boas-vindas ao trial
-          const branding = await getBranding();
-          const dataCobranca = lojista.data_vencimento
-            ? new Date(lojista.data_vencimento).toLocaleDateString('pt-BR')
-            : '7 dias';
-          const planoNome = lojista.plano_id ? (await Plano.findById(lojista.plano_id))?.nome || 'Seu plano' : 'Seu plano';
-
-          const { emailAssinaturaTrialHtml } = require('../lib/email.js');
-          await sendEmail({
-            to: lojista.email,
-            subject: `🎉 Bem-vindo ao plano ${planoNome}! | ${branding.brandName}`,
-            html: emailAssinaturaTrialHtml({ nome: lojista.nome, plano_nome: planoNome, data_cobranca: dataCobranca, branding }),
-          });
-          console.log(`[STRIPE-WEBHOOK] ✅ Email de trial enviado para ${lojista.email}`);
-        }
-      }
-
-      // === invoice.payment_succeeded ===
-      if (event.type === 'invoice.payment_succeeded') {
-        const invoice = event.data.object;
-        const customerId = invoice.customer;
-        console.log(`[STRIPE-WEBHOOK] 📋 invoice.payment_succeeded — customerId=${customerId}`);
-        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
-        if (lojista) {
-          lojista.subscription_status = 'active';
-          if (invoice.lines?.data?.[0]?.period?.end) {
-            lojista.data_vencimento = new Date(invoice.lines.data[0].period.end * 1000);
-          }
-          lojista.historico_assinatura.push({
-            evento: 'invoice.payment_succeeded',
-            data: new Date(),
-            detalhes: 'Mensalidade do plano renovada com sucesso.',
-          });
-          await lojista.save();
-          console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para active`);
-        } else {
-          console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum lojista com stripe_customer_id=${customerId}`);
-        }
-      }
-
-      // === invoice.payment_failed ===
-      if (event.type === 'invoice.payment_failed') {
-        const invoice = event.data.object;
-        const customerId = invoice.customer;
-        console.log(`[STRIPE-WEBHOOK] 📋 invoice.payment_failed — customerId=${customerId}`);
-        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
-        if (lojista) {
-          lojista.subscription_status = 'past_due';
-          lojista.historico_assinatura.push({
-            evento: 'invoice.payment_failed',
-            data: new Date(),
-            detalhes: 'Falha no pagamento da fatura (Mensalidade ou Taxas).',
-          });
-          await lojista.save();
-          console.log(`[STRIPE-WEBHOOK] ⚠️ Lojista ${lojista.email} marcado como past_due`);
-
-          const branding = await getBranding();
-          const baseUrl = getBaseUrl();
-          const { emailFalhaPagamentoHtml } = require('../lib/email.js');
-          await sendEmail({
-            to: lojista.email,
-            subject: `⚠️ Falha no pagamento | ${branding.brandName}`,
-            html: emailFalhaPagamentoHtml({ nome: lojista.nome, branding, painelUrl: baseUrl + '/painel/assinatura' }),
-          });
-        } else {
-          console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum lojista com stripe_customer_id=${customerId}`);
-        }
-      }
-
-      // === customer.subscription.deleted ===
-      if (event.type === 'customer.subscription.deleted') {
-        const sub = event.data.object;
-        const customerId = sub.customer;
-        console.log(`[STRIPE-WEBHOOK] 📋 customer.subscription.deleted — customerId=${customerId}`);
-        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
-        if (lojista) {
-          lojista.subscription_status = 'canceled';
-          lojista.plano = 'free';
-          lojista.plano_id = null;
-          lojista.stripe_subscription_id = null;
-          lojista.cancel_at_period_end = false;
-          lojista.cancel_at = null;
-          lojista.historico_assinatura.push({
-            evento: 'customer.subscription.deleted',
-            data: new Date(),
-            detalhes: 'Assinatura cancelada definitivamente.',
-          });
-          await lojista.save();
-          console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} cancelado, revertido para free`);
-        }
-      }
-
-      // === charge.refunded ===
-      if (event.type === 'charge.refunded') {
-        const charge = event.data.object;
-        const customerId = charge.customer;
-        console.log(`[STRIPE-WEBHOOK] 📋 charge.refunded — customerId=${customerId}`);
-        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
-        if (lojista) {
-          lojista.subscription_status = 'canceled';
-          lojista.plano = 'free';
-          lojista.plano_id = null;
-          lojista.stripe_subscription_id = null;
-          lojista.data_vencimento = null;
-          lojista.cancel_at_period_end = false;
-          lojista.cancel_at = null;
-          lojista.historico_assinatura.push({
-            evento: 'charge.refunded',
-            data: new Date(),
-            detalhes: 'Estorno processado. Acesso premium revogado imediatamente.',
-          });
-          await lojista.save();
-          console.log(`[STRIPE-WEBHOOK] ✅ Estorno processado. Acesso premium revogado para customer: ${customerId} (${lojista.email})`);
-        } else {
-          console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum lojista com stripe_customer_id=${customerId}`);
-        }
-      }
-
-      // === customer.subscription.updated (UPGRADES / DOWNGRADES / STATUS) ===
-      if (event.type === 'customer.subscription.updated') {
-        const sub = event.data.object;
-        const customerId = sub.customer;
-        const newPriceId = sub.items?.data?.[0]?.price?.id || null;
-        console.log(`[STRIPE-WEBHOOK] 📋 customer.subscription.updated — customerId=${customerId}, status=${sub.status}, priceId=${newPriceId}`);
-        const lojista = await Lojista.findOne({ stripe_customer_id: customerId });
-        if (lojista) {
-          lojista.subscription_status = sub.status;
-          if (sub.current_period_end) {
-            lojista.data_vencimento = new Date(sub.current_period_end * 1000);
-          }
-
-          // Resolve plano dinamicamente pelo price_id da Stripe
-          if (newPriceId) {
-            const Plano = require('../models/Plano.js');
-            const planoEncontrado = await Plano.findOne({ stripe_price_id: newPriceId, is_active: true });
-            if (planoEncontrado) {
-              lojista.plano_id = planoEncontrado._id;
-              lojista.plano = planoEncontrado.nome.toLowerCase();
-              console.log(`[STRIPE-WEBHOOK] 🔄 Plano atualizado para "${planoEncontrado.nome}" (${planoEncontrado._id}) via upgrade/downgrade`);
-            } else {
-              console.warn(`[STRIPE-WEBHOOK] ⚠️ Nenhum plano encontrado com stripe_price_id=${newPriceId}`);
-            }
-          }
-
-          // Extrair flags de cancelamento programado
-          lojista.cancel_at_period_end = sub.cancel_at_period_end || false;
-          lojista.cancel_at = sub.cancel_at ? new Date(sub.cancel_at * 1000) : null;
-          console.log(`[STRIPE-WEBHOOK] 📋 cancel_at_period_end=${lojista.cancel_at_period_end}, cancel_at=${lojista.cancel_at}`);
-
-          // Auditoria
-          lojista.historico_assinatura.push({
-            evento: 'customer.subscription.updated',
-            data: new Date(),
-            detalhes: `Assinatura atualizada (Alteração de plano ou status). Status: ${sub.status}`,
-          });
-
-          await lojista.save();
-          console.log(`[STRIPE-WEBHOOK] ✅ Lojista ${lojista.email} atualizado para ${sub.status}`);
-        }
-      }
-    } catch (err) {
-      console.error(`[STRIPE-WEBHOOK] ❌ Erro ao processar evento ${event.type}:`, err);
-    }
-
-    return res.json({ received: true });
+    const result = await stripeService.handleWebhookEvent({ event, rawBody });
+    return res.json(result);
   }
 
   // === STRIPE PORTAL (lojista autenticado) ===
@@ -526,25 +168,9 @@ module.exports = async function handler(req, res) {
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
     try {
-      const lojista = await Lojista.findById(user.lojista_id);
-      if (!lojista || !lojista.stripe_customer_id) {
-        return res.status(400).json({ error: 'Nenhuma assinatura ativa encontrada' });
-      }
-
-      const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-      if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe não configurado' });
-
-      const stripe = require('stripe')(STRIPE_SECRET_KEY);
-      const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173';
-
-      const portalSession = await stripe.billingPortal.sessions.create({
-        customer: lojista.stripe_customer_id,
-        return_url: `${baseUrl}/painel/assinatura`,
-      });
-
-      return res.json({ url: portalSession.url });
+      const result = await stripeService.createPortalSession({ user });
+      if (result.error) return res.status(result.httpStatus || 500).json({ error: result.error });
+      return res.json(result.data);
     } catch (error) {
       console.error('[STRIPE-PORTAL]', error);
       return res.status(500).json({ error: 'Erro ao criar sessão do portal', details: error.message });
@@ -561,14 +187,13 @@ module.exports = async function handler(req, res) {
     return res.json({ tipo: cupom.tipo, valor: cupom.valor, valor_minimo_pedido: cupom.valor_minimo_pedido, codigo: cupom.codigo, produtos_ids: cupom.produtos_ids || [] });
   }
 
-  // === PUBLIC: Gateways disponíveis na plataforma (retorna objeto completo com customizações) ===
+  // === PUBLIC: Gateways disponíveis na plataforma ===
   if (scope === 'gateways-disponiveis' && method === 'GET') {
     const setting = await Setting.findOne({ key: 'gateways_ativos', loja_id: null }).lean();
     let config = {};
     if (setting?.value) {
       try {
         const parsed = JSON.parse(setting.value);
-        // Retrocompat: convert old string[] format to Record
         if (Array.isArray(parsed)) {
           parsed.forEach(id => { config[id] = { ativo: true }; });
         } else {
@@ -607,7 +232,6 @@ module.exports = async function handler(req, res) {
       // 1. Fretes manuais ativos (com soma por produto via fretes_vinculados)
       const fretesDb = await Frete.find({ loja_id: bodyLojaId, is_active: true }).sort({ ordem_exibicao: 1 }).lean();
 
-      // Buscar produtos reais do carrinho para acessar fretes_vinculados
       const productIds = (items || []).map(i => i.id).filter(Boolean);
       const productsDb = productIds.length ? await Product.find({
         $or: [
@@ -661,63 +285,11 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // 2. Melhor Envio (try/catch resiliente)
-      let melhorEnvioOpcoes = [];
+      // 2. Melhor Envio (via Shipping Service)
       const meConfig = lojaDoc.configuracoes?.integracoes?.melhor_envio;
       const cepOrigem = lojaDoc.configuracoes?.endereco?.cep;
-
-      if (meConfig?.ativo && meConfig?.token && cepOrigem) {
-        try {
-          const baseUrl = meConfig.sandbox
-            ? 'https://sandbox.melhorenvio.com.br'
-            : 'https://melhorenvio.com.br';
-
-          const products = (items || []).map(item => ({
-            id: item.id || 'prod',
-            width: item.dimensions?.width || 11,
-            height: item.dimensions?.height || 2,
-            length: item.dimensions?.length || 16,
-            weight: item.weight || 0.3,
-            insurance_value: item.price || 0,
-            quantity: item.quantity || 1,
-          }));
-
-          const mePayload = {
-            from: { postal_code: cepOrigem.replace(/\D/g, '') },
-            to: { postal_code: to_postal_code.replace(/\D/g, '') },
-            products,
-          };
-
-          const meRes = await fetch(`${baseUrl}/api/v2/me/shipment/calculate`, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${meConfig.token}`,
-              'User-Agent': 'Dusking (suporte@dusking.com.br)',
-            },
-            body: JSON.stringify(mePayload),
-          });
-
-          if (meRes.ok) {
-            const meData = await meRes.json();
-            const opcoes = Array.isArray(meData) ? meData : [];
-            melhorEnvioOpcoes = opcoes
-              .filter(opt => !opt.error)
-              .map(opt => ({
-                id: String(opt.id),
-                name: opt.name || opt.company?.name || 'Envio',
-                price: Number(opt.custom_price) || Number(opt.price) || 0,
-                delivery_time: opt.custom_delivery_time || opt.delivery_time || 0,
-                picture: opt.company?.picture || '',
-              }));
-          } else {
-            console.warn('[CALCULAR-FRETE] Melhor Envio retornou status', meRes.status);
-          }
-        } catch (meErr) {
-          console.error('[CALCULAR-FRETE] Erro Melhor Envio (fallback manuais):', meErr.message);
-        }
-      }
+      const shippingService = getShippingService(lojaDoc.configuracoes?.integracoes);
+      const melhorEnvioOpcoes = await shippingService.calcularFrete({ meConfig, cepOrigem, to_postal_code, items });
 
       return res.status(200).json({ success: true, fretes: [...manuais, ...melhorEnvioOpcoes] });
     } catch (err) {
@@ -725,7 +297,6 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Erro ao calcular frete' });
     }
   }
-
 
   // === PUBLIC: Categorias de uma loja (sem auth) ===
   if (scope === 'categorias-publico' && method === 'GET' && loja_id) {
@@ -841,7 +412,6 @@ module.exports = async function handler(req, res) {
         const lojista = await Lojista.findById(user.lojista_id);
         if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
 
-        // Read Appmax URLs from platform settings
         const Setting = require('../models/Setting');
         const gwSetting = await Setting.findOne({ key: 'gateways_ativos' });
         let appmaxConfig = {};
@@ -861,7 +431,6 @@ module.exports = async function handler(req, res) {
           return res.status(500).json({ error: `URLs de ${isSandbox ? 'Sandbox' : 'Produção'} da Appmax não configuradas no painel Admin.` });
         }
 
-        // Step 1: Get Bearer token
         const tokenRes = await fetch(`${authUrl}/oauth2/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -881,7 +450,6 @@ module.exports = async function handler(req, res) {
         const tokenData = await tokenRes.json();
         const bearerToken = tokenData.access_token;
 
-        // Step 2: Authorize app for this lojista
         const host = req.headers.host || req.headers['x-forwarded-host'] || 'localhost';
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const callbackUrl = `${protocol}://${host}/painel/loja/${lojista._id}/gateways`;
@@ -930,14 +498,12 @@ module.exports = async function handler(req, res) {
       const lojista = await Lojista.findById(user.lojista_id);
       if (!lojista) return res.status(404).json({ error: 'Lojista não encontrado' });
 
-      // Save config
       if (!lojista.gateways_config) lojista.gateways_config = {};
       if (config) {
         lojista.gateways_config[id_gateway] = config;
         lojista.markModified('gateways_config');
       }
 
-      // Toggle active
       if (ativar === true) {
         lojista.gateway_ativo = id_gateway;
       } else if (ativar === false && lojista.gateway_ativo === id_gateway) {
@@ -946,7 +512,6 @@ module.exports = async function handler(req, res) {
 
       await lojista.save();
 
-      // Retrocompat: if sealpay, also save to loja.configuracoes.sealpay_api_key
       if (id_gateway === 'sealpay' && config?.api_key && resolvedLojaId) {
         await Loja.findByIdAndUpdate(resolvedLojaId, {
           $set: { 'configuracoes.sealpay_api_key': config.api_key },
@@ -975,7 +540,6 @@ module.exports = async function handler(req, res) {
       }
       await lojista.save();
 
-      // Retrocompat: if sealpay, clear loja key
       if (id_gateway === 'sealpay' && resolvedLojaId) {
         await Loja.findByIdAndUpdate(resolvedLojaId, {
           $set: { 'configuracoes.sealpay_api_key': null },
@@ -1109,7 +673,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // TEMAS (expandido com footer, cores, homepage, produto)
+    // TEMAS
     // ==========================================
     if (scope === 'tema') {
       if (method === 'GET') {
@@ -1150,7 +714,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // PIXELS (CRUD granular)
+    // PIXELS
     // ==========================================
     if (scope === 'pixels' && method === 'GET') {
       const pixels = await TrackingPixel.find({ loja_id: resolvedLojaId }).sort({ createdAt: -1 }).lean();
@@ -1185,7 +749,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // PÁGINAS (CRUD)
+    // PÁGINAS
     // ==========================================
     if (scope === 'paginas' && method === 'GET') {
       const paginas = await Pagina.find({ loja_id: resolvedLojaId }).sort({ criado_em: -1 }).lean();
@@ -1198,7 +762,6 @@ module.exports = async function handler(req, res) {
         if (!data.titulo || !data.loja_id) return res.status(400).json({ error: 'titulo e loja_id obrigatórios' });
         let slug = slugify(data.titulo);
         if (slug.length < 2) slug = slug + '-pagina';
-        // Ensure unique slug
         const existing = await Pagina.findOne({ loja_id: data.loja_id, slug });
         if (existing) slug = slug + '-' + Date.now().toString(36);
         const pagina = await Pagina.create({ ...data, slug });
@@ -1276,7 +839,6 @@ module.exports = async function handler(req, res) {
     // ==========================================
     if (scope === 'leads' && method === 'GET') {
       const leads = await Lead.find({ loja_id: resolvedLojaId }).sort({ criado_em: -1 }).lean();
-      // Check vinculo with Cliente collection
       const Cliente = require('../models/Cliente.js');
       const emails = leads.map(l => l.email);
       const clientes = await Cliente.find({ loja_id: resolvedLojaId, email: { $in: emails } }).select('email').lean();
@@ -1340,7 +902,6 @@ module.exports = async function handler(req, res) {
         const result = await Lead.insertMany(validEmails, { ordered: false });
         return res.json({ success: true, inseridos: result.length });
       } catch (err) {
-        // Duplicate key errors are expected, count successful inserts
         const inserted = err.insertedDocs?.length || 0;
         return res.json({ success: true, inseridos: inserted });
       }

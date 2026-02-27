@@ -12,6 +12,7 @@ const { sendEmail, getBranding, emailRastreioHtml, sendReportEmail, emailRelator
 const Lojista = require('../models/Lojista.js');
 const Plano = require('../models/Plano.js');
 const Product = require('../models/Product.js');
+const { getShippingService } = require('../lib/services/fretes');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
@@ -105,7 +106,6 @@ module.exports = async function handler(req, res) {
     const body = req.body;
     if (!body.loja_id) return res.status(400).json({ error: 'loja_id obrigatório' });
 
-    // Se já existe carrinho com mesmo email+loja, atualizar
     let carrinho = null;
     if (body.cliente?.email) {
       carrinho = await CarrinhoAbandonado.findOne({
@@ -142,7 +142,6 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'PATCH' && scope === 'carrinho' && id) {
-    // Marcar como convertido (pode ser público ou autenticado)
     const carrinho = await CarrinhoAbandonado.findByIdAndUpdate(id, { convertido: true }, { new: true });
     if (!carrinho) return res.status(404).json({ error: 'Carrinho não encontrado' });
     return res.status(200).json(carrinho);
@@ -201,7 +200,6 @@ module.exports = async function handler(req, res) {
       pedido.rastreio = codigo;
       await pedido.save();
 
-      // Enviar email ao cliente
       if (pedido.cliente?.email) {
         try {
           const branding = await getBranding();
@@ -234,7 +232,6 @@ module.exports = async function handler(req, res) {
       const validStatuses = ['pendente', 'em_analise', 'pago', 'recusado', 'estornado', 'chargeback'];
       if (!validStatuses.includes(novoStatus)) return res.status(400).json({ error: 'Status inválido' });
 
-      // Hierarquia: status finais (recusado, estornado, chargeback) podem ser aplicados a qualquer momento
       const statusOrder = { pendente: 0, em_analise: 1, pago: 2, recusado: 3, estornado: 4, chargeback: 5 };
       const finais = ['recusado', 'estornado', 'chargeback'];
       if (!finais.includes(novoStatus) && statusOrder[novoStatus] < statusOrder[pedido.status]) {
@@ -276,7 +273,6 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // Marcar carrinho como convertido se pago
       if (novoStatus === 'pago' && pedido.pagamento?.txid) {
         await CarrinhoAbandonado.updateOne(
           { txid: pedido.pagamento.txid, convertido: false },
@@ -333,7 +329,6 @@ module.exports = async function handler(req, res) {
     const loja = await validateLojaOwnership(cliente.loja_id, lojista.lojista_id);
     if (!loja) return res.status(403).json({ error: 'Acesso negado' });
 
-    // Campos editáveis (NUNCA email)
     const { nome, telefone } = req.body;
     if (nome !== undefined) cliente.nome = nome;
     if (telefone !== undefined) cliente.telefone = telefone;
@@ -384,19 +379,17 @@ module.exports = async function handler(req, res) {
       if (date_to) matchFilter.criado_em.$lte = new Date(date_to);
     }
 
-    // === DEFENSIVE QUERYING ===
     const docCount = await Pedido.countDocuments(matchFilter);
     let intervalDays = 0;
     if (date_from && date_to) {
       intervalDays = Math.ceil((new Date(date_to) - new Date(date_from)) / (1000 * 60 * 60 * 24));
     } else if (!date_from && !date_to) {
-      intervalDays = 999; // "Todo o tempo" = always async
+      intervalDays = 999;
     }
 
     const isHeavy = docCount > 2000 || intervalDays > 90;
 
     if (isHeavy) {
-      // Process report BEFORE responding (Vercel kills process after res.send)
       try {
         const [vendas_por_dia, vendas_por_produto, totaisAgg] = await Promise.all([
           Pedido.aggregate([
@@ -417,7 +410,6 @@ module.exports = async function handler(req, res) {
           ]),
         ]);
 
-        // Generate files
         const vendasData = vendas_por_dia.map(v => ({ Data: v._id, Pedidos: v.count, Receita: v.total }));
         const vendasHeaders = [
           { key: 'Data', label: 'Data' },
@@ -426,7 +418,6 @@ module.exports = async function handler(req, res) {
         ];
         const { csvBuffer, xlsxBuffer } = generateReportFiles(vendasData, vendasHeaders);
 
-        // Get lojista email
         const lojistaDoc = await Lojista.findById(lojista.lojista_id).select('email nome').lean();
         const periodo = date_from && date_to
           ? `${new Date(date_from).toLocaleDateString('pt-BR')} a ${new Date(date_to).toLocaleDateString('pt-BR')}`
@@ -476,7 +467,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // ========== GERAR ETIQUETA MELHOR ENVIO ==========
+  // ========== GERAR ETIQUETA (via Shipping Service) ==========
 
   if (req.method === 'POST' && scope === 'gerar-etiqueta') {
     try {
@@ -488,184 +479,13 @@ module.exports = async function handler(req, res) {
       const loja = await validateLojaOwnership(pedido.loja_id, lojista.lojista_id);
       if (!loja) return res.status(403).json({ error: 'Acesso negado' });
 
-      const integracoes = loja.configuracoes?.integracoes?.melhor_envio;
-      if (!integracoes?.ativo || !integracoes?.token) {
-        return res.status(400).json({ error: 'Integração Melhor Envio não configurada' });
+      const shippingService = getShippingService(loja.configuracoes?.integracoes);
+      const result = await shippingService.gerarEtiqueta({ pedido, loja, overrideServiceId });
+
+      if (result.error) {
+        return res.status(result.httpStatus || 500).json({ error: result.error, details: result.details });
       }
-
-      const meToken = integracoes.token;
-      const isSandbox = integracoes.sandbox;
-      const meBase = isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
-      const meHeaders = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${meToken}`,
-        'User-Agent': 'Dusking (suporte@dusking.com.br)',
-      };
-
-      // Safe JSON parser for ME responses (handles HTML error pages)
-      async function safeMeJson(response, label) {
-        const text = await response.text();
-        let data;
-        try {
-          data = text ? JSON.parse(text) : {};
-        } catch (e) {
-          console.error(`[ME] ${label} retornou não-JSON (Status ${response.status}):`, text.substring(0, 500));
-          throw new Error(`A API do Melhor Envio falhou e retornou um formato inválido (Status: ${response.status}). Tente novamente em instantes.`);
-        }
-        if (!response.ok) {
-          console.error(`[ME] ${label} error:`, JSON.stringify(data));
-          const msg = data?.message || data?.error || `Erro interno no Melhor Envio (Status: ${response.status})`;
-          if (typeof msg === 'string' && msg.toLowerCase().includes('saldo')) {
-            const err = new Error('Saldo insuficiente na carteira do Melhor Envio. Adicione créditos e tente novamente.');
-            err.statusCode = 402;
-            throw err;
-          }
-          const err = new Error(msg);
-          err.statusCode = 422;
-          err.details = data;
-          throw err;
-        }
-        return data;
-      }
-
-      const onlyDigits = (s) => (s || '').replace(/\D/g, '');
-
-      // Idempotent: if already has order, just print
-      if (pedido.melhor_envio_order_id) {
-        const printRes = await fetch(`${meBase}/api/v2/me/shipment/print`, {
-          method: 'POST', headers: meHeaders,
-          body: JSON.stringify({ mode: 'public', orders: [pedido.melhor_envio_order_id] }),
-        });
-        const printData = await safeMeJson(printRes, 'Print (idempotent)');
-        const url = printData.url || pedido.etiqueta_url;
-        if (url) { pedido.etiqueta_url = url; await pedido.save(); }
-        return res.status(200).json({ etiqueta_url: url, codigo_rastreio: pedido.codigo_rastreio, already_existed: true });
-      }
-
-      // Determine service_id
-      const serviceId = overrideServiceId || pedido.frete_id;
-      if (!serviceId) return res.status(400).json({ error: 'Nenhum serviço de frete selecionado (frete_id ausente)' });
-
-      // Fetch product dimensions from DB
-      const productIds = pedido.itens.map(i => i.product_id);
-      const products = await Product.find({ product_id: { $in: productIds }, loja_id: pedido.loja_id }).lean();
-      const prodMap = {};
-      products.forEach(p => { prodMap[p.product_id] = p; });
-
-      const endereco = loja.configuracoes?.endereco || {};
-      const empresa = loja.configuracoes?.empresa || {};
-
-      const itemsWithDims = pedido.itens.map(item => {
-        const prod = prodMap[item.product_id];
-        const dims = prod?.dimensoes || {};
-        return {
-          name: item.name,
-          quantity: item.quantity,
-          unitary_value: item.price / 100,
-          weight: dims.peso || 0.3,
-          width: dims.largura || 11,
-          height: dims.altura || 2,
-          length: dims.comprimento || 16,
-        };
-      });
-
-      // Single consolidated volume
-      const volume = {
-        weight: itemsWithDims.reduce((acc, i) => acc + i.weight * i.quantity, 0),
-        width: Math.max(...itemsWithDims.map(i => i.width)),
-        height: itemsWithDims.reduce((acc, i) => acc + i.height * i.quantity, 0),
-        length: Math.max(...itemsWithDims.map(i => i.length)),
-      };
-
-      // --- Remetente (from) ---
-      const fromDoc = onlyDigits(empresa.documento);
-      const fromPayload = {
-        name: empresa.razao_social || loja.nome,
-        address: endereco.logradouro,
-        number: endereco.numero || 'S/N',
-        complement: endereco.complemento || '',
-        district: endereco.bairro,
-        city: endereco.cidade,
-        state_abbr: endereco.estado,
-        postal_code: onlyDigits(endereco.cep),
-        phone: onlyDigits(empresa.telefone),
-        email: empresa.email_suporte || '',
-      };
-      if (fromDoc.length > 11) {
-        fromPayload.company_document = fromDoc;
-        fromPayload.state_register = '';
-      } else {
-        fromPayload.document = fromDoc;
-      }
-
-      // --- Destinatario (to) ---
-      const toDoc = onlyDigits(pedido.cliente?.cpf || pedido.cliente?.documento || '');
-      const toPayload = {
-        name: pedido.cliente?.nome || '',
-        address: pedido.endereco?.rua || pedido.endereco?.logradouro || '',
-        number: pedido.endereco?.numero || 'S/N',
-        complement: pedido.endereco?.complemento || '',
-        district: pedido.endereco?.bairro || '',
-        city: pedido.endereco?.cidade || '',
-        state_abbr: pedido.endereco?.estado || '',
-        postal_code: onlyDigits(pedido.endereco?.cep),
-        phone: onlyDigits(pedido.cliente?.telefone || ''),
-        email: pedido.cliente?.email || '',
-      };
-      if (toDoc.length > 11) {
-        toPayload.company_document = toDoc;
-        toPayload.state_register = '';
-      } else {
-        toPayload.document = toDoc;
-      }
-
-      const cartPayload = {
-        service: Number(serviceId),
-        from: fromPayload,
-        to: toPayload,
-        products: itemsWithDims,
-        volumes: [volume],
-        options: { non_commercial: true, receipt: false, own_hand: false },
-      };
-
-      // 1) POST /cart
-      const cartRes = await fetch(`${meBase}/api/v2/me/cart`, { method: 'POST', headers: meHeaders, body: JSON.stringify(cartPayload) });
-      const cartData = await safeMeJson(cartRes, 'Cart');
-      const orderId = cartData.id;
-      if (!orderId) return res.status(422).json({ error: 'Resposta inesperada do carrinho ME', details: cartData });
-
-      // 2) POST /checkout
-      const checkoutRes = await fetch(`${meBase}/api/v2/me/shipment/checkout`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [orderId] }) });
-      await safeMeJson(checkoutRes, 'Checkout');
-
-      // 3) POST /generate
-      const genRes = await fetch(`${meBase}/api/v2/me/shipment/generate`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [orderId] }) });
-      const genData = await safeMeJson(genRes, 'Generate');
-      // Extract tracking from generate response
-      let trackingCode = null;
-      if (genData && typeof genData === 'object') {
-        const orderGen = genData[orderId] || genData;
-        trackingCode = orderGen.tracking || orderGen.protocol || null;
-      }
-
-      // 4) POST /print
-      const printRes = await fetch(`${meBase}/api/v2/me/shipment/print`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ mode: 'public', orders: [orderId] }) });
-      const printData = await safeMeJson(printRes, 'Print');
-      const etiquetaUrl = printData.url || null;
-
-      // Save to DB
-      pedido.melhor_envio_order_id = orderId;
-      pedido.melhor_envio_status = 'generated';
-      pedido.etiqueta_url = etiquetaUrl;
-      pedido.codigo_rastreio = trackingCode;
-      pedido.markModified('melhor_envio_order_id');
-      pedido.markModified('melhor_envio_status');
-      pedido.markModified('etiqueta_url');
-      pedido.markModified('codigo_rastreio');
-      await pedido.save();
-
-      return res.status(200).json({ melhor_envio_order_id: orderId, etiqueta_url: etiquetaUrl, codigo_rastreio: trackingCode });
+      return res.status(result.httpStatus || 200).json(result.data);
     } catch (err) {
       console.error('[ME] Erro gerar etiqueta:', err.message);
       const status = err.statusCode || 500;
@@ -673,7 +493,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ========== CANCELAR ETIQUETA MELHOR ENVIO ==========
+  // ========== CANCELAR ETIQUETA (via Shipping Service) ==========
 
   if (req.method === 'POST' && scope === 'cancelar-etiqueta') {
     try {
@@ -685,48 +505,13 @@ module.exports = async function handler(req, res) {
       const loja = await validateLojaOwnership(pedido.loja_id, lojista.lojista_id);
       if (!loja) return res.status(403).json({ error: 'Acesso negado' });
 
-      if (!pedido.melhor_envio_order_id) {
-        return res.status(400).json({ error: 'Pedido não possui etiqueta para cancelar' });
+      const shippingService = getShippingService(loja.configuracoes?.integracoes);
+      const result = await shippingService.cancelarEtiqueta({ pedido, loja });
+
+      if (result.error) {
+        return res.status(result.httpStatus || 500).json({ error: result.error });
       }
-
-      const integracoes = loja.configuracoes?.integracoes?.melhor_envio;
-      const meToken = integracoes?.token;
-      const isSandbox = integracoes?.sandbox;
-      const meBase = isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
-      const meHeaders = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${meToken}`,
-        'User-Agent': 'Dusking (suporte@dusking.com.br)',
-      };
-
-      const cancelRes = await fetch(`${meBase}/api/v2/me/shipment/cancel`, {
-        method: 'POST', headers: meHeaders,
-        body: JSON.stringify({ order: { id: pedido.melhor_envio_order_id, reason_id: '2', description: 'Cancelado pelo painel' } }),
-      });
-
-      // Safe parse — cancel pode falhar mas não deve travar
-      const cancelText = await cancelRes.text();
-      let cancelData;
-      try { cancelData = cancelText ? JSON.parse(cancelText) : {}; } catch (e) {
-        console.error(`[ME] Cancel retornou não-JSON (Status ${cancelRes.status}):`, cancelText.substring(0, 500));
-      }
-      if (!cancelRes.ok) {
-        console.error('[ME] Cancel error:', cancelData || cancelText);
-        // Não bloqueia — limpa campos locais mesmo se ME falhar
-      }
-
-      pedido.melhor_envio_order_id = null;
-      pedido.melhor_envio_status = null;
-      pedido.etiqueta_url = null;
-      pedido.codigo_rastreio = null;
-      pedido.markModified('melhor_envio_order_id');
-      pedido.markModified('melhor_envio_status');
-      pedido.markModified('etiqueta_url');
-      pedido.markModified('codigo_rastreio');
-      await pedido.save();
-
-      return res.status(200).json({ success: true });
+      return res.status(result.httpStatus || 200).json(result.data);
     } catch (err) {
       console.error('[ME] Erro cancelar etiqueta:', err.message);
       return res.status(500).json({ error: 'Erro interno ao cancelar etiqueta', details: err.message });

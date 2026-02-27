@@ -800,6 +800,16 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 /
 ├── api/                    # 12 Serverless Functions (Vercel) — LIMITE ATINGIDO
 ├── lib/                    # Utilitários backend (auth, mongodb, email, date-utils)
+│   └── services/           # 🏭 Strategy Pattern — Serviços modulares por domínio
+│       ├── pagamentos/
+│       │   ├── index.js    # Factory: getPaymentService(gatewayId)
+│       │   └── sealpay.js  # Implementação SealPay (getStatus, handleWebhook, createPayment)
+│       ├── fretes/
+│       │   ├── index.js    # Factory: getShippingService(integracoes)
+│       │   └── melhorEnvio.js # Implementação Melhor Envio (gerarEtiqueta, cancelarEtiqueta, calcularFrete)
+│       └── assinaturas/
+│           ├── index.js    # Factory: getSubscriptionService(provider)
+│           └── stripe.js   # Implementação Stripe (checkout, webhook, portal, cron taxas, pagamento manual)
 ├── models/                 # Schemas Mongoose (Product, Loja, Pedido, Lojista, TrackingPixel, etc.)
 ├── public/                 # Assets estáticos (favicon, imagens de produtos)
 ├── src/
@@ -873,6 +883,52 @@ O servidor iniciará em `http://localhost:8080`. Como `localhost` é reconhecido
 
 ---
 
+## 🏭 Arquitetura de Serviços (Strategy Pattern)
+
+A partir da Fase 17, o projeto adota o **Design Pattern Strategy** para desacoplar integrações externas dos controllers (Serverless Functions). Isso permite adicionar novos gateways de pagamento e plataformas de frete **sem criar novos arquivos na pasta `/api`**.
+
+### Como funciona
+
+```
+api/create-pix.js (Controller)
+    └── getPaymentService('sealpay')  →  lib/services/pagamentos/sealpay.js
+                                          ├── getStatus(txid)
+                                          ├── handleWebhook({ txid, status, req })
+                                          └── createPayment({ amount, customer, ... })
+
+api/pedidos.js (Controller)
+    └── getShippingService(integracoes)  →  lib/services/fretes/melhorEnvio.js
+                                              ├── gerarEtiqueta({ pedido, loja, overrideServiceId })
+                                              ├── cancelarEtiqueta({ pedido, loja })
+                                              └── calcularFrete({ meConfig, cepOrigem, to_postal_code, items })
+
+api/loja-extras.js (Controller)
+    └── getSubscriptionService('stripe')  →  lib/services/assinaturas/stripe.js
+                                                ├── createCheckoutSession({ user, plano_id })
+                                                ├── handleWebhookEvent({ event, rawBody })
+                                                ├── createPortalSession({ user })
+                                                ├── processarCronTaxas()
+                                                └── pagarTaxasManual({ user })
+```
+
+### Para adicionar um novo gateway (ex: Mercado Pago)
+
+1. Crie `lib/services/pagamentos/mercadoPago.js` implementando `{ getStatus, handleWebhook, createPayment }`
+2. Atualize a factory `lib/services/pagamentos/index.js` para incluir o novo `case 'mercadopago'`
+3. **Nenhum novo arquivo em `/api` é necessário** — o controller existente chama a factory
+
+### Para adicionar uma nova plataforma de frete (ex: Kangu)
+
+1. Crie `lib/services/fretes/kangu.js` implementando `{ gerarEtiqueta, cancelarEtiqueta, calcularFrete }`
+2. Atualize a factory `lib/services/fretes/index.js` para incluir o novo `case`
+3. **Nenhum novo arquivo em `/api` é necessário**
+
+### Regra de ouro
+
+> Arquivos em `lib/services/` **NÃO contam como Serverless Functions**. A Vercel só transforma em function os arquivos dentro de `/api`. Tudo em `lib/` é bundled como módulo Node.js auxiliar. Os 12 slots ficam intactos.
+
+---
+
 ## 📋 Histórico de Fases
 
 | Fase | Descrição | Status |
@@ -889,3 +945,4 @@ O servidor iniciará em `http://localhost:8080`. Como `localhost` é reconhecido
 | 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas, Cron ajustado para 09h BRT | ✅ Concluído |
 | 15 | Ecossistema de Gateways (Admin + Lojista + Checkout), Sheet modular, SealPay migrado para gateway_ativo | ✅ Concluído |
 | 16 | OAuth Appmax (Instalação de Aplicativo), scopes appmax-connect/appmax-install, AppmaxConfig no painel lojista | ✅ Concluído |
+| 17 | **Strategy Pattern** — Extração de SealPay, Melhor Envio e Stripe para `lib/services/` com factories modulares | ✅ Concluído |
