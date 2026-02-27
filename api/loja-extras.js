@@ -491,7 +491,7 @@ module.exports = async function handler(req, res) {
         }
 
         const authData = await authRes.json();
-        const hash = authData.hash || authData.data?.hash;
+        const hash = authData.data?.token || authData.token || authData.hash || authData.data?.hash;
 
         if (!hash) {
           console.error('[APPMAX-CONNECT] ❌ Hash não retornado pela Appmax:', JSON.stringify(authData));
