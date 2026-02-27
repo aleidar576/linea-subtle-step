@@ -9,7 +9,7 @@ import type { LojaProduct, Variacao, AvaliacaoManual, AvaliacoesConfig, FreteCon
 import { lojaProductsApi } from '@/services/saas-api';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler } from 'lucide-react';
+import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -497,9 +497,9 @@ const LojaProdutos = () => {
     if (raw === '' || raw === undefined) {
       value = 0;
     } else if (isFloat) {
-      value = Math.min(30, Math.max(0, parseFloat(raw) || 0));
+      value = Math.max(0, parseFloat(raw.replace(',', '.')) || 0);
     } else {
-      value = Math.min(105, Math.max(0, parseInt(raw, 10) || 0));
+      value = Math.max(0, parseInt(raw, 10) || 0);
     }
     if (isNaN(value)) value = 0;
     setEditingProduct(prev => prev ? {
@@ -1166,21 +1166,22 @@ const LojaProdutos = () => {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <Label className="text-xs">Peso (kg)</Label>
-                      <Input type="number" step="0.001" min="0" max="30" value={dims.peso || ''} onChange={e => setDimensao('peso', e.target.value, true)} placeholder="ex: 0.300" />
+                      <Input type="text" inputMode="decimal" value={dims.peso || ''} onChange={e => setDimensao('peso', e.target.value, true)} placeholder="ex: 0,300" />
                     </div>
                     <div>
                       <Label className="text-xs">Altura (cm)</Label>
-                      <Input type="number" step="1" min="0" max="105" value={dims.altura || ''} onChange={e => setDimensao('altura', e.target.value)} placeholder="ex: 16" />
+                      <Input type="number" step="1" min="0" value={dims.altura || ''} onChange={e => setDimensao('altura', e.target.value)} placeholder="ex: 16" />
                     </div>
                     <div>
                       <Label className="text-xs">Largura (cm)</Label>
-                      <Input type="number" step="1" min="0" max="105" value={dims.largura || ''} onChange={e => setDimensao('largura', e.target.value)} placeholder="ex: 11" />
+                      <Input type="number" step="1" min="0" value={dims.largura || ''} onChange={e => setDimensao('largura', e.target.value)} placeholder="ex: 11" />
                     </div>
                     <div>
                       <Label className="text-xs">Comprimento (cm)</Label>
-                      <Input type="number" step="1" min="0" max="105" value={dims.comprimento || ''} onChange={e => setDimensao('comprimento', e.target.value)} placeholder="ex: 2" />
+                      <Input type="number" step="1" min="0" value={dims.comprimento || ''} onChange={e => setDimensao('comprimento', e.target.value)} placeholder="ex: 2" />
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><Info className="w-3 h-3" /> O tamanho e peso cadastrados influenciam diretamente o cálculo. Pacotes com dimensões extremas podem não ser aceitos por algumas transportadoras, como os Correios.</p>
                 </CardContent>
               </Card>
 
