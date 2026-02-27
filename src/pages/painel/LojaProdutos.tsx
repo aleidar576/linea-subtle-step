@@ -813,6 +813,11 @@ const LojaProdutos = () => {
                         {nameWarning && <p className="text-xs text-amber-500 mt-1">{nameWarning}</p>}
                       </div>
                       <div>
+                        <Label>SKU (Código de Referência)</Label>
+                        <Input placeholder="Ex: PROD-001" value={editingProduct.sku || ''} onChange={e => setField('sku', e.target.value)} />
+                        <p className="text-xs text-muted-foreground mt-1">Opcional. Usado como identificador em integrações de pagamento.</p>
+                      </div>
+                      <div>
                         <Label>Descrição curta</Label>
                         <Input value={editingProduct.short_description || ''} onChange={e => setField('short_description', e.target.value)} />
                       </div>

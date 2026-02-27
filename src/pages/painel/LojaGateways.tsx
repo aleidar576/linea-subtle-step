@@ -65,7 +65,7 @@ function SealPayConfig({
   const [showKey, setShowKey] = useState(false);
 
   const hasKey = !!apiKey.trim();
-  const webhookUrl = `https://${window.location.hostname}/api/create-pix?scope=webhook`;
+  const webhookUrl = `https://${window.location.hostname}/api/process-payment?scope=webhook`;
 
   const handleSave = async (activate = false) => {
     if (!apiKey.trim()) return;
@@ -114,7 +114,7 @@ function SealPayConfig({
     setSandboxLoading(true);
     setSandboxLog('Enviando requisição...');
     try {
-      const r = await fetch(`${API_BASE}/create-pix`, {
+      const r = await fetch(`${API_BASE}/process-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

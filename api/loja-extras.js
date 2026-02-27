@@ -384,6 +384,19 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // === PUBLIC: Appmax Payment Webhook ===
+  if (scope === 'appmax-webhook' && method === 'POST') {
+    try {
+      const { getPaymentService } = require('../lib/services/pagamentos');
+      const appmaxService = getPaymentService('appmax');
+      const result = await appmaxService.handleWebhook({ body: req.body, req });
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error('[APPMAX-WEBHOOK] Erro CRÍTICO:', err.message, err.stack);
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+
   // === AUTH REQUIRED ===
   const user = verifyLojista(req);
   if (!user) return res.status(401).json({ error: 'Não autorizado' });
