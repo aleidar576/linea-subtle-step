@@ -88,10 +88,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode; storageKey?: st
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
-  const totalInReais = totalPrice / 100;
-  const discountPercent = totalInReais > 350 ? 50 : totalInReais > 300 ? 45 : totalInReais > 250 ? 40 : totalInReais > 200 ? 30 : totalInReais > 150 ? 25 : totalInReais > 100 ? 20 : 0;
-  const discountAmount = Math.round(totalPrice * discountPercent / 100);
-  const finalPrice = totalPrice - discountAmount;
+  const discountPercent = 0;
+  const discountAmount = 0;
+  const finalPrice = totalPrice;
 
   return (
     <CartContext.Provider value={{
