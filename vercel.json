@@ -7,6 +7,7 @@
     { "source": "/api/settings", "destination": "/api/settings.js" },
     { "source": "/api/create-pix", "destination": "/api/create-pix.js" },
     { "source": "/api/tracking-webhook", "destination": "/api/tracking-webhook.js" },
+    { "source": "/api/process-payment", "destination": "/api/process-payment.js" },
     { "source": "/api/products", "destination": "/api/products.ts" },
     { "source": "/api/categorias", "destination": "/api/categorias.js" },
     { "source": "/api/pedidos", "destination": "/api/pedidos.js" },

@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Copy, Check, Ticket, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Check, Ticket, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X, AlertCircle, QrCode, FileText, Lock } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { useLoja } from '@/contexts/LojaContext';
 import { firePixelEvent } from '@/components/LojaLayout';
@@ -121,10 +123,16 @@ const LojaCheckout = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [pixData, setPixData] = useState<{ pix_qr_code: string; pix_code: string; txid: string } | null>(null);
+  const [boletoData, setBoletoData] = useState<{ pdf_url: string; txid: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [transitionProgress, setTransitionProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Multi-method payment states ──
+  const [paymentMethod, setPaymentMethod] = useState<string>('pix');
+  const [cardData, setCardData] = useState({ number: '', name: '', expiry: '', cvv: '' });
+  const [installments, setInstallments] = useState<number>(1);
 
   // Freight selection — dynamic from API
   const [selectedFrete, setSelectedFrete] = useState<CalculatedFreight | null>(null);
@@ -312,15 +320,35 @@ const LojaCheckout = () => {
     return () => clearTimeout(t);
   }, []);
 
-  // Monitor payment
+  // ── Appmax script injection ──
   useEffect(() => {
-    if (!pixData?.txid) return;
+    if (gatewayAtivo !== 'appmax') return;
+    const existing = document.querySelector('script[src*="appmax.min.js"]');
+    if (existing) return;
+    const script = document.createElement('script');
+    script.src = 'https://cdn.appmax.com.br/js/appmax.min.js';
+    script.async = true;
+    document.head.appendChild(script);
+    return () => { try { document.head.removeChild(script); } catch {} };
+  }, [gatewayAtivo]);
+
+  // ── Set default payment method based on gateway ──
+  useEffect(() => {
+    if (metodosSuportados.length > 0 && !metodosSuportados.includes(paymentMethod)) {
+      setPaymentMethod(metodosSuportados[0] === 'cartao' ? 'credit_card' : metodosSuportados[0]);
+    }
+  }, [metodosSuportados]);
+
+  // Monitor payment (PIX + Boleto polling)
+  const activeTxid = pixData?.txid || boletoData?.txid;
+  useEffect(() => {
+    if (!activeTxid) return;
     intervalRef.current = setInterval(async () => {
       try {
         const apiBase = window.location.hostname.includes('lovable.app')
           ? 'https://pandora-five-amber.vercel.app/api'
           : '/api';
-        const r = await fetch(`${apiBase}/create-pix?scope=status&txid=${pixData.txid}`);
+        const r = await fetch(`${apiBase}/process-payment?scope=status&txid=${activeTxid}`);
         const d = await r.json();
         console.log('[POLLING] Status response:', JSON.stringify(d));
         const statusValue = (d.status || d.data?.status || '').toLowerCase();
@@ -355,7 +383,7 @@ const LojaCheckout = () => {
       } catch (err) { console.error('[POLLING] Error:', err); }
     }, 5000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [pixData?.txid]);
+  }, [activeTxid]);
 
   const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let { name, value } = e.target;
@@ -455,7 +483,12 @@ const LojaCheckout = () => {
   // Pick main coupon for order (first non-frete_gratis, or first one)
   const mainCupom = cuponsApplied.find(c => c.tipo !== 'frete_gratis') || cuponsApplied[0] || null;
 
-  const handleGeneratePix = async () => {
+  // ── Card masks ──
+  const maskCardNumber = (v: string) => v.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
+  const maskExpiry = (v: string) => v.replace(/\D/g, '').slice(0, 4).replace(/(\d{2})(\d)/, '$1/$2');
+
+  const handlePayment = async (method?: string) => {
+    const activeMethod = method || paymentMethod;
     setIsLoading(true);
     firePixelEvent('AddPaymentInfo', { value: finalTotal / 100, currency: 'BRL', num_items: items.reduce((s, i) => s + i.quantity, 0) });
     try {
@@ -469,14 +502,51 @@ const LojaCheckout = () => {
       Object.entries(utmParams).forEach(([key, value]) => {
         if (key.startsWith('utm_')) utm[key] = value;
       });
-      const r = await fetch('/api/create-pix', {
+
+      // Tokenizar cartão via Appmax SDK se necessário
+      let card_token: string | undefined;
+      if (activeMethod === 'credit_card' && gatewayAtivo === 'appmax') {
+        if (!cardData.number || !cardData.name || !cardData.expiry || !cardData.cvv) {
+          toast.error('Preencha todos os dados do cartão');
+          setIsLoading(false);
+          return;
+        }
+        try {
+          const win = window as any;
+          if (win.Appmax?.tokenize) {
+            const [expMonth, expYear] = cardData.expiry.split('/');
+            card_token = await win.Appmax.tokenize({
+              number: cardData.number.replace(/\s/g, ''),
+              holder_name: cardData.name,
+              exp_month: expMonth,
+              exp_year: expYear.length === 2 ? `20${expYear}` : expYear,
+              cvv: cardData.cvv,
+            });
+          } else {
+            toast.error('SDK de pagamento não carregado. Aguarde e tente novamente.');
+            setIsLoading(false);
+            return;
+          }
+        } catch (tokenErr: any) {
+          toast.error(tokenErr.message || 'Erro ao processar cartão. Verifique os dados.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const r = await fetch('/api/process-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: Math.round(finalTotal),
           description: desc,
+          method: activeMethod,
+          card_token,
+          installments: activeMethod === 'credit_card' ? installments : undefined,
           customer: { name: customerData.name, email: customerData.email, cellphone: customerData.cellphone, taxId: customerData.taxId },
           loja_id: lojaId,
+          shipping: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
+          items: items.map(i => ({ product_id: i.product.id, name: i.product.name, quantity: i.quantity, price: i.product.price, sku: (i.product as any).sku || '' })),
           tracking: { utm, src: utmParams.src || window.location.href },
           fbp: getCookie('_fbp'),
           fbc: getCookie('_fbc') || utmParams.fbclid || '',
@@ -485,10 +555,8 @@ const LojaCheckout = () => {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
-      setPixData(data);
-      toast.success('QR Code Pix gerado!');
 
-      // Create order with retry + fallback
+      // Build pedido payload (common)
       const pedidoPayload = {
         loja_id: lojaId,
         itens: items.map(i => ({ product_id: i.product.id, name: i.product.name, image: i.product.image, slug: i.product.slug || '', quantity: i.quantity, price: i.product.price, variacao: i.selectedColor || i.selectedSize || null })),
@@ -501,11 +569,48 @@ const LojaCheckout = () => {
         frete_id: selectedFrete?.id || null,
         total: finalTotal,
         cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
-        pagamento: { metodo: 'pix', txid: data.txid, pix_code: data.pix_code, pago_em: null },
+        pagamento: { metodo: activeMethod, gateway: gatewayAtivo || 'sealpay', txid: data.txid, pix_code: data.pix_code || null, pago_em: null },
         cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
         endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
         utms: utmParams,
       };
+
+      // Handle method-specific responses
+      if (activeMethod === 'pix' || data.pix_qr_code) {
+        setPixData(data);
+        toast.success('QR Code Pix gerado!');
+      } else if (activeMethod === 'boleto' && data.pdf_url) {
+        setBoletoData({ pdf_url: data.pdf_url, txid: data.txid });
+        window.open(data.pdf_url, '_blank');
+        toast.success('Boleto gerado! Abrindo em nova aba...');
+      } else if (activeMethod === 'credit_card') {
+        const cardStatus = (data.status || '').toLowerCase();
+        if (cardStatus === 'pago' || cardStatus === 'approved' || cardStatus === 'authorized') {
+          pedidoPayload.pagamento.pago_em = new Date().toISOString() as any;
+          toast.success('✅ Pagamento aprovado!');
+          // Create order then redirect
+          try { await pedidosApi.create(pedidoPayload); } catch {}
+          carrinhosApi.save({ ...buildCartData('payment'), txid: data.txid }).catch(() => {});
+          cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
+          firePixelEvent('Purchase', { value: finalTotal / 100, currency: 'BRL', content_id: data.txid, num_items: items.reduce((s, i) => s + i.quantity, 0) });
+          try { sessionStorage.setItem('last_purchase', JSON.stringify({ value: finalTotal / 100, currency: 'BRL', txid: data.txid })); } catch {}
+          setPaymentConfirmed(true);
+          const start = Date.now();
+          const pi = setInterval(() => {
+            const p = Math.min(((Date.now() - start) / 5000) * 100, 100);
+            setTransitionProgress(p);
+            if (Date.now() - start >= 5000) { clearInterval(pi); clearCart(); navigate('/sucesso'); }
+          }, 100);
+          setIsLoading(false);
+          return;
+        } else {
+          toast.error('Pagamento recusado. Tente outro cartão ou método.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Create order for PIX/Boleto
       try {
         await pedidosApi.create(pedidoPayload);
         console.log('[PEDIDO] Criado com sucesso');
@@ -521,13 +626,11 @@ const LojaCheckout = () => {
           console.log('[PEDIDO] Criado no retry');
         } catch (retryErr) {
           console.error('[PEDIDO] Falha total:', retryErr);
-          toast.error('Erro ao registrar pedido. O pagamento PIX foi gerado normalmente.');
+          toast.error('Erro ao registrar pedido. O pagamento foi gerado normalmente.');
         }
       }
 
       carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(e => console.error('[CARRINHO]', e));
-
-      // Clean up redeemed coupons from localStorage after order
       cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
     } catch (e: any) { toast.error(e.message || 'Erro ao gerar pagamento'); }
     finally { setIsLoading(false); }
@@ -927,22 +1030,125 @@ const LojaCheckout = () => {
             )}
 
             {/* ── PAYMENT ── */}
-            {!paymentConfirmed && currentStep === 'payment' && !pixData && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold">Pagamento via PIX</h2>
+            {!paymentConfirmed && currentStep === 'payment' && !pixData && !boletoData && (
+              <div className="space-y-5">
+                <h2 className="text-xl font-bold">Pagamento</h2>
 
                 {/* Mobile: show summary inline */}
                 <div className="lg:hidden">{orderSummaryJSX}</div>
 
+                {/* Payment method selection — only if multiple methods */}
+                {metodosSuportados.length > 1 && (
+                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-1 gap-3">
+                    {metodosSuportados.includes('pix') && (
+                      <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'pix' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+                        <RadioGroupItem value="pix" />
+                        <QrCode className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-semibold text-foreground">PIX</p>
+                          <p className="text-xs text-muted-foreground">Pagamento instantâneo via QR Code</p>
+                        </div>
+                      </label>
+                    )}
+                    {(metodosSuportados.includes('cartao') || metodosSuportados.includes('credit_card')) && (
+                      <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'credit_card' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+                        <RadioGroupItem value="credit_card" />
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-semibold text-foreground">Cartão de Crédito</p>
+                          <p className="text-xs text-muted-foreground">Pague em até 12x</p>
+                        </div>
+                      </label>
+                    )}
+                    {metodosSuportados.includes('boleto') && (
+                      <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'boleto' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+                        <RadioGroupItem value="boleto" />
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-semibold text-foreground">Boleto Bancário</p>
+                          <p className="text-xs text-muted-foreground">Compensação em até 3 dias úteis</p>
+                        </div>
+                      </label>
+                    )}
+                  </RadioGroup>
+                )}
+
+                {/* Credit Card Form */}
+                {paymentMethod === 'credit_card' && (
+                  <div className="space-y-4 rounded-xl border border-border p-5 bg-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Seus dados estão protegidos com criptografia</span>
+                    </div>
+                    <div>
+                      <Label>Número do Cartão *</Label>
+                      <Input
+                        placeholder="0000 0000 0000 0000"
+                        value={cardData.number}
+                        onChange={e => setCardData(p => ({ ...p, number: maskCardNumber(e.target.value) }))}
+                        inputMode="numeric"
+                        maxLength={19}
+                      />
+                    </div>
+                    <div>
+                      <Label>Nome no Cartão *</Label>
+                      <Input
+                        placeholder="Como está impresso no cartão"
+                        value={cardData.name}
+                        onChange={e => setCardData(p => ({ ...p, name: e.target.value.toUpperCase() }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Validade *</Label>
+                        <Input
+                          placeholder="MM/AA"
+                          value={cardData.expiry}
+                          onChange={e => setCardData(p => ({ ...p, expiry: maskExpiry(e.target.value) }))}
+                          inputMode="numeric"
+                          maxLength={5}
+                        />
+                      </div>
+                      <div>
+                        <Label>CVV *</Label>
+                        <Input
+                          placeholder="000"
+                          value={cardData.cvv}
+                          onChange={e => setCardData(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                          inputMode="numeric"
+                          maxLength={4}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Parcelas</Label>
+                      <Select value={String(installments)} onValueChange={v => setInstallments(Number(v))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}x de {formatPrice(Math.ceil(finalTotal / n))} {n === 1 ? '(à vista)' : 'sem juros'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => { setCurrentStep('shipping'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 rounded-full">Voltar</Button>
-                  <Button onClick={handleGeneratePix} disabled={isLoading} className="flex-1 gap-2 rounded-full font-bold">
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Gerar PIX
+                  <Button onClick={() => handlePayment()} disabled={isLoading} className="flex-1 gap-2 rounded-full font-bold">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {paymentMethod === 'pix' ? 'Gerar PIX' : paymentMethod === 'boleto' ? 'Gerar Boleto' : 'Pagar'}
                   </Button>
                 </div>
               </div>
             )}
 
+            {/* PIX QR Code display */}
             {!paymentConfirmed && pixData && (
               <div className="space-y-4 text-center">
                 <h2 className="text-lg font-bold">Escaneie o QR Code</h2>
@@ -956,6 +1162,20 @@ const LojaCheckout = () => {
                 </div>
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Aguardando pagamento...
+                </div>
+              </div>
+            )}
+
+            {/* Boleto display */}
+            {!paymentConfirmed && boletoData && (
+              <div className="space-y-4 text-center">
+                <h2 className="text-lg font-bold">Boleto Gerado</h2>
+                <p className="text-sm text-muted-foreground">Seu boleto foi gerado com sucesso. Ele também foi aberto em uma nova aba.</p>
+                <Button onClick={() => window.open(boletoData.pdf_url, '_blank')} className="gap-2 rounded-full">
+                  <FileText className="h-4 w-4" /> Abrir Boleto
+                </Button>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Aguardando compensação...
                 </div>
               </div>
             )}

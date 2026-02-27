@@ -252,7 +252,9 @@ export interface PixResponse {
 
 export const paymentsApi = {
   createPix: (data: CreatePixRequest) =>
-    request<PixResponse>('/create-pix', { method: 'POST', body: JSON.stringify(data) }),
+    request<PixResponse>('/process-payment', { method: 'POST', body: JSON.stringify(data) }),
+  createPayment: (data: any) =>
+    request<any>('/process-payment', { method: 'POST', body: JSON.stringify(data) }),
   updateSealPayKey: (api_key: string) =>
     request<{ success: boolean }>('/settings?action=update-sealpay-key', {
       method: 'POST', body: JSON.stringify({ api_key }),

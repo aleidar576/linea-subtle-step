@@ -37,6 +37,7 @@ const ProductSchema = new mongoose.Schema({
   category_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
   name: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
+  sku: { type: String, default: '' },
   short_description: { type: String, default: '' },
   description: { type: String, default: '' },
   description_image: { type: String, default: null },

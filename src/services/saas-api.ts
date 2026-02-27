@@ -431,6 +431,7 @@ export interface LojaProduct {
   category_ids?: string[];
   name: string;
   slug: string;
+  sku?: string;
   short_description: string;
   description: string;
   description_image?: string | null;

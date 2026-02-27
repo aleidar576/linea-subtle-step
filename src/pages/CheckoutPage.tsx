@@ -191,7 +191,7 @@ const CheckoutPage = () => {
             ? 'https://pandora-five-amber.vercel.app/api'
             : '/api';
           const resStatus = await fetch(
-            `${apiBase}/create-pix?scope=status&txid=${pixData.txid}`
+            `${apiBase}/process-payment?scope=status&txid=${pixData.txid}`
           );
           const statusData = await resStatus.json();
           console.log("🔁 Status recebido:", statusData);
