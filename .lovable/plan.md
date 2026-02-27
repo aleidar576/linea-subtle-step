@@ -1,43 +1,50 @@
 
-## Correcao: Token OAuth Appmax - URLSearchParams
+Objetivo imediato: corrigir definitivamente o erro `Missing form parameter: grant_type` na autenticação OAuth da Appmax, trocando apenas o formato do body de token em 2 pontos, sem alterar nenhuma outra lógica.
 
-### Problema
-A API `/oauth2/token` da Appmax exige `application/x-www-form-urlencoded`, mas o codigo envia `application/json` em **dois arquivos**:
+Estado atual auditado:
+- `api/loja-extras.js` (`appmax-connect`) ainda usa:
+  - `Content-Type: application/json`
+  - `body: JSON.stringify(...)`
+- `lib/services/pagamentos/appmax.js` (`getToken`) ainda usa:
+  - `Content-Type: application/json`
+  - `body: JSON.stringify(...)`
 
-1. `api/loja-extras.js` (linhas 447-455) - fluxo de conexao `appmax-connect`
-2. `lib/services/pagamentos/appmax.js` (linhas 54-62) - fluxo de pagamento `getToken()`
+Plano de execução (replace literal, sem mudanças extras):
 
-### Correcao
+1) Arquivo `api/loja-extras.js`
+- Local: bloco do `fetch(`${authUrl}/oauth2/token`...)` dentro de `scope === 'appmax-connect'`.
+- Substituir exatamente o bloco JSON atual por:
+  - `const tokenParams = new URLSearchParams();`
+  - `append('grant_type', 'client_credentials')`
+  - `append('client_id', APPMAX_CLIENT_ID)`
+  - `append('client_secret', APPMAX_CLIENT_SECRET)`
+  - `headers` com:
+    - `'Content-Type': 'application/x-www-form-urlencoded'`
+    - `'Accept': 'application/json'`
+  - `body: tokenParams`
 
-Nos dois arquivos, substituir:
+2) Arquivo `lib/services/pagamentos/appmax.js`
+- Local: função `getToken(lojista)`, no `fetch(`${authUrl}/oauth2/token`...)`.
+- Substituir exatamente o bloco JSON atual por:
+  - `const tokenParams = new URLSearchParams();`
+  - `append('grant_type', 'client_credentials')`
+  - `append('client_id', appmaxCreds.client_id)`
+  - `append('client_secret', appmaxCreds.client_secret)`
+  - `headers` com:
+    - `'Content-Type': 'application/x-www-form-urlencoded'`
+    - `'Accept': 'application/json'`
+  - `body: tokenParams`
 
-```javascript
-// DE (JSON - incorreto):
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-  grant_type: 'client_credentials',
-  client_id: ...,
-  client_secret: ...,
-}),
-```
+3) Verificação pós-edição (sem refactor adicional)
+- Confirmar que os dois `fetch` de `/oauth2/token` não têm mais `JSON.stringify`.
+- Confirmar que em ambos existe:
+  - `URLSearchParams`
+  - `grant_type=client_credentials`
+  - `Content-Type: application/x-www-form-urlencoded`
+- Não tocar em outros `fetch` do arquivo (authorize, webhooks, etc.).
 
-```javascript
-// PARA (URLSearchParams - correto):
-const tokenParams = new URLSearchParams();
-tokenParams.append('grant_type', 'client_credentials');
-tokenParams.append('client_id', ...);
-tokenParams.append('client_secret', ...);
+Resultado esperado
+- Appmax passa a receber `grant_type` como form parameter válido.
+- Erro `invalid_request / Missing form parameter: grant_type` deixa de ocorrer nesses dois fluxos (conexão no painel e token para pagamentos).
 
-// No fetch:
-headers: {
-  'Content-Type': 'application/x-www-form-urlencoded',
-  'Accept': 'application/json',
-},
-body: tokenParams,
-```
-
-### Arquivos Afetados
-- `api/loja-extras.js` - linhas 447-455
-- `lib/services/pagamentos/appmax.js` - linhas 54-62
-
-Nenhuma outra alteracao necessaria. O restante do fluxo permanece intacto.
+Se você aprovar, eu executo exatamente esses dois replaces literais e te devolvo a confirmação final com os trechos resultantes para auditoria.
