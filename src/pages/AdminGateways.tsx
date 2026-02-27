@@ -33,6 +33,7 @@ const AdminGateways = () => {
   const [editAuthUrlProd, setEditAuthUrlProd] = useState('');
   const [editApiUrlProd, setEditApiUrlProd] = useState('');
   const [editRedirectUrlProd, setEditRedirectUrlProd] = useState('');
+  const [editSealpayApiUrl, setEditSealpayApiUrl] = useState('');
 
   useEffect(() => {
     adminApi.getGatewaysPlataforma()
@@ -60,7 +61,7 @@ const AdminGateways = () => {
     saveConfigs(newConfigs);
   };
 
-  const openEditDialog = (gw: GatewayDefinition) => {
+  const openEditDialog = async (gw: GatewayDefinition) => {
     const current: GatewayPlatformConfig = configs[gw.id] || { ativo: false };
     setEditGw(gw);
     setEditNome(current.nome || '');
@@ -73,9 +74,17 @@ const AdminGateways = () => {
     setEditAuthUrlProd(current.auth_url_prod || '');
     setEditApiUrlProd(current.api_url_prod || '');
     setEditRedirectUrlProd(current.redirect_url_prod || '');
+    setEditSealpayApiUrl('');
+    if (gw.id === 'sealpay') {
+      try {
+        const settings = await settingsApi.getByKeys(['sealpay_api_url']);
+        const found = settings.find((s: any) => s.key === 'sealpay_api_url');
+        setEditSealpayApiUrl(found?.value || '');
+      } catch {}
+    }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editGw) return;
     const current = configs[editGw.id] || { ativo: false };
     const updated: any = {
@@ -92,6 +101,13 @@ const AdminGateways = () => {
       updated.auth_url_prod = editAuthUrlProd.trim() || undefined;
       updated.api_url_prod = editApiUrlProd.trim() || undefined;
       updated.redirect_url_prod = editRedirectUrlProd.trim() || undefined;
+    }
+    if (editGw.id === 'sealpay' && editSealpayApiUrl.trim()) {
+      try {
+        await settingsApi.upsert([{ key: 'sealpay_api_url', value: editSealpayApiUrl.trim() }]);
+      } catch (err: any) {
+        toast({ title: 'Erro ao salvar URL da API', description: err.message, variant: 'destructive' });
+      }
     }
     const newConfigs = { ...configs, [editGw.id]: updated };
     saveConfigs(newConfigs);
@@ -232,6 +248,22 @@ const AdminGateways = () => {
               <Label className="text-sm font-medium">Descrição</Label>
               <Input placeholder={editGw?.descricao} value={editDescricao} onChange={(e) => setEditDescricao(e.target.value)} />
             </div>
+
+            {/* SealPay-specific: API URL */}
+            {editGw?.id === 'sealpay' && (
+              <div className="border-t border-border pt-4 space-y-2">
+                <Label className="text-sm font-medium">URL da API (SealPay)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Endereço que receberá as solicitações de criação de PIX. Deixe em branco para usar o padrão.
+                </p>
+                <Input
+                  placeholder="https://abacate-5eo1.onrender.com/create-pix"
+                  value={editSealpayApiUrl}
+                  onChange={(e) => setEditSealpayApiUrl(e.target.value)}
+                  className="font-mono text-xs"
+                />
+              </div>
+            )}
 
             {/* Appmax-specific: Integration URLs */}
             {editGw?.id === 'appmax' && (
