@@ -17,13 +17,25 @@ module.exports = async function handler(req, res) {
   const scope = req.query?.scope || req.body?.scope;
 
   // ── scope=status: Proxy de consulta de status de pagamento ──
+  // Tenta SealPay primeiro, depois verifica nosso banco como fallback
   if (scope === 'status' && req.method === 'GET') {
     const { txid } = req.query;
     if (!txid) return res.status(400).json({ error: 'txid é obrigatório' });
 
+    // 1. Verificar no nosso banco primeiro (mais confiável, webhook já atualiza)
+    try {
+      const Pedido = require('../models/Pedido.js');
+      const pedido = await Pedido.findOne({ 'pagamento.txid': txid }).select('status pagamento.pago_em').lean();
+      if (pedido && pedido.status === 'pago') {
+        return res.status(200).json({ status: 'paid', source: 'db', pago_em: pedido.pagamento?.pago_em });
+      }
+    } catch (dbErr) {
+      console.error('[STATUS] Erro ao consultar DB:', dbErr.message);
+    }
+
+    // 2. Fallback: consultar SealPay
     const settings = await Setting.find({ key: 'sealpay_api_url' }).lean();
     const sealpayUrl = settings[0]?.value || 'https://abacate-5eo1.onrender.com/create-pix';
-    // Derive base URL: remove trailing path like /create-pix
     const baseUrl = sealpayUrl.replace(/\/create-pix\/?$/, '');
 
     try {

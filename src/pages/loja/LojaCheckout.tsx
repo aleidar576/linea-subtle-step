@@ -322,7 +322,9 @@ const LojaCheckout = () => {
           : '/api';
         const r = await fetch(`${apiBase}/create-pix?scope=status&txid=${pixData.txid}`);
         const d = await r.json();
-        if (['paid','approved','confirmed','completed'].includes(d.status?.toLowerCase())) {
+        console.log('[POLLING] Status response:', JSON.stringify(d));
+        const statusValue = (d.status || d.data?.status || '').toLowerCase();
+        if (['paid','approved','confirmed','completed'].includes(statusValue)) {
           clearInterval(intervalRef.current!);
           setPaymentConfirmed(true);
           toast.success('✅ Pagamento confirmado!');
@@ -350,7 +352,7 @@ const LojaCheckout = () => {
             if (Date.now() - start >= 10000) { clearInterval(pi); clearCart(); navigate('/sucesso'); }
           }, 100);
         }
-      } catch {}
+      } catch (err) { console.error('[POLLING] Error:', err); }
     }, 5000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [pixData?.txid]);
