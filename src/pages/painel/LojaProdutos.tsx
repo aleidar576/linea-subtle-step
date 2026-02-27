@@ -492,7 +492,16 @@ const LojaProdutos = () => {
     });
   };
 
-  const setDimensao = (key: string, value: number) => {
+  const setDimensao = (key: string, raw: string, isFloat = false) => {
+    let value: number;
+    if (raw === '' || raw === undefined) {
+      value = 0;
+    } else if (isFloat) {
+      value = Math.min(30, Math.max(0, parseFloat(raw) || 0));
+    } else {
+      value = Math.min(105, Math.max(0, parseInt(raw, 10) || 0));
+    }
+    if (isNaN(value)) value = 0;
     setEditingProduct(prev => prev ? {
       ...prev,
       dimensoes: { ...(prev.dimensoes || { peso: 0, altura: 0, largura: 0, comprimento: 0 }), [key]: value }
@@ -1157,19 +1166,19 @@ const LojaProdutos = () => {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <Label className="text-xs">Peso (kg)</Label>
-                      <Input type="number" step="0.1" min="0" value={dims.peso} onChange={e => setDimensao('peso', Number(e.target.value))} placeholder="0.5" />
+                      <Input type="number" step="0.001" min="0" max="30" value={dims.peso || ''} onChange={e => setDimensao('peso', e.target.value, true)} placeholder="ex: 0.300" />
                     </div>
                     <div>
                       <Label className="text-xs">Altura (cm)</Label>
-                      <Input type="number" step="1" min="0" value={dims.altura} onChange={e => setDimensao('altura', Number(e.target.value))} placeholder="10" />
+                      <Input type="number" step="1" min="0" max="105" value={dims.altura || ''} onChange={e => setDimensao('altura', e.target.value)} placeholder="ex: 16" />
                     </div>
                     <div>
                       <Label className="text-xs">Largura (cm)</Label>
-                      <Input type="number" step="1" min="0" value={dims.largura} onChange={e => setDimensao('largura', Number(e.target.value))} placeholder="20" />
+                      <Input type="number" step="1" min="0" max="105" value={dims.largura || ''} onChange={e => setDimensao('largura', e.target.value)} placeholder="ex: 11" />
                     </div>
                     <div>
                       <Label className="text-xs">Comprimento (cm)</Label>
-                      <Input type="number" step="1" min="0" value={dims.comprimento} onChange={e => setDimensao('comprimento', Number(e.target.value))} placeholder="30" />
+                      <Input type="number" step="1" min="0" max="105" value={dims.comprimento || ''} onChange={e => setDimensao('comprimento', e.target.value)} placeholder="ex: 2" />
                     </div>
                   </div>
                 </CardContent>
