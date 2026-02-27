@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet';
-import { Truck, PackageCheck, ExternalLink, Eye, EyeOff, Loader2, AlertTriangle, Blocks } from 'lucide-react';
+import { Truck, PackageCheck, ExternalLink, Eye, EyeOff, Loader2, AlertTriangle, Blocks, Info } from 'lucide-react';
 
 // ============================================
 // 📦 Integrations Hub — App Store Style
@@ -220,9 +220,9 @@ export default function LojaIntegracoes() {
                       />
                     </div>
                     {sheetData.sandbox && (
-                      <Alert className="border-amber-500/30 bg-amber-500/5">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        <AlertDescription className="text-xs text-amber-600">
+                      <Alert className="border-destructive/30 bg-destructive/5">
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <AlertDescription className="text-xs text-destructive">
                           Sandbox ativo. Use tokens do ambiente de teste.
                         </AlertDescription>
                       </Alert>
@@ -272,6 +272,18 @@ export default function LojaIntegracoes() {
                     </a>
                   );
                 })()}
+
+                {/* Alerta de peso padrão — apenas Melhor Envio */}
+                {activeSheet === 'melhor_envio' && (
+                  <Alert className="bg-muted/50 border-border mt-4">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <AlertDescription className="text-xs text-muted-foreground">
+                      <strong>Importante:</strong> Produtos cadastrados na sua loja sem peso ou dimensões informadas
+                      utilizarão o padrão mínimo aceito pelas transportadoras (300g, 16×11×2 cm) para que o cálculo
+                      de frete não falhe no checkout.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* Save Button */}
                 <Button

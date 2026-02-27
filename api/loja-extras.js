@@ -592,6 +592,92 @@ module.exports = async function handler(req, res) {
     return res.json(fretes);
   }
 
+  // === PUBLIC: Calcular Frete Híbrido (Manuais + Melhor Envio) ===
+  if (scope === 'calcular-frete' && method === 'POST') {
+    try {
+      const { loja_id: bodyLojaId, to_postal_code, items } = req.body || {};
+      if (!bodyLojaId || !to_postal_code) {
+        return res.status(400).json({ error: 'loja_id e to_postal_code são obrigatórios' });
+      }
+
+      const lojaDoc = await Loja.findById(bodyLojaId).lean();
+      if (!lojaDoc) return res.status(404).json({ error: 'Loja não encontrada' });
+
+      // 1. Fretes manuais ativos
+      const fretesDb = await Frete.find({ loja_id: bodyLojaId, is_active: true }).sort({ ordem_exibicao: 1 }).lean();
+      const manuais = fretesDb.map((f, i) => ({
+        id: f._id.toString(),
+        name: f.nome,
+        price: Number(f.valor) || 0,
+        delivery_time: f.prazo_dias_max || f.prazo_dias_min || 0,
+        picture: '',
+      }));
+
+      // 2. Melhor Envio (try/catch resiliente)
+      let melhorEnvioOpcoes = [];
+      const meConfig = lojaDoc.configuracoes?.integracoes?.melhor_envio;
+      const cepOrigem = lojaDoc.configuracoes?.endereco?.cep;
+
+      if (meConfig?.ativo && meConfig?.token && cepOrigem) {
+        try {
+          const baseUrl = meConfig.sandbox
+            ? 'https://sandbox.melhorenvio.com.br'
+            : 'https://melhorenvio.com.br';
+
+          const products = (items || []).map(item => ({
+            id: item.id || 'prod',
+            width: item.dimensions?.width || 11,
+            height: item.dimensions?.height || 2,
+            length: item.dimensions?.length || 16,
+            weight: item.weight || 0.3,
+            insurance_value: item.price || 0,
+            quantity: item.quantity || 1,
+          }));
+
+          const mePayload = {
+            from: { postal_code: cepOrigem.replace(/\D/g, '') },
+            to: { postal_code: to_postal_code.replace(/\D/g, '') },
+            products,
+          };
+
+          const meRes = await fetch(`${baseUrl}/api/v2/me/shipment/calculate`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${meConfig.token}`,
+              'User-Agent': 'Dusking (suporte@dusking.com.br)',
+            },
+            body: JSON.stringify(mePayload),
+          });
+
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            const opcoes = Array.isArray(meData) ? meData : [];
+            melhorEnvioOpcoes = opcoes
+              .filter(opt => !opt.error)
+              .map(opt => ({
+                id: String(opt.id),
+                name: opt.name || opt.company?.name || 'Envio',
+                price: Number(opt.custom_price) || Number(opt.price) || 0,
+                delivery_time: opt.custom_delivery_time || opt.delivery_time || 0,
+                picture: opt.company?.picture || '',
+              }));
+          } else {
+            console.warn('[CALCULAR-FRETE] Melhor Envio retornou status', meRes.status);
+          }
+        } catch (meErr) {
+          console.error('[CALCULAR-FRETE] Erro Melhor Envio (fallback manuais):', meErr.message);
+        }
+      }
+
+      return res.status(200).json({ success: true, fretes: [...manuais, ...melhorEnvioOpcoes] });
+    } catch (err) {
+      console.error('[CALCULAR-FRETE] Erro geral:', err);
+      return res.status(500).json({ error: 'Erro ao calcular frete' });
+    }
+  }
+
 
   // === PUBLIC: Categorias de uma loja (sem auth) ===
   if (scope === 'categorias-publico' && method === 'GET' && loja_id) {
