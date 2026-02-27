@@ -5,7 +5,7 @@
     { "source": "/api/lojas", "destination": "/api/lojas.js" },
     { "source": "/api/lojista", "destination": "/api/lojista.js" },
     { "source": "/api/settings", "destination": "/api/settings.js" },
-    { "source": "/api/create-pix", "destination": "/api/create-pix.js" },
+    { "source": "/api/create-pix", "destination": "/api/process-payment.js" },
     { "source": "/api/tracking-webhook", "destination": "/api/tracking-webhook.js" },
     { "source": "/api/process-payment", "destination": "/api/process-payment.js" },
     { "source": "/api/products", "destination": "/api/products.ts" },
