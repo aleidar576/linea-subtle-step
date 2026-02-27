@@ -963,6 +963,30 @@ export const cuponsPopupApi = {
     ),
 };
 
+// === Freight Calculation Types ===
+
+export interface CalculateFreightItem {
+  id: string;
+  price: number;
+  quantity: number;
+  weight: number;
+  dimensions: { height: number; width: number; length: number };
+}
+
+export interface CalculateFreightRequest {
+  loja_id: string;
+  to_postal_code: string;
+  items: CalculateFreightItem[];
+}
+
+export interface CalculatedFreight {
+  id: string;
+  name: string;
+  price: number;
+  delivery_time: number;
+  picture: string;
+}
+
 // ============================================
 // 🌐 API Pública (sem autenticação)
 // ============================================
@@ -1004,6 +1028,10 @@ export const lojaPublicaApi = {
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
   getPagina: (lojaId: string, slug: string) =>
     publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+  calcularFrete: (data: CalculateFreightRequest) =>
+    publicPostRequest<{ success: boolean; fretes: CalculatedFreight[] }>(
+      '/loja-extras?scope=calcular-frete', data
+    ),
 };
 
 // === Gateways API ===
