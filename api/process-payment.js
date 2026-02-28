@@ -107,9 +107,8 @@ module.exports = async function handler(req, res) {
       loja_id: body.loja_id,
       // Campos extras para Appmax (ignorados pelo SealPay)
       method: body.method || 'pix',
-      card_token: body.card_token,
+      card_data: body.card_data,
       installments: body.installments,
-      holder_document_number: body.holder_document_number,
       shipping: body.shipping,
       items: body.items,
     };
