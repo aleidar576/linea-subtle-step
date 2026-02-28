@@ -547,7 +547,7 @@ const LojaCheckout = () => {
         frete_id: selectedFrete?.id || null,
         total: finalTotal,
         cupom: mainCupom ? { codigo: mainCupom.codigo, tipo: mainCupom.tipo, valor: mainCupom.valor } : null,
-        pagamento: { metodo: activeMethod, gateway: gatewayAtivo || 'sealpay', txid: data.txid, pix_code: data.pix_code || null, pago_em: null },
+        pagamento: { metodo: activeMethod, gateway: gatewayAtivo || 'sealpay', txid: data.txid, appmax_order_id: data.appmax_order_id || data.txid || null, pix_code: data.pix_code || null, pago_em: null },
         cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
         endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
         utms: utmParams,
@@ -578,6 +578,7 @@ const LojaCheckout = () => {
         }
         // Qualquer outro status (pago, aprovado, autorizado, pendente, processing, etc) = sucesso
         pedidoPayload.pagamento.pago_em = new Date().toISOString() as any;
+        (pedidoPayload as any).status = 'pago';
         toast.success('✅ Pagamento aprovado!');
         try { await pedidosApi.create(pedidoPayload); } catch {}
         carrinhosApi.save({ ...buildCartData('payment'), txid: data.txid }).catch(() => {});
