@@ -131,7 +131,8 @@ const LojaCheckout = () => {
 
   // ── Multi-method payment states ──
   const [paymentMethod, setPaymentMethod] = useState<string>('pix');
-  const [cardData, setCardData] = useState({ number: '', name: '', expiry: '', cvv: '' });
+  const [cardData, setCardData] = useState({ number: '', name: '', holderCpf: '', expiry: '', cvv: '' });
+  const [appmaxSdkReady, setAppmaxSdkReady] = useState(false);
   const [installments, setInstallments] = useState<number>(1);
 
   // Freight selection — dynamic from API
@@ -320,14 +321,26 @@ const LojaCheckout = () => {
     return () => clearTimeout(t);
   }, []);
 
-  // ── Appmax script injection ──
+  // ── Appmax script injection (sandbox-aware) ──
   useEffect(() => {
     if (gatewayAtivo !== 'appmax') return;
     const existing = document.querySelector('script[src*="appmax.min.js"]');
-    if (existing) return;
+    if (existing) {
+      // Script already loaded, check if SDK ready
+      if ((window as any).Appmax?.tokenize) setAppmaxSdkReady(true);
+      return;
+    }
     const script = document.createElement('script');
-    script.src = 'https://cdn.appmax.com.br/js/appmax.min.js';
+    // TODO: switch to production URL when going live
+    script.src = 'https://scripts.sandboxappmax.com.br/appmax.min.js';
     script.async = true;
+    script.onload = () => {
+      console.log('[APPMAX] SDK carregado com sucesso');
+      setAppmaxSdkReady(true);
+    };
+    script.onerror = () => {
+      console.error('[APPMAX] Falha ao carregar SDK');
+    };
     document.head.appendChild(script);
     return () => { try { document.head.removeChild(script); } catch {} };
   }, [gatewayAtivo]);
@@ -506,8 +519,8 @@ const LojaCheckout = () => {
       // Tokenizar cartão via Appmax SDK se necessário
       let card_token: string | undefined;
       if (activeMethod === 'credit_card' && gatewayAtivo === 'appmax') {
-        if (!cardData.number || !cardData.name || !cardData.expiry || !cardData.cvv) {
-          toast.error('Preencha todos os dados do cartão');
+        if (!cardData.number || !cardData.name || !cardData.holderCpf || !cardData.expiry || !cardData.cvv) {
+          toast.error('Preencha todos os dados do cartão, incluindo o CPF do titular');
           setIsLoading(false);
           return;
         }
@@ -547,6 +560,7 @@ const LojaCheckout = () => {
           card_token,
           installments: activeMethod === 'credit_card' ? installments : undefined,
           customer: { name: customerData.name, email: customerData.email, cellphone: customerData.cellphone, taxId: customerData.taxId },
+          holder_document_number: activeMethod === 'credit_card' ? cardData.holderCpf.replace(/\D/g, '') : undefined,
           loja_id: lojaId,
           shipping: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
           items: items.map(i => ({ product_id: i.product.id, name: i.product.name, quantity: i.quantity, price: i.product.price, sku: (i.product as any).sku || '' })),
@@ -1107,6 +1121,16 @@ const LojaCheckout = () => {
                         onChange={e => setCardData(p => ({ ...p, name: e.target.value.toUpperCase() }))}
                       />
                     </div>
+                    <div>
+                      <Label>CPF do Titular *</Label>
+                      <Input
+                        placeholder="000.000.000-00"
+                        value={cardData.holderCpf}
+                        onChange={e => setCardData(p => ({ ...p, holderCpf: maskCPF(e.target.value) }))}
+                        inputMode="numeric"
+                        maxLength={14}
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>Validade *</Label>
@@ -1149,9 +1173,15 @@ const LojaCheckout = () => {
 
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => { setCurrentStep('shipping'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 rounded-full">Voltar</Button>
-                  <Button onClick={() => handlePayment()} disabled={isLoading} className="flex-1 gap-2 rounded-full font-bold">
+                  <Button
+                    onClick={() => handlePayment()}
+                    disabled={isLoading || (paymentMethod === 'credit_card' && gatewayAtivo === 'appmax' && !appmaxSdkReady)}
+                    className="flex-1 gap-2 rounded-full font-bold"
+                  >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {paymentMethod === 'pix' ? 'Gerar PIX' : paymentMethod === 'boleto' ? 'Gerar Boleto' : 'Pagar'}
+                    {paymentMethod === 'credit_card' && gatewayAtivo === 'appmax' && !appmaxSdkReady
+                      ? 'Carregando segurança...'
+                      : paymentMethod === 'pix' ? 'Gerar PIX' : paymentMethod === 'boleto' ? 'Gerar Boleto' : 'Pagar'}
                   </Button>
                 </div>
               </div>
