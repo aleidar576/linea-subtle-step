@@ -47,22 +47,57 @@ interface TranslatedCardError { message: string; field: CardFieldKey | null; }
 
 function translateCardError(raw: string): TranslatedCardError {
   const low = (raw || '').toLowerCase();
+  // HTTP 422 genérico
+  if (low.includes('unprocessable'))
+    return { message: 'Os dados informados são inválidos. Verifique o número do cartão, validade e CVV.', field: null };
+  // Validade
   if (low.includes('expiration year') || low.includes('year is invalid') || low.includes('ano'))
     return { message: 'O ano de validade do cartão é inválido ou já expirou.', field: 'expiry' };
   if (low.includes('expiration month') || low.includes('month is invalid') || low.includes('mês'))
     return { message: 'O mês de validade do cartão é inválido.', field: 'expiry' };
   if (low.includes('expiration') || low.includes('validade') || low.includes('expired'))
     return { message: 'A data de validade do cartão é inválida ou está expirada.', field: 'expiry' };
+  // Número do cartão
   if (low.includes('card number') || low.includes('número do cartão') || low.includes('invalid credit card number'))
-    return { message: 'Número do cartão de crédito inválido.', field: 'number' };
+    return { message: 'O número do cartão de crédito está incorreto ou incompleto.', field: 'number' };
+  // CVV
   if (low.includes('cvv') || low.includes('security code') || low.includes('código de segurança'))
-    return { message: 'Código de segurança (CVV) inválido.', field: 'cvv' };
+    return { message: 'O código de segurança (CVV) é inválido.', field: 'cvv' };
+  // CPF do titular (ANTES do match genérico de holder/document)
+  if (low.includes('holder_document') || low.includes('holder document'))
+    return { message: 'O CPF do titular do cartão é inválido.', field: 'holderCpf' };
+  // Nome do titular
   if (low.includes('holder') || low.includes('titular'))
     return { message: 'Nome do titular do cartão inválido.', field: 'name' };
+  // CPF genérico
   if (low.includes('document') || low.includes('cpf'))
     return { message: 'CPF do titular inválido.', field: 'holderCpf' };
-  // Fallback genérico
-  return { message: 'Verifique os dados do cartão e tente novamente.', field: null };
+  // Recusa banco emissor
+  if (low.includes('not authorized') || low.includes('não autorizada') || low.includes('nao autorizada'))
+    return { message: 'Pagamento recusado pelo banco emissor. Verifique seu limite ou tente outro cartão.', field: null };
+  // Risco / antifraude
+  if (low.includes('risk') || low.includes('risco'))
+    return { message: 'Pagamento recusado por segurança. Tente outro cartão ou método de pagamento.', field: null };
+  // Match genérico "number" (campo número)
+  if (low.includes('number'))
+    return { message: 'O número do cartão de crédito está incorreto ou incompleto.', field: 'number' };
+  // Fallback
+  return { message: 'Não foi possível processar o pagamento. Verifique os dados e tente novamente.', field: null };
+}
+
+// ── Extract API error from nested responses ──
+function extractApiError(data: any): string {
+  if (typeof data === 'string') return data;
+  if (typeof data?.error === 'string') return data.error;
+  if (typeof data?.message === 'string') return data.message;
+  if (data?.errors) {
+    if (typeof data.errors === 'string') return data.errors;
+    if (typeof data.errors?.message === 'string') return data.errors.message;
+    if (Array.isArray(data.errors)) return data.errors.map((e: any) => typeof e === 'string' ? e : e?.message || JSON.stringify(e)).join('. ');
+    if (typeof data.errors === 'object') return JSON.stringify(data.errors);
+  }
+  if (typeof data?.details?.message === 'string') return data.details.message;
+  return '';
 }
 
 // ── CPF Validation ──
@@ -562,7 +597,7 @@ const LojaCheckout = () => {
       const data = await r.json();
       if (!r.ok) {
         if (activeMethod === 'credit_card') {
-          const translated = translateCardError(data.error || data.message || '');
+          const translated = translateCardError(extractApiError(data));
           setCardError(translated.message);
           setCardFieldError(translated.field);
           setIsLoading(false);
@@ -609,8 +644,8 @@ const LojaCheckout = () => {
         const cardStatus = (data.status || '').toLowerCase();
         const isRecusado = ['recusado', 'declined', 'refused', 'cancelado', 'recusado_por_risco'].includes(cardStatus);
         if (isRecusado) {
-          const translated = translateCardError(data.error || data.message || '');
-          setCardError(translated.message || 'Seu cartão foi recusado pelo banco emissor. Verifique o limite disponível, os dados digitados ou tente utilizar outro cartão.');
+          const translated = translateCardError(extractApiError(data));
+          setCardError(translated.message);
           setCardFieldError(translated.field);
           setIsLoading(false);
           return;
@@ -657,7 +692,15 @@ const LojaCheckout = () => {
 
       carrinhosApi.save({ ...buildCartData('payment'), pix_code: data.pix_code, txid: data.txid }).catch(e => console.error('[CARRINHO]', e));
       cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
-    } catch (e: any) { toast.error(e.message || 'Erro ao gerar pagamento'); }
+    } catch (e: any) {
+      if (activeMethod === 'credit_card') {
+        const translated = translateCardError(e.message || '');
+        setCardError(translated.message);
+        setCardFieldError(translated.field);
+      } else {
+        toast.error(e.message || 'Erro ao gerar pagamento');
+      }
+    }
     finally { setIsLoading(false); }
   };
 
@@ -1113,7 +1156,7 @@ const LojaCheckout = () => {
                         onChange={e => { setCardData(p => ({ ...p, number: maskCardNumber(e.target.value) })); setCardError(null); setCardFieldError(null); }}
                         inputMode="numeric"
                         maxLength={19}
-                        className={cardFieldError === 'number' ? 'border-destructive text-destructive focus-visible:ring-destructive' : ''}
+                        className={cardFieldError === 'number' ? 'border-red-500 bg-red-50 text-red-900 focus-visible:ring-red-500' : ''}
                       />
                     </div>
                     <div>
@@ -1122,7 +1165,7 @@ const LojaCheckout = () => {
                         placeholder="Como está impresso no cartão"
                         value={cardData.name}
                         onChange={e => { setCardData(p => ({ ...p, name: e.target.value.toUpperCase() })); setCardError(null); setCardFieldError(null); }}
-                        className={cardFieldError === 'name' ? 'border-destructive text-destructive focus-visible:ring-destructive' : ''}
+                        className={cardFieldError === 'name' ? 'border-red-500 bg-red-50 text-red-900 focus-visible:ring-red-500' : ''}
                       />
                     </div>
                     <div>
@@ -1133,7 +1176,7 @@ const LojaCheckout = () => {
                         onChange={e => { setCardData(p => ({ ...p, holderCpf: maskCPF(e.target.value) })); setCardError(null); setCardFieldError(null); }}
                         inputMode="numeric"
                         maxLength={14}
-                        className={cardFieldError === 'holderCpf' ? 'border-destructive text-destructive focus-visible:ring-destructive' : ''}
+                        className={cardFieldError === 'holderCpf' ? 'border-red-500 bg-red-50 text-red-900 focus-visible:ring-red-500' : ''}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -1145,7 +1188,7 @@ const LojaCheckout = () => {
                           onChange={e => { setCardData(p => ({ ...p, expiry: maskExpiry(e.target.value) })); setCardError(null); setCardFieldError(null); }}
                           inputMode="numeric"
                           maxLength={5}
-                          className={cardFieldError === 'expiry' ? 'border-destructive text-destructive focus-visible:ring-destructive' : ''}
+                          className={cardFieldError === 'expiry' ? 'border-red-500 bg-red-50 text-red-900 focus-visible:ring-red-500' : ''}
                         />
                       </div>
                       <div>
@@ -1156,7 +1199,7 @@ const LojaCheckout = () => {
                           onChange={e => { setCardData(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })); setCardError(null); setCardFieldError(null); }}
                           inputMode="numeric"
                           maxLength={4}
-                          className={cardFieldError === 'cvv' ? 'border-destructive text-destructive focus-visible:ring-destructive' : ''}
+                          className={cardFieldError === 'cvv' ? 'border-red-500 bg-red-50 text-red-900 focus-visible:ring-red-500' : ''}
                         />
                       </div>
                     </div>
