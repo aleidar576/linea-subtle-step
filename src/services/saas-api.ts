@@ -709,7 +709,7 @@ export interface Pedido {
   total: number;
   cupom: { codigo: string; tipo: string; valor: number } | null;
   status: 'pendente' | 'pago' | 'enviado' | 'entregue' | 'cancelado';
-  pagamento: { metodo: string; txid: string | null; pix_code: string | null; pago_em: string | null };
+  pagamento: { metodo: string; txid: string | null; pix_code: string | null; pago_em: string | null; pdf_url?: string | null; digitable_line?: string | null; gateway?: string; appmax_order_id?: string | null };
   cliente: { nome: string; email: string; telefone: string; cpf: string };
   endereco: { cep: string; rua: string; numero: string; complemento: string; bairro: string; cidade: string; estado: string } | null;
   rastreio: string | null;
