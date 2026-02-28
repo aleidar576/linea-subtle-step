@@ -1,36 +1,19 @@
 
+## Injecao de raw_appmax no bloco PIX
 
-## Correcao da Extracao do Boleto com Payload Real da Appmax
+### Alteracao (arquivo: `lib/services/pagamentos/appmax.js`, linha 383)
 
-### Contexto
-O `raw_appmax` revelou que a Appmax retorna os dados do boleto em `data.data.payment` com campos `boleto_link_pdf` e `boleto_digitable_line`, nomes completamente diferentes dos que estavamos tentando extrair.
+Adicionar `normalized.raw_appmax = payResult.data;` no final do bloco PIX, logo apos a logica do prefixo base64, para expor o payload cru da Appmax na aba Network do navegador.
 
-### Alteracao (arquivo: `lib/services/pagamentos/appmax.js`, linhas 384-393)
+### Detalhes tecnicos
 
-Substituir o bloco atual de extracao do boleto:
+No bloco `if (method === 'pix')` (linhas 374-383), apos a linha do prefixo base64:
 
-**De:**
 ```javascript
-} else if (method === 'boleto') {
-  console.log('[APPMAX RAW BOLETO RESPONSE]:', JSON.stringify(payResult.data));
-  const boletoData = payData.boleto || payData.payment || payData;
-  normalized.pdf_url = boletoData.pdf || boletoData.url || ...
-  normalized.digitable_line = boletoData.digitable_line || ...
-  normalized.raw_appmax = payResult.data;
+// Adicionar apos linha 383:
+normalized.raw_appmax = payResult.data;
 ```
 
-**Para:**
-```javascript
-} else if (method === 'boleto') {
-  console.log('[APPMAX RAW BOLETO RESPONSE]:', JSON.stringify(payResult.data));
-  const paymentData = payResult?.data?.data?.payment || payResult?.data?.payment || {};
-  normalized.pdf_url = paymentData.boleto_link_pdf || '';
-  normalized.digitable_line = paymentData.boleto_digitable_line || paymentData.boleto_payment_code || '';
-```
+Isso permitira inspecionar a estrutura real da resposta PIX da Appmax e identificar o caminho correto para o QR code, da mesma forma que foi feito com sucesso para o Boleto.
 
-### Resumo
-- Usa o caminho exato confirmado pelo payload real: `data.data.payment`
-- Extrai `boleto_link_pdf` e `boleto_digitable_line` pelos nomes corretos
-- Remove `raw_appmax` do retorno (nao e mais necessario)
-- Mantem o log de debug para rastreabilidade
-
+Apos a inspecao, o campo `raw_appmax` sera removido e a extracao sera corrigida com os caminhos reais.
