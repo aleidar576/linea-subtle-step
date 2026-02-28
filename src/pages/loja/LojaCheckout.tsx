@@ -123,7 +123,7 @@ const LojaCheckout = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [pixData, setPixData] = useState<{ pix_qr_code: string; pix_code: string; txid: string } | null>(null);
-  const [boletoData, setBoletoData] = useState<{ pdf_url: string; txid: string } | null>(null);
+  const [boletoData, setBoletoData] = useState<{ pdf_url: string; digitable_line: string; txid: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [transitionProgress, setTransitionProgress] = useState(0);
@@ -582,10 +582,16 @@ const LojaCheckout = () => {
       if (activeMethod === 'pix' || data.pix_qr_code) {
         setPixData(data);
         toast.success('QR Code Pix gerado!');
-      } else if (activeMethod === 'boleto' && data.pdf_url) {
-        setBoletoData({ pdf_url: data.pdf_url, txid: data.txid });
-        window.open(data.pdf_url, '_blank');
-        toast.success('Boleto gerado! Abrindo em nova aba...');
+      } else if (activeMethod === 'boleto') {
+        const pdfUrl = data.pdf_url || data.url || data.boleto_url || '';
+        const digitableLine = data.digitable_line || data.linha_digitavel || '';
+        setBoletoData({ pdf_url: pdfUrl, digitable_line: digitableLine, txid: data.txid });
+        if (pdfUrl) {
+          window.open(pdfUrl, '_blank');
+          toast.success('Boleto gerado! Abrindo em nova aba...');
+        } else {
+          toast.success('Boleto gerado com sucesso!');
+        }
       } else if (activeMethod === 'credit_card') {
         const cardStatus = (data.status || '').toLowerCase();
         if (cardStatus === 'pago' || cardStatus === 'approved' || cardStatus === 'authorized') {
@@ -1171,14 +1177,46 @@ const LojaCheckout = () => {
 
             {/* Boleto display */}
             {!paymentConfirmed && boletoData && (
-              <div className="space-y-4 text-center">
-                <h2 className="text-lg font-bold">Boleto Gerado</h2>
-                <p className="text-sm text-muted-foreground">Seu boleto foi gerado com sucesso. Ele também foi aberto em uma nova aba.</p>
-                <Button onClick={() => window.open(boletoData.pdf_url, '_blank')} className="gap-2 rounded-full">
-                  <FileText className="h-4 w-4" /> Abrir Boleto
-                </Button>
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Aguardando compensação...
+              <div className="space-y-5 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-8 w-8 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-bold">Boleto Gerado!</h2>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Seu boleto foi gerado com sucesso. A compensação pode levar até 3 dias úteis.
+                  </p>
+                </div>
+
+                {boletoData.pdf_url && (
+                  <Button onClick={() => window.open(boletoData.pdf_url, '_blank')} className="gap-2 rounded-full w-full" size="lg">
+                    <FileText className="h-4 w-4" /> Baixar / Abrir Boleto
+                  </Button>
+                )}
+
+                {boletoData.digitable_line && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Linha digitável:</p>
+                    <div className="flex gap-2">
+                      <Input value={boletoData.digitable_line} readOnly className="text-xs font-mono" />
+                      <Button variant="outline" onClick={() => {
+                        navigator.clipboard.writeText(boletoData.digitable_line);
+                        setCopied(true);
+                        toast.success('Linha digitável copiada!');
+                        setTimeout(() => setCopied(false), 2000);
+                      }} className="gap-2 shrink-0">
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!boletoData.pdf_url && !boletoData.digitable_line && (
+                  <p className="text-sm text-muted-foreground">O boleto foi gerado. Verifique seu e-mail para os dados de pagamento.</p>
+                )}
+
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Aguardando compensação do boleto...
                 </div>
               </div>
             )}
