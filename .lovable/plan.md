@@ -1,70 +1,56 @@
 
 
-## Correção: Erro 400 na criação de pagamento PIX (Appmax)
+## Refatoracao UX de Erros do Cartao de Credito
 
-### Diagnóstico
+### Problema Atual
+A funcao `translateCardError` (linha 48) cobre poucos cenarios. Faltam mapeamentos criticos como "Unprocessable Entity" (HTTP 422), "not authorized", "risk", e "holder_document_number". Alem disso, a extracao do erro da API (linha 565) nao lida com respostas aninhadas como `data.errors.message` ou arrays de erros.
 
-Os logs mostram que as 3 etapas funcionam parcialmente:
-- Token: OK
-- Customer (etapa 1): 201 OK
-- Order (etapa 2): 201 OK  
-- **Payment PIX (etapa 3): 400 ERRO**
+### Mudancas Planejadas (arquivo unico: `src/pages/loja/LojaCheckout.tsx`)
 
-O erro `"No momento nao conseguimos processar sua solicitacao"` com um error ID da Appmax indica um problema de **payload inválido**, nao de autenticação. A causa raiz está em dois problemas no código atual:
+#### 1. Expandir a funcao `translateCardError` (linhas 48-66)
 
-### Problema 1: `document_number` vazio ou inválido
+Adicionar os mapeamentos que faltam, na ordem correta de prioridade:
 
-Linha 178: `const document_number = (customer.taxId || customer.cpf || '').replace(/\D/g, '');`
+- `"unprocessable"` -> "Os dados informados sao invalidos. Verifique o numero do cartao, validade e CVV." (field: null)
+- `"holder_document"` -> "O CPF do titular do cartao e invalido." (field: holderCpf) -- ANTES do match generico de "document"
+- `"not authorized"` ou `"nao autorizada"` -> "Pagamento recusado pelo banco emissor. Verifique seu limite ou tente outro cartao." (field: null)
+- `"risk"` ou `"risco"` -> "Pagamento recusado por seguranca. Tente outro cartao ou metodo de pagamento." (field: null)
+- `"number"` sozinho (sem "card number") -> match para campo number
+- Fallback atualizado: "Nao foi possivel processar o pagamento. Verifique os dados e tente novamente."
 
-Se o usuário não preencher CPF válido, `document_number` será uma string vazia `""`. A documentação Appmax exige `document_number` válido para PIX.
+#### 2. Melhorar extracao de erro da API (linhas 563-571)
 
-### Problema 2: Order criada com produtos sem `unit_value`
+Criar uma funcao `extractApiError(data)` que busca a mensagem de erro em multiplos caminhos:
+- `data.error` (string)
+- `data.message` (string)
+- `data.errors?.message` (string ou objeto)
+- `data.details?.message`
+- Se for objeto/array, converte para string
 
-Linha 245: `unit_value: item.price || 0`
+Usar essa funcao nos dois pontos de tratamento de erro de cartao (HTTP error na linha 565, e status recusado na linha 612).
 
-Se `items` vier vazio do checkout (array vazio `[]`), a order é criada com `products: []` e valor total 0. A Appmax não consegue gerar PIX para um pedido sem valor.
+#### 3. Melhorar estilo visual dos inputs com erro (linhas 1110-1161)
 
-Quando `items` tem produtos mas `price` é 0 ou undefined, `unit_value` fica 0, gerando a mesma inconsistência.
-
-### Problema 3: Falta de logging do payload PIX
-
-Não há log do payload exato enviado na etapa 3, dificultando diagnóstico.
-
----
-
-### Correções (1 arquivo: `lib/services/pagamentos/appmax.js`)
-
-#### 1. Validar `document_number` antes de PIX/Boleto
-Adicionar validação após linha 178: se `document_number` estiver vazio e o método for `pix` ou `boleto`, retornar erro 400 claro.
-
-#### 2. Fallback de produtos na Order
-Se `items` estiver vazio ou todos com `unit_value: 0`, criar um produto genérico com o `amount` total para que a Appmax processe corretamente:
-```javascript
-if (!orderPayload.products.length || orderPayload.products.every(p => !p.unit_value)) {
-  orderPayload.products = [{
-    sku: 'PEDIDO-UNICO',
-    name: 'Pedido',
-    quantity: 1,
-    unit_value: amount,
-  }];
-}
+Trocar as classes de erro dos inputs de:
+```
+border-destructive text-destructive focus-visible:ring-destructive
+```
+Para:
+```
+border-red-500 bg-red-50 text-red-900 focus-visible:ring-red-500
 ```
 
-#### 3. Adicionar `products_value` na order
-Conforme a documentação, quando `unit_value` dos produtos individuais não reflete o total correto (ex: com desconto/frete), deve-se enviar `products_value` explicitamente:
-```javascript
-orderPayload.products_value = amount;
-```
+Isso adiciona o fundo levemente avermelhado pedido, tornando o destaque mais visivel.
 
-#### 4. Log do payload PIX antes do envio
-Adicionar `console.log('[APPMAX] PIX payload:', JSON.stringify(paymentPayload))` antes da chamada de pagamento para facilitar debug futuro.
+#### 4. Remover toast.error residual para erros de cartao
 
-#### 5. Validação mínima de `document_number`
-CPF deve ter 11 dígitos e CNPJ 14. Adicionar validação de tamanho mínimo.
+Garantir que no bloco `catch` generico (linha 660), erros de cartao nao disparem `toast.error`, ja que a caixa vermelha inline e suficiente. O toast generico permanece apenas para erros de PIX/Boleto.
 
-### Resumo das alterações
-- Arquivo: `lib/services/pagamentos/appmax.js`
-- Adicionar validação de `document_number` (não pode ser vazio para PIX/boleto)
-- Adicionar fallback de produtos quando `items` vazio
-- Adicionar `products_value` no payload da order
-- Adicionar logs detalhados do payload de pagamento
+### Detalhes Tecnicos
+
+- Nenhuma dependencia nova
+- Arquivo afetado: apenas `src/pages/loja/LojaCheckout.tsx`
+- A Alert box inline (linhas 1179-1188) ja existe e sera mantida como esta
+- Os estados `cardError` e `cardFieldError` ja existem e serao reutilizados
+- Os `onChange` dos inputs ja limpam os estados de erro -- sem mudanca necessaria
+
