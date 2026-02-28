@@ -86,7 +86,7 @@ module.exports = async function handler(req, res) {
         frete: body.frete || 0,
         total: body.total || 0,
         cupom: body.cupom || null,
-        status: 'pendente',
+        status: ['pago', 'em_analise'].includes(body.status) ? body.status : 'pendente',
         pagamento: body.pagamento || { metodo: 'pix', txid: null, pix_code: null, pago_em: null },
         cliente: body.cliente || {},
         endereco: body.endereco || null,
