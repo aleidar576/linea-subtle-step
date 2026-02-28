@@ -568,30 +568,31 @@ const LojaCheckout = () => {
           toast.success('Boleto gerado com sucesso!');
         }
       } else if (activeMethod === 'credit_card') {
+        // HTTP 200 do backend = pagamento aceito/em processamento pela Appmax
         const cardStatus = (data.status || '').toLowerCase();
-        if (cardStatus === 'pago' || cardStatus === 'approved' || cardStatus === 'authorized') {
-          pedidoPayload.pagamento.pago_em = new Date().toISOString() as any;
-          toast.success('✅ Pagamento aprovado!');
-          // Create order then redirect
-          try { await pedidosApi.create(pedidoPayload); } catch {}
-          carrinhosApi.save({ ...buildCartData('payment'), txid: data.txid }).catch(() => {});
-          cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
-          firePixelEvent('Purchase', { value: finalTotal / 100, currency: 'BRL', content_id: data.txid, num_items: items.reduce((s, i) => s + i.quantity, 0) });
-          try { sessionStorage.setItem('last_purchase', JSON.stringify({ value: finalTotal / 100, currency: 'BRL', txid: data.txid })); } catch {}
-          setPaymentConfirmed(true);
-          const start = Date.now();
-          const pi = setInterval(() => {
-            const p = Math.min(((Date.now() - start) / 5000) * 100, 100);
-            setTransitionProgress(p);
-            if (Date.now() - start >= 5000) { clearInterval(pi); clearCart(); navigate('/sucesso'); }
-          }, 100);
-          setIsLoading(false);
-          return;
-        } else {
+        const isRecusado = cardStatus === 'recusado' || cardStatus === 'declined' || cardStatus === 'refused';
+        if (isRecusado) {
           toast.error('Pagamento recusado. Tente outro cartão ou método.');
           setIsLoading(false);
           return;
         }
+        // Qualquer outro status (pago, aprovado, autorizado, pendente, processing, etc) = sucesso
+        pedidoPayload.pagamento.pago_em = new Date().toISOString() as any;
+        toast.success('✅ Pagamento aprovado!');
+        try { await pedidosApi.create(pedidoPayload); } catch {}
+        carrinhosApi.save({ ...buildCartData('payment'), txid: data.txid }).catch(() => {});
+        cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
+        firePixelEvent('Purchase', { value: finalTotal / 100, currency: 'BRL', content_id: data.txid, num_items: items.reduce((s, i) => s + i.quantity, 0) });
+        try { sessionStorage.setItem('last_purchase', JSON.stringify({ value: finalTotal / 100, currency: 'BRL', txid: data.txid })); } catch {}
+        setPaymentConfirmed(true);
+        const start = Date.now();
+        const pi = setInterval(() => {
+          const p = Math.min(((Date.now() - start) / 5000) * 100, 100);
+          setTransitionProgress(p);
+          if (Date.now() - start >= 5000) { clearInterval(pi); clearCart(); navigate('/sucesso'); }
+        }, 100);
+        setIsLoading(false);
+        return;
       }
 
       // Create order for PIX/Boleto
