@@ -58,14 +58,20 @@ module.exports = async function handler(req, res) {
 
   // ── Webhook scope (para SealPay legacy) ──
   if (scope === 'webhook') {
-    const { txid, status } = req.body || {};
-    if (!txid) return res.status(400).json({ error: 'txid é obrigatório' });
+    const { txid, status, order_id, id, event } = req.body || {};
+    const webhookId = txid || order_id || id;
+    if (!webhookId) return res.status(400).json({ error: 'txid/order_id é obrigatório' });
 
     try {
-      // Detectar gateway pelo txid
+      // Detectar gateway pelo txid ou appmax_order_id
       let gatewayId = 'sealpay';
       const Pedido = require('../models/Pedido.js');
-      const pedido = await Pedido.findOne({ 'pagamento.txid': txid }).select('pagamento.gateway').lean();
+      const pedido = await Pedido.findOne({
+        $or: [
+          { 'pagamento.txid': String(webhookId) },
+          { 'pagamento.appmax_order_id': String(webhookId) },
+        ],
+      }).select('pagamento.gateway').lean();
       if (pedido?.pagamento?.gateway) gatewayId = pedido.pagamento.gateway;
 
       const paymentService = getPaymentService(gatewayId);
