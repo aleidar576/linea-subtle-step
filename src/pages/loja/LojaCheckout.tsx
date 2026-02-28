@@ -132,7 +132,6 @@ const LojaCheckout = () => {
   // ── Multi-method payment states ──
   const [paymentMethod, setPaymentMethod] = useState<string>('pix');
   const [cardData, setCardData] = useState({ number: '', name: '', holderCpf: '', expiry: '', cvv: '' });
-  const [appmaxSdkReady, setAppmaxSdkReady] = useState(false);
   const [installments, setInstallments] = useState<number>(1);
 
   // Freight selection — dynamic from API
@@ -321,29 +320,7 @@ const LojaCheckout = () => {
     return () => clearTimeout(t);
   }, []);
 
-  // ── Appmax script injection (sandbox-aware) ──
-  useEffect(() => {
-    if (gatewayAtivo !== 'appmax') return;
-    const existing = document.querySelector('script[src*="appmax.min.js"]');
-    if (existing) {
-      // Script already loaded, check if SDK ready
-      if ((window as any).Appmax?.tokenize) setAppmaxSdkReady(true);
-      return;
-    }
-    const script = document.createElement('script');
-    // TODO: switch to production URL when going live
-    script.src = 'https://scripts.sandboxappmax.com.br/appmax.min.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('[APPMAX] SDK carregado com sucesso');
-      setAppmaxSdkReady(true);
-    };
-    script.onerror = () => {
-      console.error('[APPMAX] Falha ao carregar SDK');
-    };
-    document.head.appendChild(script);
-    return () => { try { document.head.removeChild(script); } catch {} };
-  }, [gatewayAtivo]);
+  // ── Appmax: integração server-to-server, sem SDK frontend ──
 
   // ── Set default payment method based on gateway ──
   useEffect(() => {
@@ -516,32 +493,10 @@ const LojaCheckout = () => {
         if (key.startsWith('utm_')) utm[key] = value;
       });
 
-      // Tokenizar cartão via Appmax SDK se necessário
-      let card_token: string | undefined;
-      if (activeMethod === 'credit_card' && gatewayAtivo === 'appmax') {
+      // Validar dados do cartão antes de enviar ao backend (server-to-server)
+      if (activeMethod === 'credit_card') {
         if (!cardData.number || !cardData.name || !cardData.holderCpf || !cardData.expiry || !cardData.cvv) {
           toast.error('Preencha todos os dados do cartão, incluindo o CPF do titular');
-          setIsLoading(false);
-          return;
-        }
-        try {
-          const win = window as any;
-          if (win.Appmax?.tokenize) {
-            const [expMonth, expYear] = cardData.expiry.split('/');
-            card_token = await win.Appmax.tokenize({
-              number: cardData.number.replace(/\s/g, ''),
-              holder_name: cardData.name,
-              exp_month: expMonth,
-              exp_year: expYear.length === 2 ? `20${expYear}` : expYear,
-              cvv: cardData.cvv,
-            });
-          } else {
-            toast.error('SDK de pagamento não carregado. Aguarde e tente novamente.');
-            setIsLoading(false);
-            return;
-          }
-        } catch (tokenErr: any) {
-          toast.error(tokenErr.message || 'Erro ao processar cartão. Verifique os dados.');
           setIsLoading(false);
           return;
         }
@@ -557,10 +512,16 @@ const LojaCheckout = () => {
           amount: Math.round(finalTotal),
           description: desc,
           method: activeMethod,
-          card_token,
+          card_data: activeMethod === 'credit_card' ? {
+            number: cardData.number.replace(/\s/g, ''),
+            name: cardData.name,
+            holder_document_number: cardData.holderCpf.replace(/\D/g, ''),
+            exp_month: cardData.expiry.split('/')[0],
+            exp_year: cardData.expiry.split('/')[1]?.length === 2 ? `20${cardData.expiry.split('/')[1]}` : cardData.expiry.split('/')[1],
+            cvv: cardData.cvv,
+          } : undefined,
           installments: activeMethod === 'credit_card' ? installments : undefined,
           customer: { name: customerData.name, email: customerData.email, cellphone: customerData.cellphone, taxId: customerData.taxId },
-          holder_document_number: activeMethod === 'credit_card' ? cardData.holderCpf.replace(/\D/g, '') : undefined,
           loja_id: lojaId,
           shipping: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
           items: items.map(i => ({ product_id: i.product.id, name: i.product.name, quantity: i.quantity, price: i.product.price, sku: (i.product as any).sku || '' })),
@@ -1175,13 +1136,11 @@ const LojaCheckout = () => {
                   <Button variant="outline" onClick={() => { setCurrentStep('shipping'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 rounded-full">Voltar</Button>
                   <Button
                     onClick={() => handlePayment()}
-                    disabled={isLoading || (paymentMethod === 'credit_card' && gatewayAtivo === 'appmax' && !appmaxSdkReady)}
+                    disabled={isLoading}
                     className="flex-1 gap-2 rounded-full font-bold"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {paymentMethod === 'credit_card' && gatewayAtivo === 'appmax' && !appmaxSdkReady
-                      ? 'Carregando segurança...'
-                      : paymentMethod === 'pix' ? 'Gerar PIX' : paymentMethod === 'boleto' ? 'Gerar Boleto' : 'Pagar'}
+                    {paymentMethod === 'pix' ? 'Gerar PIX' : paymentMethod === 'boleto' ? 'Gerar Boleto' : 'Pagar'}
                   </Button>
                 </div>
               </div>
