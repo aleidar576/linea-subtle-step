@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { DollarSign, Copy } from 'lucide-react';
+import { DollarSign, Copy, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Pedido } from '@/services/saas-api';
 
@@ -93,6 +93,40 @@ export default function PedidoResumoCard({ pedido }: Props) {
                   </TooltipProvider>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* BOLETO */}
+        {pedido.pagamento?.metodo === 'boleto' && (pedido.pagamento?.digitable_line || pedido.pagamento?.pdf_url) && (
+          <div className="bg-background/40 border border-border/50 rounded-lg p-3 space-y-3">
+            {pedido.pagamento.digitable_line && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Linha Digitável</label>
+                <div className="flex gap-1.5">
+                  <Input value={pedido.pagamento.digitable_line} readOnly className="text-xs font-mono h-8" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => copyToClipboard(pedido.pagamento.digitable_line!, 'Linha digitável')}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copiar linha digitável</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+            )}
+            {pedido.pagamento.pdf_url && (
+              <Button
+                variant="outline"
+                className="w-full gap-2 h-8 text-xs"
+                onClick={() => window.open(pedido.pagamento.pdf_url, '_blank')}
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                Baixar Boleto (PDF)
+              </Button>
             )}
           </div>
         )}
