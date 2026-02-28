@@ -336,6 +336,10 @@ export interface FreteEspecifico {
 export interface ProdutoConfig {
   barra_pesquisa?: { ativo: boolean };
   chatbot?: { ativo: boolean };
+  social_proof_toast?: {
+    ativo: boolean;
+    genero: 'masculino' | 'feminino' | 'misto';
+  };
 }
 
 export interface CarrinhoCheckoutConfig {

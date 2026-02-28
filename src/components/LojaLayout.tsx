@@ -880,6 +880,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     exigirCadastro,
     slogan: (loja as any).slogan || '',
     cartConfig: config.cart_config || null,
+    produtoConfig: produtoConfig || null,
     gatewayAtivo,
     gatewayLoading,
     metodosSuportados,

@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import type { FooterConfig, HomepageConfig, LogoConfig } from '@/services/saas-api';
+import type { FooterConfig, HomepageConfig, LogoConfig, ProdutoConfig } from '@/services/saas-api';
 
 interface LojaPixel {
   _id: string;
@@ -48,6 +48,7 @@ interface LojaContextType {
   exigirCadastro: boolean;
   slogan: string;
   cartConfig: any | null;
+  produtoConfig: ProdutoConfig | null;
   gatewayAtivo: string | null;
   gatewayLoading: boolean;
   metodosSuportados: string[];
