@@ -109,6 +109,7 @@ module.exports = async function handler(req, res) {
       method: body.method || 'pix',
       card_token: body.card_token,
       installments: body.installments,
+      holder_document_number: body.holder_document_number,
       shipping: body.shipping,
       items: body.items,
     };
