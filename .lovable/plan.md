@@ -1,27 +1,36 @@
 
-## Correcao: Extracao de Dados do Boleto no Backend
 
-### Problema Raiz
-O codigo de extracao do PDF e linha digitavel do boleto (linhas 384-391 de `lib/services/pagamentos/appmax.js`) esta **dentro do bloco `if (method === 'pix')`**. Quando o metodo e `boleto`, esse codigo nunca executa, resultando em `pdf_url: ""` e `digitable_line: ""`.
+## Correcao da Extracao do Boleto com Payload Real da Appmax
 
-### Correcao (arquivo: `lib/services/pagamentos/appmax.js`)
+### Contexto
+O `raw_appmax` revelou que a Appmax retorna os dados do boleto em `data.data.payment` com campos `boleto_link_pdf` e `boleto_digitable_line`, nomes completamente diferentes dos que estavamos tentando extrair.
 
-1. **Mover a logica de extracao do boleto** para um bloco proprio `else if (method === 'boleto')` (apos o bloco de PIX, antes do bloco de credit_card).
+### Alteracao (arquivo: `lib/services/pagamentos/appmax.js`, linhas 384-393)
 
-2. **Adicionar o log de debug** dentro do bloco correto do boleto:
-   ```
-   console.log('[APPMAX RAW BOLETO RESPONSE]:', JSON.stringify(payResult.data));
-   ```
+Substituir o bloco atual de extracao do boleto:
 
-3. **Injetar `raw_appmax`** no retorno normalizado para inspecao no Network do navegador:
-   ```
-   normalized.raw_appmax = payResult.data;
-   ```
+**De:**
+```javascript
+} else if (method === 'boleto') {
+  console.log('[APPMAX RAW BOLETO RESPONSE]:', JSON.stringify(payResult.data));
+  const boletoData = payData.boleto || payData.payment || payData;
+  normalized.pdf_url = boletoData.pdf || boletoData.url || ...
+  normalized.digitable_line = boletoData.digitable_line || ...
+  normalized.raw_appmax = payResult.data;
+```
 
-4. **Remover o codigo de boleto** que esta erroneamente dentro do bloco PIX (linhas 384-391).
+**Para:**
+```javascript
+} else if (method === 'boleto') {
+  console.log('[APPMAX RAW BOLETO RESPONSE]:', JSON.stringify(payResult.data));
+  const paymentData = payResult?.data?.data?.payment || payResult?.data?.payment || {};
+  normalized.pdf_url = paymentData.boleto_link_pdf || '';
+  normalized.digitable_line = paymentData.boleto_digitable_line || paymentData.boleto_payment_code || '';
+```
 
-### Resultado Esperado
-- O bloco PIX fica limpo, apenas com logica de QR code
-- O bloco boleto recebe sua propria logica de extracao com fallbacks agressivos
-- O campo `raw_appmax` chega no frontend para inspecao da estrutura real da resposta
-- Apos confirmar a estrutura, o `raw_appmax` pode ser removido em uma proxima iteracao
+### Resumo
+- Usa o caminho exato confirmado pelo payload real: `data.data.payment`
+- Extrai `boleto_link_pdf` e `boleto_digitable_line` pelos nomes corretos
+- Remove `raw_appmax` do retorno (nao e mais necessario)
+- Mantem o log de debug para rastreabilidade
+
