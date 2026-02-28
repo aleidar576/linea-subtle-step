@@ -6,7 +6,8 @@ import { useLojaCategories } from '@/hooks/useLojaCategories';
 import { useFretes } from '@/hooks/useLojaExtras';
 import { settingsApi } from '@/services/api';
 import type { LojaProduct, Variacao, AvaliacaoManual, AvaliacoesConfig, FreteConfig, OfertaRelampago, RegraFrete } from '@/services/saas-api';
-import { lojaProductsApi } from '@/services/saas-api';
+import { lojaProductsApi, lojistaApi } from '@/services/saas-api';
+import { calculateAppmaxInstallments, type InstallmentConfig } from '@/utils/installments';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info } from 'lucide-react';
@@ -276,6 +277,21 @@ const LojaProdutos = () => {
 
   // Load fretes da loja
   const { data: fretesLoja = [] } = useFretes(id);
+
+  // Load installment config from gateway
+  const [installmentCfg, setInstallmentCfg] = useState<InstallmentConfig | null>(null);
+  useEffect(() => {
+    lojistaApi.perfil().then((prof: any) => {
+      const cfg = prof?.gateways_config?.appmax;
+      if (cfg && (cfg.max_installments || cfg.interest_rate_pp)) {
+        setInstallmentCfg({
+          max_installments: cfg.max_installments || 12,
+          free_installments: cfg.free_installments || 1,
+          interest_rate_pp: cfg.interest_rate_pp || 0,
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   // Load comment packages from admin + loja
   useEffect(() => {
@@ -1335,11 +1351,22 @@ const LojaProdutos = () => {
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Não exibir</SelectItem>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                            <SelectItem key={n} value={String(n)}>
-                              {n}x {editingProduct.price ? `de ${(editingProduct.price / 100 / n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            const price = editingProduct.price || 0;
+                            const maxN = installmentCfg?.max_installments || 12;
+                            const options = price > 0 && installmentCfg
+                              ? calculateAppmaxInstallments(price, installmentCfg)
+                              : Array.from({ length: maxN }, (_, i) => ({
+                                  installment: i + 1,
+                                  installmentPrice: price > 0 ? Math.ceil(price / (i + 1)) : 0,
+                                  isFree: true,
+                                }));
+                            return options.map(opt => (
+                              <SelectItem key={opt.installment} value={String(opt.installment)}>
+                                {opt.installment}x {price > 0 ? `de ${(opt.installmentPrice / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}{!opt.isFree ? ' (com juros)' : ''}
+                              </SelectItem>
+                            ));
+                          })()}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1751,7 +1778,7 @@ const LojaProdutos = () => {
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="0">Não exibir</SelectItem>
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                            {Array.from({ length: installmentCfg?.max_installments || 12 }, (_, i) => i + 1).map(n => (
                               <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
                             ))}
                           </SelectContent>
