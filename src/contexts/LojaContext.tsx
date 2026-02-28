@@ -52,6 +52,7 @@ interface LojaContextType {
   gatewayAtivo: string | null;
   gatewayLoading: boolean;
   metodosSuportados: string[];
+  installmentConfig: { max_installments: number; free_installments: number; interest_rate_pp: number } | null;
   isLoading: boolean;
   notFound: boolean;
 }

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Check, Clock, Flame, ChevronLeft, ChevronRight, ShieldCheck, Minus, Plus, Share2, Home, MessageCircle, X, Maximize2, ChevronDown } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
+import { calculateAppmaxInstallments } from '@/utils/installments';
 import { useLojaPublicaProduct, useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';
 import { useCart } from '@/contexts/CartContext';
 import { firePixelEvent } from '@/components/LojaLayout';
@@ -50,7 +51,7 @@ const BlockDivider = () => <div className="border-b-8 border-muted/40" />;
 
 const LojaProduto = () => {
   const { productSlug } = useParams<{ productSlug: string }>();
-  const { lojaId, nomeExibicao, chatbotEnabled, slogan } = useLoja();
+  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig } = useLoja();
   const { data: product, isLoading } = useLojaPublicaProduct(lojaId, productSlug);
   const { data: fretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allProducts = [] } = useLojaPublicaProducts(lojaId);
@@ -448,6 +449,16 @@ const LojaProduto = () => {
                   )}
                 </div>
                 {(() => {
+                  // Dynamic installments from Appmax config
+                  if (gatewayAtivo === 'appmax' && installmentConfig && installmentConfig.interest_rate_pp > 0) {
+                    const options = calculateAppmaxInstallments(product.price, installmentConfig);
+                    const maxOpt = options[options.length - 1];
+                    if (maxOpt && maxOpt.installment > 1) {
+                      return <p className="text-xs text-muted-foreground mt-1">ou {maxOpt.installment}x de {formatPrice(maxOpt.installmentPrice)} {maxOpt.isFree ? 'sem juros' : ''}</p>;
+                    }
+                    return null;
+                  }
+                  // Fallback: parcelas_fake
                   const parcelas = product.parcelas_fake ? Number(product.parcelas_fake) : 0;
                   if (parcelas > 0 && product.price > 0) {
                     return <p className="text-xs text-muted-foreground mt-1">ou {parcelas}x de {formatPrice(Math.ceil(product.price / parcelas))} sem juros</p>;
