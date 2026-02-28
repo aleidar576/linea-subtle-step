@@ -133,6 +133,7 @@ const LojaCheckout = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>('pix');
   const [cardData, setCardData] = useState({ number: '', name: '', holderCpf: '', expiry: '', cvv: '' });
   const [installments, setInstallments] = useState<number>(1);
+  const [cardError, setCardError] = useState<string | null>(null);
 
   // Freight selection — dynamic from API
   const [selectedFrete, setSelectedFrete] = useState<CalculatedFreight | null>(null);
@@ -345,7 +346,7 @@ const LojaCheckout = () => {
         if (['paid','approved','confirmed','completed'].includes(statusValue)) {
           clearInterval(intervalRef.current!);
           setPaymentConfirmed(true);
-          toast.success('✅ Pagamento confirmado!');
+          toast.success('Pagamento confirmado!');
           // Fire Purchase pixel event
           firePixelEvent('Purchase', {
             value: finalTotal / 100,
@@ -495,6 +496,7 @@ const LojaCheckout = () => {
 
       // Validar dados do cartão antes de enviar ao backend (server-to-server)
       if (activeMethod === 'credit_card') {
+        setCardError(null);
         if (!cardData.number || !cardData.name || !cardData.holderCpf || !cardData.expiry || !cardData.cvv) {
           toast.error('Preencha todos os dados do cartão, incluindo o CPF do titular');
           setIsLoading(false);
@@ -570,16 +572,17 @@ const LojaCheckout = () => {
       } else if (activeMethod === 'credit_card') {
         // HTTP 200 do backend = pagamento aceito/em processamento pela Appmax
         const cardStatus = (data.status || '').toLowerCase();
-        const isRecusado = cardStatus === 'recusado' || cardStatus === 'declined' || cardStatus === 'refused';
+        const isRecusado = ['recusado', 'declined', 'refused', 'cancelado', 'recusado_por_risco'].includes(cardStatus);
         if (isRecusado) {
-          toast.error('Pagamento recusado. Tente outro cartão ou método.');
+          const apiMsg = data.error || data.message || '';
+          setCardError(apiMsg || 'Seu cartão foi recusado pelo banco emissor. Verifique o limite disponível, os dados digitados ou tente utilizar outro cartão.');
           setIsLoading(false);
           return;
         }
         // Qualquer outro status (pago, aprovado, autorizado, pendente, processing, etc) = sucesso
         pedidoPayload.pagamento.pago_em = new Date().toISOString() as any;
         (pedidoPayload as any).status = 'pago';
-        toast.success('✅ Pagamento aprovado!');
+        toast.success('Pagamento aprovado.');
         try { await pedidosApi.create(pedidoPayload); } catch {}
         carrinhosApi.save({ ...buildCartData('payment'), txid: data.txid }).catch(() => {});
         cuponsApplied.forEach(c => localStorage.removeItem(`cupom_resgatado_${c.codigo}`));
@@ -1131,6 +1134,17 @@ const LojaCheckout = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Card error alert */}
+                    {cardError && (
+                      <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold">Transação não autorizada</p>
+                          <p className="mt-1 opacity-90">{cardError}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
