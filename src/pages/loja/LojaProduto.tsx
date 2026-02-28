@@ -95,10 +95,11 @@ const LojaProduto = () => {
     }
   }, [product, nomeExibicao, slogan]);
 
-  // Social proof toasts
+  // Social proof toasts (global config)
+  const spToast = useLoja().produtoConfig?.social_proof_toast;
   useEffect(() => {
-    if (!product?.social_proof_gender || product.social_proof_gender === 'desativado') return;
-    const gender = product.social_proof_gender;
+    if (!spToast?.ativo || !product) return;
+    const gender = spToast.genero || 'misto';
     const showToast = () => {
       const name = getRandomName(gender);
       toast(`🔥 ${name} acabou de comprar`, {
@@ -108,12 +109,12 @@ const LojaProduto = () => {
       });
     };
     const scheduleNext = () => {
-      const delay = 15000 + Math.random() * 30000;
+      const delay = 30000 + Math.random() * 30000; // 30s a 1min
       return setTimeout(() => { showToast(); timerId = scheduleNext(); }, delay);
     };
     let timerId = scheduleNext();
     return () => clearTimeout(timerId);
-  }, [product?.product_id, product?.social_proof_gender]);
+  }, [product?.product_id, spToast?.ativo, spToast?.genero]);
 
   // Pessoas vendo agora
   const pessoasVendo = useMemo(() => {

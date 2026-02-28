@@ -377,8 +377,13 @@ const LojaCheckout = () => {
   const names = ['Maria S.', 'João P.', 'Ana L.', 'Carlos M.', 'Juliana R.', 'Pedro A.'];
   useEffect(() => {
     const show = () => { toast(`🎉 ${names[Math.floor(Math.random() * names.length)]} acabou de garantir o seu!`, { icon: <ShoppingBag className="h-5 w-5 text-primary" />, duration: 4000 }); };
-    const t = setTimeout(() => { show(); const i = setInterval(show, 15000); return () => clearInterval(i); }, 7000);
-    return () => clearTimeout(t);
+    const scheduleNext = () => {
+      const delay = 30000 + Math.random() * 30000; // 30s a 1min
+      return setTimeout(() => { show(); timerId = scheduleNext(); }, delay);
+    };
+    const first = setTimeout(() => { show(); timerId = scheduleNext(); }, 30000);
+    let timerId: ReturnType<typeof setTimeout>;
+    return () => { clearTimeout(first); clearTimeout(timerId); };
   }, []);
 
   // ── Appmax: integração server-to-server, sem SDK frontend ──

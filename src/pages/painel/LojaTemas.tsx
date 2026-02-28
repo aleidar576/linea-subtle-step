@@ -997,6 +997,36 @@ const LojaTemas = () => {
               <Label className="text-sm">Chat Virtual Ativo</Label>
             </div>
           </div>
+
+          {/* Social Proof Toast (Notificações de Compra) */}
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-semibold block">Notificações de Compra (Social Proof)</Label>
+                <p className="text-xs text-muted-foreground mt-1">Exibe toasts como "🔥 Fulano acabou de comprar" a cada 30s–1min na página do produto.</p>
+              </div>
+              <Switch
+                checked={produtoConfig?.social_proof_toast?.ativo ?? false}
+                onCheckedChange={v => setProdutoConfig({ ...produtoConfig, social_proof_toast: { ...produtoConfig?.social_proof_toast, ativo: v, genero: produtoConfig?.social_proof_toast?.genero || 'misto' } })}
+              />
+            </div>
+            {produtoConfig?.social_proof_toast?.ativo && (
+              <div>
+                <Label className="text-xs">Gênero dos Nomes</Label>
+                <Select
+                  value={produtoConfig.social_proof_toast.genero || 'misto'}
+                  onValueChange={(v: any) => setProdutoConfig({ ...produtoConfig, social_proof_toast: { ...produtoConfig.social_proof_toast!, genero: v } })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="misto">Misto (Masculino e Feminino)</SelectItem>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* ===== CARRINHO ===== */}
