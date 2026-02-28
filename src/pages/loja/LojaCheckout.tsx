@@ -339,8 +339,8 @@ const LojaCheckout = () => {
     }
   }, [metodosSuportados]);
 
-  // Monitor payment (PIX + Boleto polling)
-  const activeTxid = pixData?.txid || boletoData?.txid;
+  // Monitor payment (PIX only — boleto takes 12-24h, no polling needed)
+  const activeTxid = pixData?.txid;
   useEffect(() => {
     if (!activeTxid) return;
     intervalRef.current = setInterval(async () => {
@@ -1177,28 +1177,34 @@ const LojaCheckout = () => {
 
             {/* Boleto display */}
             {!paymentConfirmed && boletoData && (
-              <div className="space-y-5 text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-8 w-8 text-primary" />
+              <div className="space-y-6">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                   </div>
-                  <h2 className="text-xl font-bold">Boleto Gerado!</h2>
+                  <h2 className="text-xl font-bold">Pedido Registrado!</h2>
                   <p className="text-sm text-muted-foreground max-w-sm">
-                    Seu boleto foi gerado com sucesso. A compensação pode levar até 3 dias úteis.
+                    Seu boleto foi gerado com sucesso. Após o pagamento, a compensação leva de <strong>1 a 3 dias úteis</strong>.
                   </p>
                 </div>
 
+                {/* Download button — always prominent */}
                 {boletoData.pdf_url && (
-                  <Button onClick={() => window.open(boletoData.pdf_url, '_blank')} className="gap-2 rounded-full w-full" size="lg">
-                    <FileText className="h-4 w-4" /> Baixar / Abrir Boleto
+                  <Button
+                    onClick={() => window.open(boletoData.pdf_url, '_blank')}
+                    className="gap-2 rounded-full w-full text-base"
+                    size="lg"
+                  >
+                    <FileText className="h-5 w-5" /> Baixar Boleto (PDF)
                   </Button>
                 )}
 
+                {/* Digitable line with copy */}
                 {boletoData.digitable_line && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Linha digitável:</p>
+                  <div className="space-y-2 rounded-xl border border-border p-4 bg-card">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Linha Digitável</p>
                     <div className="flex gap-2">
-                      <Input value={boletoData.digitable_line} readOnly className="text-xs font-mono" />
+                      <Input value={boletoData.digitable_line} readOnly className="text-xs font-mono bg-muted" />
                       <Button variant="outline" onClick={() => {
                         navigator.clipboard.writeText(boletoData.digitable_line);
                         setCopied(true);
@@ -1212,12 +1218,18 @@ const LojaCheckout = () => {
                 )}
 
                 {!boletoData.pdf_url && !boletoData.digitable_line && (
-                  <p className="text-sm text-muted-foreground">O boleto foi gerado. Verifique seu e-mail para os dados de pagamento.</p>
+                  <p className="text-sm text-muted-foreground text-center">O boleto foi gerado. Verifique seu e-mail para os dados de pagamento.</p>
                 )}
 
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Aguardando compensação do boleto...
+                {/* Info box */}
+                <div className="rounded-xl border border-border bg-muted/50 p-4 space-y-2 text-sm text-muted-foreground">
+                  <p>📌 <strong>Dica:</strong> Pague via internet banking, app do banco ou em qualquer lotérica.</p>
+                  <p>⏳ Após o pagamento, a confirmação será enviada ao seu e-mail.</p>
                 </div>
+
+                <Button variant="outline" onClick={() => navigate('/')} className="w-full rounded-full">
+                  Voltar à Loja
+                </Button>
               </div>
             )}
           </div>
