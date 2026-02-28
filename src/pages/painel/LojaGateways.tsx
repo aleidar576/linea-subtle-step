@@ -311,9 +311,46 @@ function AppmaxConfig({
   const [connecting, setConnecting] = useState(false);
   const [activating, setActivating] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [maxInstallments, setMaxInstallments] = useState<number>(12);
+  const [freeInstallments, setFreeInstallments] = useState<number>(1);
+  const [interestRatePP, setInterestRatePP] = useState<string>('2.49');
+  const [savingConfig, setSavingConfig] = useState(false);
 
   const appmaxConfig = profile?.gateways_config?.appmax;
   const isConnected = !!appmaxConfig?.client_id;
+
+  // Load existing installment config
+  useEffect(() => {
+    if (appmaxConfig) {
+      setMaxInstallments(appmaxConfig.max_installments || 12);
+      setFreeInstallments(appmaxConfig.free_installments || 1);
+      setInterestRatePP(String(appmaxConfig.interest_rate_pp ?? '2.49'));
+    }
+  }, [profile?.gateways_config?.appmax]);
+
+  const handleSaveInstallmentConfig = async () => {
+    setSavingConfig(true);
+    try {
+      await authRequest('/loja-extras?scope=salvar-gateway', {
+        method: 'POST',
+        body: JSON.stringify({
+          id_gateway: 'appmax',
+          config: {
+            max_installments: maxInstallments,
+            free_installments: freeInstallments,
+            interest_rate_pp: parseFloat(interestRatePP) || 0,
+          },
+          loja_id: lojaId,
+        }),
+      });
+      toast({ title: 'Configuração de parcelamento salva!' });
+      onSaved();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   const handleConnect = async () => {
     setConnecting(true);
@@ -367,6 +404,39 @@ function AppmaxConfig({
             <p className="text-[10px] text-muted-foreground mt-1">Identificador único desta integração na Appmax.</p>
           </div>
         )}
+
+        {/* Installment Config */}
+        <div className="border-t border-border pt-4 space-y-4">
+          <h3 className="font-semibold flex items-center gap-2 text-sm"><CreditCard className="h-4 w-4" /> Parcelamento (Taxa P.P)</h3>
+          <p className="text-xs text-muted-foreground">Configure o parcelamento com juros por parcela (P.P). A taxa é multiplicada pelo número de parcelas.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs">Máximo de parcelas</Label>
+              <Input type="number" min={1} max={12} value={maxInstallments} onChange={e => setMaxInstallments(Math.min(12, Math.max(1, Number(e.target.value))))} />
+            </div>
+            <div>
+              <Label className="text-xs">Parcelas sem juros</Label>
+              <Input type="number" min={1} max={maxInstallments} value={freeInstallments} onChange={e => setFreeInstallments(Math.min(maxInstallments, Math.max(1, Number(e.target.value))))} />
+              <div className="mt-2 flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2.5">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-yellow-700 leading-snug">
+                  As taxas das parcelas configuradas como "Sem Juros" serão descontadas diretamente do seu saldo a receber na Appmax (Taxa Absorvida).
+                </p>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Taxa P.P (%)</Label>
+              <Input type="number" min={0} max={99} step={0.01} value={interestRatePP} onChange={e => setInterestRatePP(e.target.value)} placeholder="2.49" />
+              <p className="text-[10px] text-muted-foreground mt-1">Ex: 2.49% → 3x = 7.47% de juros total</p>
+            </div>
+          </div>
+
+          <Button onClick={handleSaveInstallmentConfig} disabled={savingConfig} variant="outline" className="gap-2 w-full">
+            {savingConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar Parcelamento
+          </Button>
+        </div>
 
         {/* Activate button */}
         {!isActive && (

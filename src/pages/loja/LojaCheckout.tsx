@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { useLoja } from '@/contexts/LojaContext';
+import { calculateAppmaxInstallments } from '@/utils/installments';
 import { firePixelEvent } from '@/components/LojaLayout';
 import { pedidosApi, carrinhosApi, cuponsApi, lojaPublicaApi } from '@/services/saas-api';
 import type { CalculatedFreight } from '@/services/saas-api';
@@ -159,7 +160,7 @@ interface AppliedCoupon {
 const LojaCheckout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart } = useCart();
-  const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, gatewayLoading, metodosSuportados } = useLoja();
+  const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, gatewayLoading, metodosSuportados, installmentConfig } = useLoja();
 
   // Gateway blocking is rendered at the end, after all hooks
 
@@ -1224,11 +1225,20 @@ const LojaCheckout = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                            <SelectItem key={n} value={String(n)}>
-                              {n}x de {formatPrice(Math.ceil(finalTotal / n))} {n === 1 ? '(à vista)' : 'sem juros'}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            if (gatewayAtivo === 'appmax' && installmentConfig && installmentConfig.interest_rate_pp > 0) {
+                              return calculateAppmaxInstallments(finalTotal, installmentConfig).map(opt => (
+                                <SelectItem key={opt.installment} value={String(opt.installment)}>
+                                  {opt.installment}x de {formatPrice(opt.installmentPrice)} {opt.isFree ? '(sem juros)' : `(total ${formatPrice(opt.totalPrice)})`}
+                                </SelectItem>
+                              ));
+                            }
+                            return Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                              <SelectItem key={n} value={String(n)}>
+                                {n}x de {formatPrice(Math.ceil(finalTotal / n))} {n === 1 ? '(à vista)' : 'sem juros'}
+                              </SelectItem>
+                            ));
+                          })()}
                         </SelectContent>
                       </Select>
                     </div>

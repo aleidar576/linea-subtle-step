@@ -209,7 +209,17 @@ module.exports = async function handler(req, res) {
     const lojaDoc = await Loja.findById(loja_id).lean();
     if (!lojaDoc) return res.status(404).json({ error: 'Loja não encontrada' });
     const dono = await Lojista.findById(lojaDoc.lojista_id).lean();
-    return res.json({ gateway_ativo: dono?.gateway_ativo || null });
+    const gwAtivo = dono?.gateway_ativo || null;
+    let installment_config = null;
+    if (gwAtivo === 'appmax' && dono?.gateways_config?.appmax) {
+      const ac = dono.gateways_config.appmax;
+      installment_config = {
+        max_installments: ac.max_installments || 12,
+        free_installments: ac.free_installments || 1,
+        interest_rate_pp: ac.interest_rate_pp || 0,
+      };
+    }
+    return res.json({ gateway_ativo: gwAtivo, installment_config });
   }
 
   // === PUBLIC: Fretes de uma loja (sem auth) ===
@@ -517,7 +527,7 @@ module.exports = async function handler(req, res) {
 
       if (!lojista.gateways_config) lojista.gateways_config = {};
       if (config) {
-        lojista.gateways_config[id_gateway] = config;
+        lojista.gateways_config[id_gateway] = { ...(lojista.gateways_config[id_gateway] || {}), ...config };
         lojista.markModified('gateways_config');
       }
 
