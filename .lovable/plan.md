@@ -1,19 +1,40 @@
 
-## Injecao de raw_appmax no bloco PIX
+## Correcao da Extracao do PIX com Payload Real da Appmax
 
-### Alteracao (arquivo: `lib/services/pagamentos/appmax.js`, linha 383)
+### Contexto
+O `raw_appmax` revelou que a Appmax retorna os dados do PIX em `data.data.payment` com campos `pix_qrcode` (base64 puro) e `pix_emv` (copia e cola).
 
-Adicionar `normalized.raw_appmax = payResult.data;` no final do bloco PIX, logo apos a logica do prefixo base64, para expor o payload cru da Appmax na aba Network do navegador.
+### Alteracao (arquivo: `lib/services/pagamentos/appmax.js`, linhas 375-384)
 
-### Detalhes tecnicos
-
-No bloco `if (method === 'pix')` (linhas 374-383), apos a linha do prefixo base64:
+Substituir o bloco atual:
 
 ```javascript
-// Adicionar apos linha 383:
-normalized.raw_appmax = payResult.data;
+      // Extrair QR code e código copia-e-cola
+      const pixData = payData.pix || payData.payment || payData;
+      normalized.pix_qr_code = pixData.qr_code || pixData.qr_code_url || pixData.qrcode || '';
+      normalized.pix_code = pixData.pix_code || pixData.emv || pixData.code || pixData.pix_emv || '';
+
+      // Garantir prefixo base64 se for imagem
+      if (normalized.pix_qr_code && !normalized.pix_qr_code.startsWith('data:image') && !normalized.pix_qr_code.startsWith('http')) {
+      normalized.pix_qr_code = `data:image/png;base64,${normalized.pix_qr_code}`;
+      }
+      normalized.raw_appmax = payResult.data;
 ```
 
-Isso permitira inspecionar a estrutura real da resposta PIX da Appmax e identificar o caminho correto para o QR code, da mesma forma que foi feito com sucesso para o Boleto.
+Por:
 
-Apos a inspecao, o campo `raw_appmax` sera removido e a extracao sera corrigida com os caminhos reais.
+```javascript
+      const paymentData = payResult?.data?.data?.payment || payResult?.data?.payment || {};
+      const qrCodeRaw = paymentData.pix_qrcode || '';
+      const emvCode = paymentData.pix_emv || '';
+      normalized.pix_qr_code = qrCodeRaw
+        ? (qrCodeRaw.startsWith('data:image') ? qrCodeRaw : `data:image/png;base64,${qrCodeRaw}`)
+        : '';
+      normalized.pix_code = emvCode;
+```
+
+### Resumo
+- Usa o caminho real confirmado: `data.data.payment`
+- Extrai `pix_qrcode` e `pix_emv` pelos nomes corretos da Appmax
+- Adiciona prefixo base64 apenas quando necessario
+- Remove `raw_appmax` (debug concluido)
