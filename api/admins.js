@@ -155,7 +155,7 @@ module.exports = async function handler(req, res) {
                 await lojista.save();
               } else {
                 await stripe.subscriptions.update(lojista.stripe_subscription_id, {
-                  pause_collection: '',
+                  pause_collection: null,
                 });
                 lojista.historico_assinatura = lojista.historico_assinatura || [];
                 lojista.historico_assinatura.push({ evento: 'Assinatura retomada pelo administrador (desbloqueio)', data: new Date() });
@@ -189,7 +189,7 @@ module.exports = async function handler(req, res) {
                 await lojista.save();
               } else {
                 await stripe.subscriptions.update(lojista.stripe_subscription_id, {
-                  pause_collection: '',
+                  pause_collection: null,
                 });
                 lojista.historico_assinatura = lojista.historico_assinatura || [];
                 lojista.historico_assinatura.push({ evento: 'Assinatura retomada pelo administrador (desbloqueio de acesso)', data: new Date() });
