@@ -1,56 +1,53 @@
 
 
-## Diagnóstico completo + Plano de correção
+## Diagnóstico dos 2 problemas
 
-### Por que calculou R$195 e não R$260?
+### Problema 1: Status muda de `trialing` para `active` ao pagar taxas manualmente
 
-O `pedido.total` é armazenado em **centavos** (R$130,00 = `13000`). A fórmula atual na linha 41 de `confirmarPagamento.js`:
+**Causa raiz:** Quando `pagarTaxasManual` cria uma invoice avulsa e a paga via `stripe.invoices.pay()`, o Stripe dispara o webhook `invoice.payment_succeeded`. No handler desse evento (linha 132-136), a condição só protege o caso `billing_reason === 'subscription_create'`. Para invoices avulsas de taxas, o `billing_reason` será `manual` — caindo no `else` que seta `subscription_status = 'active'`.
 
-```
-pedido.total * taxaPercentual / 100
-```
+**Correção em `lib/services/assinaturas/stripe.js`**, handler `invoice.payment_succeeded` (linhas 130-137):
 
-Com taxa 1.5%: `13000 * 1.5 / 100 = 195` (errado, deveria ser R$1,95)
+Expandir a condição para também preservar `trialing` quando a invoice NÃO é de subscription (invoices avulsas de taxas não devem alterar o status da assinatura):
 
-**Mas por que usou 1.5% e não 2% (trial)?** Isso indica que o `subscription_status` do lojista no banco não estava como `trialing` no momento da venda. Pode ter sido setado como `active` pelo webhook do Stripe, ou o campo não estava preenchido corretamente. Isso é um problema de dados, não de lógica — a lógica de seleção trial vs ativa está correta (linhas 37-39). Será preciso verificar manualmente no MongoDB o `subscription_status` atual do lojista.
-
-### Correções necessárias
-
-**1. `lib/services/pedidos/confirmarPagamento.js`** — Converter centavos para reais (BUG CRÍTICO)
-
-Linha 41, alterar de:
 ```javascript
-const valorTaxa = (pedido.total * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
+if (lojista) {
+  // Só mudar para 'active' se for renovação real da assinatura
+  if (lojista.subscription_status === 'trialing' && billingReason !== 'subscription_cycle') {
+    console.log(`[STRIPE-WEBHOOK] ℹ️ Invoice não-subscription durante trial — mantendo 'trialing'`);
+  } else if (billingReason === 'manual') {
+    console.log(`[STRIPE-WEBHOOK] ℹ️ Invoice manual (taxas) — não altera subscription_status`);
+  } else {
+    lojista.subscription_status = 'active';
+  }
+}
 ```
-Para:
+
+Lógica: só seta `active` quando `billing_reason === 'subscription_cycle'` (renovação real do plano). Invoices manuais e de criação nunca alteram o status.
+
+### Problema 2: Pagamento manual não aparece no Stripe
+
+**Causa provável:** O valor em centavos pode estar sendo `0` se `taxas_acumuladas` no banco era `0` ou muito pequeno. Ou o `stripe.invoices.pay()` pode estar falhando silenciosamente (o catch no `api/loja-extras.js` retorna erro genérico "Cartão recusado").
+
+**Correção em `lib/services/assinaturas/stripe.js`**, função `pagarTaxasManual` (linhas 385-423):
+
+- Adicionar logs detalhados antes de cada chamada Stripe para rastrear o fluxo
+- Validar que `amountCents > 0` antes de prosseguir
+- Garantir que a invoice criada realmente contém o item (log do invoice.id)
+
 ```javascript
-const totalReais = pedido.total / 100;
-const valorTaxa = (totalReais * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
+console.log(`[PAGAR-TAXAS-MANUAL] Lojista: ${lojista.email}, taxas: R$${lojista.taxas_acumuladas}, centavos: ${amountCents}, customer: ${lojista.stripe_customer_id}`);
+
+if (amountCents <= 0) {
+  return { error: 'Valor de taxas inválido para cobrança', httpStatus: 400 };
+}
+
+// ... invoiceItems.create + invoices.create + invoices.pay com logs
+console.log(`[PAGAR-TAXAS-MANUAL] ✅ Invoice ${invoice.id} criada e paga`);
 ```
 
-Resultado correto para R$130 com 2% trial: `130 * 2 / 100 = R$2,60`
-Resultado correto para R$130 com 1.5%: `130 * 1.5 / 100 = R$1,95`
+Também melhorar o catch em `api/loja-extras.js` para logar o erro real (atualmente só loga `err.message` mas retorna mensagem genérica).
 
-A taxa fixa (`taxa_transacao_fixa`) já é em reais, está correto como está — somada após o percentual.
-
-**2. `src/pages/painel/LojaAssinatura.tsx`** — Melhorar UI para trial
-
-No bloco de assinatura ativa, quando `isTrial === true`:
-
-- Mostrar um banner informativo no BLOCO 1 (Mensalidade) explicando que o lojista está no **período trial de 7 dias** e que ao final será migrado automaticamente para o plano contratado (ex: "Starter")
-- No BLOCO 2 (Taxas), o banner de taxa trial já existe (linhas 195-201) mas será aprimorado para deixar mais claro que:
-  - A taxa atual é de X% (puxada do plano: `taxa_transacao_trial`)
-  - Após o trial, a taxa será de Y% (puxada do plano: `taxa_transacao_percentual`)
-
-Mudanças específicas no BLOCO 1:
-- Quando `isTrial`, exibir badge "Trial Ativo" (já existe via STATUS_MAP)
-- Adicionar banner azul informativo abaixo do preço: "Você está no período trial de 7 dias. Ao final, será cobrado automaticamente o plano {planoNome} de R$ {precoPromocional}/mês."
-
-Mudanças no BLOCO 2:
-- Expandir o banner azul de trial (já existente) para incluir: "Após o trial, a taxa será reduzida para {taxa_transacao_percentual}%."
-
-Todos os valores puxados do `currentPlano` (dados do banco).
-
-### Ação manual necessária (fora do código)
-O saldo de `taxas_acumuladas` no MongoDB está incorreto (R$195). Será necessário corrigir manualmente para o valor correto.
+### Ação manual necessária
+Corrigir `subscription_status` no MongoDB de volta para `"trialing"` (foi alterado para `active` pelo bug).
 
