@@ -69,8 +69,16 @@ const LojistaRegistro = () => {
             <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block text-foreground">Telefone</label>
-            <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" required />
+            <label className="text-sm font-medium mb-1 block text-foreground">Celular (WhatsApp)</label>
+            <Input value={telefone} onChange={e => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+              let formatted = digits;
+              if (digits.length > 2 && digits.length <= 6) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+              else if (digits.length > 6 && digits.length <= 10) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+              else if (digits.length === 11) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+              else if (digits.length > 0 && digits.length <= 2) formatted = `(${digits}`;
+              setTelefone(formatted);
+            }} placeholder="(11) 99999-9999" required />
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block text-foreground">Senha</label>

@@ -225,14 +225,22 @@ const LojaPerfil = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Dados Pessoais</CardTitle>
-            <CardDescription>Atualize seu nome e telefone</CardDescription>
+            <CardDescription>Atualize seu nome e celular</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div><label className="text-sm font-medium mb-1 block">Nome</label><Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required /></div>
               <div><label className="text-sm font-medium mb-1 block">Email</label><Input value={profile?.email || ''} readOnly className="bg-muted cursor-not-allowed" /><p className="text-xs text-muted-foreground mt-1">O email não pode ser alterado</p></div>
               <div><label className="text-sm font-medium mb-1 block">CPF/CNPJ</label><Input value={cpfCnpj} onChange={e => setCpfCnpj(e.target.value)} placeholder="000.000.000-00" /></div>
-              <div><label className="text-sm font-medium mb-1 block">Telefone</label><Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" /></div>
+              <div><label className="text-sm font-medium mb-1 block">Celular (WhatsApp)</label><Input value={telefone} onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                let formatted = digits;
+                if (digits.length > 2 && digits.length <= 6) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+                else if (digits.length > 6 && digits.length <= 10) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+                else if (digits.length === 11) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+                else if (digits.length > 0 && digits.length <= 2) formatted = `(${digits}`;
+                setTelefone(formatted);
+              }} placeholder="(11) 99999-9999" /></div>
               <Button type="submit" disabled={savingProfile}>{savingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Salvar</Button>
             </form>
           </CardContent>
