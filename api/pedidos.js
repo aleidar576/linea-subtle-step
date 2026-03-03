@@ -10,7 +10,6 @@ const Loja = require('../models/Loja.js');
 const authPkg = require('../lib/auth.js');
 const { sendEmail, getBranding, emailRastreioHtml, sendReportEmail, emailRelatorioHtml, generateReportFiles } = require('../lib/email.js');
 const Lojista = require('../models/Lojista.js');
-const Plano = require('../models/Plano.js');
 const Product = require('../models/Product.js');
 const { getShippingService } = require('../lib/services/fretes');
 
