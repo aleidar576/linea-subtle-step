@@ -103,8 +103,9 @@ module.exports = async function handler(req, res) {
       if (result.error) return res.status(result.httpStatus || 500).json({ error: result.error });
       return res.json(result.data);
     } catch (err) {
-      console.error('[PAGAR-TAXAS-MANUAL] ❌ Falha:', err.message);
-      return res.status(400).json({ error: 'Cartão recusado. Atualize seu método de pagamento no portal Stripe e tente novamente.' });
+      console.error('[PAGAR-TAXAS-MANUAL] ❌ Falha completa:', err);
+      const msg = err?.raw?.message || err?.message || 'Erro desconhecido';
+      return res.status(400).json({ error: `Falha no pagamento: ${msg}. Atualize seu método de pagamento no portal Stripe e tente novamente.` });
     }
   }
 
