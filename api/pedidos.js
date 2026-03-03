@@ -95,7 +95,7 @@ module.exports = async function handler(req, res) {
         frete_nome: body.frete_nome || null,
       });
 
-      // === ACUMULAR TAXAS quando pedido é criado já como pago (ex: cartão de crédito) ===
+      // === ACUMULAR TAXAS DA PLATAFORMA (Stripe) quando pedido é criado já como pago ===
       if (pedido.status === 'pago' && pedido.total > 0) {
         try {
           const lojaDoc = await Loja.findById(pedido.loja_id).select('lojista_id').lean();
