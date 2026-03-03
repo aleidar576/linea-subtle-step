@@ -67,6 +67,7 @@ export interface LojistaUser {
   role: 'lojista';
   lojista_id: string;
   plano: string;
+  subscription_status?: string | null;
   modo_amigo?: boolean;
   liberar_visualizacao_subdominio?: boolean;
   bloqueado?: boolean;
