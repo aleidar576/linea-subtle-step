@@ -148,17 +148,17 @@ const LojaAssinatura = () => {
             )}
 
             {isTrial && currentPlano && (
-              <div className="flex items-start gap-3 rounded-lg bg-blue-500/10 p-4 border border-blue-300">
-                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700 font-medium space-y-1">
+              <div className="flex items-start gap-3 rounded-lg bg-primary/10 p-4 border border-primary/30">
+                <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="text-sm text-muted-foreground font-medium space-y-1">
                   <p>
-                    Você está no <strong>período trial de 7 dias</strong>. Ao final, será cobrado automaticamente o plano{' '}
-                    <strong>{planoNome}</strong> de{' '}
-                    <strong>R$ {(precoPromocional ?? 0).toFixed(2).replace('.', ',')}/mês</strong>.
+                    Você está no <strong className="text-foreground">período trial de 7 dias</strong>. Ao final, será cobrado automaticamente o plano{' '}
+                    <strong className="text-foreground">{planoNome}</strong> de{' '}
+                    <strong className="text-foreground">R$ {(precoPromocional ?? 0).toFixed(2).replace('.', ',')}/mês</strong>.
                   </p>
                   {profile.data_vencimento && (
-                    <p className="text-blue-600">
-                      O trial termina em <strong>{new Date(profile.data_vencimento).toLocaleDateString('pt-BR')}</strong>.
+                    <p>
+                      O trial termina em <strong className="text-foreground">{new Date(profile.data_vencimento).toLocaleDateString('pt-BR')}</strong>.
                     </p>
                   )}
                 </div>
@@ -212,14 +212,14 @@ const LojaAssinatura = () => {
             </div>
 
             {isTrial && currentPlano && (
-              <div className="flex items-start gap-2 rounded-lg bg-blue-500/10 p-3 border border-blue-300">
-                <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-700 font-medium space-y-1">
+              <div className="flex items-start gap-2 rounded-lg bg-primary/10 p-3 border border-primary/30">
+                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div className="text-xs text-muted-foreground font-medium space-y-1">
                   <p>
-                    Taxa vigente durante o trial: <strong>{taxaVigente}%</strong> por transação.
+                    Taxa vigente durante o trial: <strong className="text-foreground">{taxaVigente}%</strong> por transação.
                   </p>
                   <p>
-                    Após o trial, a taxa será de <strong>{currentPlano.taxa_transacao_percentual ?? currentPlano.taxa_transacao ?? 1.5}%</strong>
+                    Após o trial, a taxa será de <strong className="text-foreground">{currentPlano.taxa_transacao_percentual ?? currentPlano.taxa_transacao ?? 1.5}%</strong>
                     {(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${currentPlano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''} por transação.
                   </p>
                 </div>
