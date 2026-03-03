@@ -17,7 +17,7 @@ interface Depoimento {
 
 const SETTING_KEYS = [
   'global_domain', 'termos_uso', 'browser_icon',
-  'dias_tolerancia_inadimplencia', 'depoimentos_landing_page',
+  'dias_tolerancia_inadimplencia', 'dias_tolerancia_taxas', 'depoimentos_landing_page',
   'saas_name', 'saas_slogan', 'saas_auth_subtitle', 'saas_icon_name',
   'saas_logo_url', 'saas_logo_url_light', 'saas_logo_url_home',
   'saas_logo_size', 'saas_logo_size_home', 'saas_logo_size_login',
@@ -33,6 +33,7 @@ const AdminConfigEmpresa = () => {
     termos_uso: '',
     browser_icon: '',
     dias_tolerancia_inadimplencia: '5',
+    dias_tolerancia_taxas: '3',
     depoimentos_landing_page: '[]',
     saas_name: '',
     saas_slogan: '',
@@ -199,9 +200,14 @@ const AdminConfigEmpresa = () => {
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <h2 className="font-semibold text-lg">Regras de Inadimplência</h2>
           <div>
-            <label className="text-sm font-medium mb-1 block">Dias de Tolerância Padrão</label>
+            <label className="text-sm font-medium mb-1 block">Dias de Tolerância Padrão (Mensalidade)</label>
             <Input type="number" min="0" value={form.dias_tolerancia_inadimplencia} onChange={e => setForm(f => ({ ...f, dias_tolerancia_inadimplencia: e.target.value }))} placeholder="5" />
-            <p className="text-xs text-muted-foreground mt-1">Quantidade de dias após o vencimento antes de bloquear a loja do lojista.</p>
+            <p className="text-xs text-muted-foreground mt-1">Quantidade de dias após o vencimento da mensalidade antes de bloquear a loja.</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Dias de Tolerância para Taxas</label>
+            <Input type="number" min="0" value={form.dias_tolerancia_taxas} onChange={e => setForm(f => ({ ...f, dias_tolerancia_taxas: e.target.value }))} placeholder="3" />
+            <p className="text-xs text-muted-foreground mt-1">Quantidade de dias após o bloqueio de taxas (3 tentativas falhadas) antes de suspender a loja.</p>
           </div>
         </div>
 

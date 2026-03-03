@@ -374,6 +374,8 @@ export interface LojistaProfile {
   data_vencimento_taxas?: string | null;
   tentativas_taxas?: number;
   status_taxas?: string;
+  data_bloqueio_taxas?: string | null;
+  tolerancia_extra_dias?: number;
   historico_assinatura?: Array<{ evento: string; data: string; detalhes: string }>;
   gateway_ativo?: string | null;
   gateways_config?: Record<string, any>;

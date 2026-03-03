@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
+import { settingsApi } from '@/services/api';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   trialing: { label: 'Trial Ativo', className: 'bg-blue-500/10 text-blue-600' },
@@ -24,6 +25,7 @@ const LojaAssinatura = () => {
   const [searchParams] = useSearchParams();
   const [refreshing, setRefreshing] = useState(false);
   const [payManualLoading, setPayManualLoading] = useState(false);
+  const [diasToleranciaTaxas, setDiasToleranciaTaxas] = useState(3);
 
   const fetchData = useCallback(() => {
     return Promise.all([planosApi.list(), lojistaApi.perfil()])
@@ -31,7 +33,13 @@ const LojaAssinatura = () => {
       .catch(() => toast({ title: 'Erro', description: 'Falha ao carregar dados', variant: 'destructive' }));
   }, [toast]);
 
-  useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
+  useEffect(() => {
+    fetchData().finally(() => setLoading(false));
+    settingsApi.getByKeys(['dias_tolerancia_taxas']).then(settings => {
+      const s = settings.find(s => s.key === 'dias_tolerancia_taxas');
+      if (s?.value) setDiasToleranciaTaxas(Number(s.value) || 3);
+    }).catch(() => {});
+  }, [fetchData]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -280,9 +288,19 @@ const LojaAssinatura = () => {
               <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
-                  <p className="text-sm text-destructive font-medium">
-                    Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} estão pendentes. Regularize imediatamente para evitar a suspensão da sua loja.
-                  </p>
+                  <div className="text-sm text-destructive font-medium">
+                    <p>Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} estão pendentes.</p>
+                    {profile.data_bloqueio_taxas && (() => {
+                      const dataBloqueio = new Date(profile.data_bloqueio_taxas);
+                      const dataLimite = new Date(dataBloqueio);
+                      dataLimite.setDate(dataLimite.getDate() + diasToleranciaTaxas);
+                      return (
+                        <p className="mt-1 font-bold">
+                          Regularize até {dataLimite.toLocaleDateString('pt-BR')} para evitar a suspensão da sua loja.
+                        </p>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <Button onClick={handlePayManual} disabled={payManualLoading} variant="destructive" className="w-full gap-2">
                   {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}

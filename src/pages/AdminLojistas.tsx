@@ -31,7 +31,7 @@ const AdminLojistas = () => {
   const { toast } = useToast();
   const [mode, setMode] = useState<ViewMode>('list');
   const [selectedLojista, setSelectedLojista] = useState<AdminLojista | null>(null);
-  const [toleranciaForm, setToleranciaForm] = useState({ modo_amigo: false, tolerancia_extra_dias: 0 });
+  const [toleranciaForm, setToleranciaForm] = useState({ modo_amigo: false, tolerancia_extra_dias: 0, tolerancia_extra_dias_taxas: 0 });
   const [savingTolerancia, setSavingTolerancia] = useState(false);
   const [metrics, setMetrics] = useState<{ totalProdutos: number; totalPedidos: number; totalVendas: number; lojas?: Array<{ slug: string; nome: string }> } | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -58,6 +58,7 @@ const AdminLojistas = () => {
     setToleranciaForm({
       modo_amigo: l.modo_amigo || false,
       tolerancia_extra_dias: l.tolerancia_extra_dias || 0,
+      tolerancia_extra_dias_taxas: l.tolerancia_extra_dias_taxas || 0,
     });
     setMetrics(null);
     setMetricsLoading(true);
@@ -257,13 +258,24 @@ const AdminLojistas = () => {
             <div className="bg-card border border-border rounded-xl p-6 space-y-4">
               <h2 className="font-semibold">Controle de Tolerância</h2>
               <div>
-                <Label>Dias Extras de Tolerância</Label>
-                <p className="text-xs text-muted-foreground mb-2">Dias adicionais somados à regra global especificamente para este lojista.</p>
+                <Label>Dias Extras de Tolerância (Mensalidade)</Label>
+                <p className="text-xs text-muted-foreground mb-2">Dias adicionais somados à regra global de mensalidade para este lojista.</p>
                 <Input
                   type="number"
                   min="0"
                   value={toleranciaForm.tolerancia_extra_dias}
                   onChange={(e) => setToleranciaForm(f => ({ ...f, tolerancia_extra_dias: Number(e.target.value) || 0 }))}
+                  disabled={toleranciaForm.modo_amigo}
+                />
+              </div>
+              <div>
+                <Label>Dias Extras de Tolerância (Taxas)</Label>
+                <p className="text-xs text-muted-foreground mb-2">Dias adicionais somados à regra global de taxas para este lojista.</p>
+                <Input
+                  type="number"
+                  min="0"
+                  value={toleranciaForm.tolerancia_extra_dias_taxas}
+                  onChange={(e) => setToleranciaForm(f => ({ ...f, tolerancia_extra_dias_taxas: Number(e.target.value) || 0 }))}
                   disabled={toleranciaForm.modo_amigo}
                 />
               </div>

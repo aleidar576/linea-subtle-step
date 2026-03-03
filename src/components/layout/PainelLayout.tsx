@@ -281,8 +281,9 @@ const PainelLayout = () => {
 
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
+        {/* Banner: Mensalidade past_due */}
         {lojistaProfile?.subscription_status === 'past_due' && (() => {
-          const toleranciaGlobal = 7;
+          const toleranciaGlobal = Number((lojistaProfile as any)?.tolerancia_global_inadimplencia) || 5;
           const toleranciaExtra = (lojistaProfile as any)?.tolerancia_extra_dias || 0;
           const totalTolerancia = toleranciaGlobal + toleranciaExtra;
           const vencimento = lojistaProfile.data_vencimento ? new Date(lojistaProfile.data_vencimento) : null;
@@ -306,6 +307,46 @@ const PainelLayout = () => {
               <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
               <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
                 Seu pagamento está pendente. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
+              </span>
+            </div>
+          );
+        })()}
+
+        {/* Banner: Taxas em falha */}
+        {lojistaProfile?.status_taxas === 'falha' && (
+          <div className="mb-4 rounded-lg bg-yellow-500/15 border border-yellow-500/30 p-4 text-center">
+            <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
+            <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
+              Cobrança de taxas falhou. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
+            </span>
+          </div>
+        )}
+
+        {/* Banner: Taxas bloqueadas */}
+        {lojistaProfile?.status_taxas === 'bloqueado' && (() => {
+          const dataBloqueio = lojistaProfile.data_bloqueio_taxas ? new Date(lojistaProfile.data_bloqueio_taxas) : null;
+          if (!dataBloqueio) return null;
+          const toleranciaGlobalTaxas = 3; // fallback — real value loaded from settings in LojaAssinatura
+          const agora = new Date();
+          const diffDias = Math.floor((agora.getTime() - dataBloqueio.getTime()) / (1000 * 60 * 60 * 24));
+          const bloqueadoReal = diffDias > toleranciaGlobalTaxas;
+
+          if (bloqueadoReal) {
+            return (
+              <div
+                className="mb-4 rounded-lg bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold"
+                onClick={() => navigate('/painel/assinatura')}
+              >
+                <AlertTriangle className="h-5 w-5 inline mr-2" />
+                LOJA BLOQUEADA POR TAXAS PENDENTES — REGULARIZE AGORA
+              </div>
+            );
+          }
+          return (
+            <div className="mb-4 rounded-lg bg-destructive/15 border border-destructive/30 p-4 text-center">
+              <AlertTriangle className="h-4 w-4 inline mr-2 text-destructive" />
+              <span className="text-sm text-destructive font-medium">
+                Taxas pendentes! Sua loja será suspensa em breve. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
               </span>
             </div>
           );
