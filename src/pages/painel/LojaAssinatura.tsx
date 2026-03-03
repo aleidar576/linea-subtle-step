@@ -226,6 +226,14 @@ const LojaAssinatura = () => {
               </div>
             )}
 
+            {/* Botão: Pagar taxas antecipadamente (quando status OK mas há taxas) */}
+            {profile.status_taxas === 'ok' && taxasAcumuladas > 0 && (
+              <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2">
+                {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Pagar Taxas Antecipadamente
+              </Button>
+            )}
+
             {/* Banner: Falha na cobrança */}
             {profile.status_taxas === 'falha' && taxasAcumuladas > 0 && (
               <div className="rounded-lg bg-orange-500/10 p-4 border border-orange-300 space-y-3">

@@ -139,12 +139,68 @@ module.exports = async function handler(req, res) {
       if (action === 'bloquear') {
         lojista.bloqueado = !lojista.bloqueado;
         await lojista.save();
+
+        // Pausar/retomar cobrança Stripe
+        if (lojista.stripe_subscription_id) {
+          try {
+            const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+            if (STRIPE_SECRET_KEY) {
+              const stripe = require('stripe')(STRIPE_SECRET_KEY);
+              if (lojista.bloqueado) {
+                await stripe.subscriptions.update(lojista.stripe_subscription_id, {
+                  pause_collection: { behavior: 'void' },
+                });
+                lojista.historico_assinatura = lojista.historico_assinatura || [];
+                lojista.historico_assinatura.push({ evento: 'Assinatura pausada pelo administrador (bloqueio)', data: new Date() });
+                await lojista.save();
+              } else {
+                await stripe.subscriptions.update(lojista.stripe_subscription_id, {
+                  pause_collection: '',
+                });
+                lojista.historico_assinatura = lojista.historico_assinatura || [];
+                lojista.historico_assinatura.push({ evento: 'Assinatura retomada pelo administrador (desbloqueio)', data: new Date() });
+                await lojista.save();
+              }
+            }
+          } catch (stripeErr) {
+            console.error(`[ADMIN] Erro ao pausar/retomar assinatura Stripe para ${lojista.email}:`, stripeErr.message);
+          }
+        }
+
         return res.status(200).json({ success: true, bloqueado: lojista.bloqueado });
       }
 
       if (action === 'bloquear-acesso') {
         lojista.acesso_bloqueado = !lojista.acesso_bloqueado;
         await lojista.save();
+
+        // Pausar/retomar cobrança Stripe
+        if (lojista.stripe_subscription_id) {
+          try {
+            const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+            if (STRIPE_SECRET_KEY) {
+              const stripe = require('stripe')(STRIPE_SECRET_KEY);
+              if (lojista.acesso_bloqueado) {
+                await stripe.subscriptions.update(lojista.stripe_subscription_id, {
+                  pause_collection: { behavior: 'void' },
+                });
+                lojista.historico_assinatura = lojista.historico_assinatura || [];
+                lojista.historico_assinatura.push({ evento: 'Assinatura pausada pelo administrador (bloqueio de acesso)', data: new Date() });
+                await lojista.save();
+              } else {
+                await stripe.subscriptions.update(lojista.stripe_subscription_id, {
+                  pause_collection: '',
+                });
+                lojista.historico_assinatura = lojista.historico_assinatura || [];
+                lojista.historico_assinatura.push({ evento: 'Assinatura retomada pelo administrador (desbloqueio de acesso)', data: new Date() });
+                await lojista.save();
+              }
+            }
+          } catch (stripeErr) {
+            console.error(`[ADMIN] Erro ao pausar/retomar assinatura Stripe para ${lojista.email}:`, stripeErr.message);
+          }
+        }
+
         return res.status(200).json({ success: true, acesso_bloqueado: lojista.acesso_bloqueado });
       }
 
