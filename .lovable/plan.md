@@ -1,70 +1,56 @@
 
 
-## Plano: Centralizar lógica de taxas em `api/pedidos.js`
+## Diagnóstico completo + Plano de correção
 
-### Problema atual
-A lógica de acúmulo de taxas da plataforma está duplicada em 3 lugares:
-1. `api/pedidos.js` (criação com status pago + PATCH status)
-2. `lib/services/pagamentos/sealpay.js` (webhook)
-3. `lib/services/pagamentos/appmax.js` (webhook)
+### Por que calculou R$195 e não R$260?
 
-Isso significa que a cada novo gateway, seria preciso copiar a lógica de taxas novamente.
+O `pedido.total` é armazenado em **centavos** (R$130,00 = `13000`). A fórmula atual na linha 41 de `confirmarPagamento.js`:
 
-### Solução
-
-Criar um **scope público** em `api/pedidos.js` (ex: `scope=confirmar-pagamento`) que os webhooks chamam internamente. Esse scope:
-1. Atualiza o pedido para `pago` (com `pago_em`)
-2. Acumula as taxas da plataforma
-3. Converte carrinho abandonado
-4. **NÃO** mexe no CAPI/pixel (cada webhook continua disparando seu próprio CAPI Purchase como já faz)
-
-### Mudanças por arquivo
-
-**1. `api/pedidos.js`** — Novo scope interno `confirmar-pagamento`
-- Aceita `POST` com `{ txid, appmax_order_id }` (um dos dois)
-- Busca o pedido, muda status para `pago`, salva `pagamento.pago_em`
-- Executa a lógica de acúmulo de taxas (modo_amigo, plano, trial, etc.)
-- Converte carrinho abandonado associado
-- Retorna `{ ok: true, pedido_id, status }` para o webhook saber que deu certo
-- A lógica de taxas que já existe no PATCH action=status continua chamando essa mesma função interna (refatorar para função reutilizável `acumularTaxasPlataforma(pedido)`)
-
-**2. `lib/services/pagamentos/sealpay.js`** — Remover lógica de taxas duplicada
-- Remover o bloco de "ACUMULAR TAXAS DA PLATAFORMA" (linhas 48-80)
-- Substituir o `findOneAndUpdate` direto por uma chamada HTTP interna a `api/pedidos?scope=confirmar-pagamento`
-- **OU** (mais simples e sem overhead de HTTP): importar e chamar a função `confirmarPagamento` diretamente
-- Manter intacto o dispatch CAPI Purchase (linhas 82-105)
-
-**3. `lib/services/pagamentos/appmax.js`** — Remover lógica de taxas duplicada
-- Remover o bloco de "ACUMULAR TAXAS DA PLATAFORMA" (linhas 518-548)
-- Substituir o `findByIdAndUpdate` + taxas por chamada à função centralizada
-- Manter intacto o dispatch CAPI Purchase (linhas 550-580)
-
-### Abordagem técnica
-
-A forma mais eficiente (sem overhead de HTTP interno) é extrair uma **função utilitária** em `api/pedidos.js`:
-
-```text
-// Função exportada para uso interno por webhooks
-async function confirmarPagamentoPedido({ txid, appmax_order_id }) {
-  1. Busca pedido por txid ou appmax_order_id
-  2. Se já pago → retorna sem duplicar
-  3. Atualiza status → 'pago', pagamento.pago_em → now
-  4. Acumula taxas (modo_amigo, plano, trial)
-  5. Converte carrinho abandonado
-  return { ok, pedido }
-}
+```
+pedido.total * taxaPercentual / 100
 ```
 
-Porém, como `api/pedidos.js` é uma serverless function (handler), exportar funções dele é problemático no Vercel. A solução limpa é:
+Com taxa 1.5%: `13000 * 1.5 / 100 = 195` (errado, deveria ser R$1,95)
 
-**Criar `lib/services/pedidos/confirmarPagamento.js`** — Módulo utilitário
-- Contém a lógica de confirmar pagamento + acumular taxas
-- Importado por `api/pedidos.js`, `sealpay.js` e `appmax.js`
-- Único ponto de manutenção
+**Mas por que usou 1.5% e não 2% (trial)?** Isso indica que o `subscription_status` do lojista no banco não estava como `trialing` no momento da venda. Pode ter sido setado como `active` pelo webhook do Stripe, ou o campo não estava preenchido corretamente. Isso é um problema de dados, não de lógica — a lógica de seleção trial vs ativa está correta (linhas 37-39). Será preciso verificar manualmente no MongoDB o `subscription_status` atual do lojista.
 
-### O que NÃO será alterado
-- Lógica de CAPI Purchase dispatch (pixels) — cada webhook mantém seu próprio dispatch
-- Fluxo de checkout do frontend — nenhuma mudança
-- Lógica interna de cartão de crédito do Appmax — intacta
-- Nenhuma rota nova no `vercel.json`
+### Correções necessárias
+
+**1. `lib/services/pedidos/confirmarPagamento.js`** — Converter centavos para reais (BUG CRÍTICO)
+
+Linha 41, alterar de:
+```javascript
+const valorTaxa = (pedido.total * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
+```
+Para:
+```javascript
+const totalReais = pedido.total / 100;
+const valorTaxa = (totalReais * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
+```
+
+Resultado correto para R$130 com 2% trial: `130 * 2 / 100 = R$2,60`
+Resultado correto para R$130 com 1.5%: `130 * 1.5 / 100 = R$1,95`
+
+A taxa fixa (`taxa_transacao_fixa`) já é em reais, está correto como está — somada após o percentual.
+
+**2. `src/pages/painel/LojaAssinatura.tsx`** — Melhorar UI para trial
+
+No bloco de assinatura ativa, quando `isTrial === true`:
+
+- Mostrar um banner informativo no BLOCO 1 (Mensalidade) explicando que o lojista está no **período trial de 7 dias** e que ao final será migrado automaticamente para o plano contratado (ex: "Starter")
+- No BLOCO 2 (Taxas), o banner de taxa trial já existe (linhas 195-201) mas será aprimorado para deixar mais claro que:
+  - A taxa atual é de X% (puxada do plano: `taxa_transacao_trial`)
+  - Após o trial, a taxa será de Y% (puxada do plano: `taxa_transacao_percentual`)
+
+Mudanças específicas no BLOCO 1:
+- Quando `isTrial`, exibir badge "Trial Ativo" (já existe via STATUS_MAP)
+- Adicionar banner azul informativo abaixo do preço: "Você está no período trial de 7 dias. Ao final, será cobrado automaticamente o plano {planoNome} de R$ {precoPromocional}/mês."
+
+Mudanças no BLOCO 2:
+- Expandir o banner azul de trial (já existente) para incluir: "Após o trial, a taxa será reduzida para {taxa_transacao_percentual}%."
+
+Todos os valores puxados do `currentPlano` (dados do banco).
+
+### Ação manual necessária (fora do código)
+O saldo de `taxas_acumuladas` no MongoDB está incorreto (R$195). Será necessário corrigir manualmente para o valor correto.
 
