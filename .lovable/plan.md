@@ -1,34 +1,30 @@
 
 
-## Plano de Correção: Banners e datas não aparecendo
+## Correção: Banner não some após pagamento manual de taxas
 
-### Problema raiz
+### Problema
+O `PainelLayout` carrega o perfil do lojista em seu próprio `useEffect` e guarda em estado local (`lojistaProfile`). Quando o `LojaAssinatura` faz o pagamento manual e chama `fetchData()`, só atualiza o estado **dele** — o PainelLayout continua com o `status_taxas: 'bloqueado'` em memória.
 
-1. **`data_bloqueio_taxas` não existe no MongoDB** — o campo foi adicionado ao schema mas o lojista já estava bloqueado antes do deploy. No PainelLayout, `if (!dataBloqueio) return null` faz o banner desaparecer completamente.
+### Solução
+Adicionar um listener de `visibilitychange` ou, mais direto, usar um **evento customizado** para que o `LojaAssinatura` notifique o `PainelLayout` para recarregar o perfil após o pagamento.
 
-2. **`tolerancia_global_inadimplencia` não vem da API** — o PainelLayout tenta ler `lojistaProfile.tolerancia_global_inadimplencia` mas a API `/lojista` GET retorna apenas campos do modelo Lojista, sem settings globais. O PainelLayout precisa buscar os settings separadamente.
+**Abordagem simples:** Disparar `window.dispatchEvent(new Event('refresh-lojista-profile'))` no `handlePayManual` do `LojaAssinatura`, e no `PainelLayout` ouvir esse evento para recarregar o perfil.
 
-3. **PainelLayout banner de taxas usa tolerância hardcoded (3)** — deveria buscar o setting `dias_tolerancia_taxas` da API.
+### Alterações
 
-### Correções necessárias
+#### 1. `src/pages/painel/LojaAssinatura.tsx`
+No `handlePayManual`, após `await fetchData()` com sucesso, disparar:
+```js
+window.dispatchEvent(new Event('refresh-lojista-profile'));
+```
 
-#### 1. PainelLayout — buscar settings reais + fallback quando data_bloqueio_taxas é null
-**`src/components/layout/PainelLayout.tsx`**:
-- No `useEffect` que carrega o perfil, também buscar `settingsApi.getByKeys(['dias_tolerancia_inadimplencia', 'dias_tolerancia_taxas'])`.
-- No banner de mensalidade: usar o setting real em vez de `lojistaProfile.tolerancia_global_inadimplencia`.
-- No banner de taxas bloqueadas: se `data_bloqueio_taxas` é null mas `status_taxas === 'bloqueado'`, ainda exibir o banner (sem data específica, mas com o aviso genérico de suspensão iminente).
-
-#### 2. LojaAssinatura — fallback quando data_bloqueio_taxas é null
-**`src/pages/painel/LojaAssinatura.tsx`**:
-- Quando `status_taxas === 'bloqueado'` mas `data_bloqueio_taxas` é null, exibir o banner vermelho sem a data limite (mensagem genérica "Regularize o mais rápido possível para evitar suspensão").
-
-### Nota sobre o MongoDB
-O campo `data_bloqueio_taxas` precisa ser adicionado manualmente no MongoDB para este lojista de teste. Valor sugerido: a data em que ele atingiu 3 tentativas (ou `new Date()` para testar). Futuros lojistas terão o campo preenchido automaticamente pelo cron.
+#### 2. `src/components/layout/PainelLayout.tsx`
+Adicionar um `useEffect` que escuta o evento `refresh-lojista-profile` e re-executa o fetch do perfil do lojista.
 
 ### Arquivos modificados
 
 | Arquivo | Alteração |
 |---|---|
-| `src/components/layout/PainelLayout.tsx` | Buscar settings reais + fallback para banner sem data |
-| `src/pages/painel/LojaAssinatura.tsx` | Fallback no banner quando data_bloqueio_taxas é null |
+| `src/pages/painel/LojaAssinatura.tsx` | Disparar evento após pagamento manual |
+| `src/components/layout/PainelLayout.tsx` | Ouvir evento e recarregar perfil |
 
