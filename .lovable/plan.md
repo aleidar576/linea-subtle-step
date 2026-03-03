@@ -1,53 +1,56 @@
 
 
-## Diagnóstico dos 2 problemas
+## Análise
 
-### Problema 1: Status muda de `trialing` para `active` ao pagar taxas manualmente
+O código **já implementa os 3 passos** corretamente em ambas as funções (`pagarTaxasManual` linhas 407-421 e `processarCronTaxas` linhas 332-343):
 
-**Causa raiz:** Quando `pagarTaxasManual` cria uma invoice avulsa e a paga via `stripe.invoices.pay()`, o Stripe dispara o webhook `invoice.payment_succeeded`. No handler desse evento (linha 132-136), a condição só protege o caso `billing_reason === 'subscription_create'`. Para invoices avulsas de taxas, o `billing_reason` será `manual` — caindo no `else` que seta `subscription_status = 'active'`.
+1. `stripe.invoiceItems.create(...)` ✅
+2. `stripe.invoices.create({ customer, auto_advance: true })` ✅  
+3. `stripe.invoices.pay(invoice.id)` ✅
 
-**Correção em `lib/services/assinaturas/stripe.js`**, handler `invoice.payment_succeeded` (linhas 130-137):
+O fluxo está correto no código. O problema real pode ser outro:
 
-Expandir a condição para também preservar `trialing` quando a invoice NÃO é de subscription (invoices avulsas de taxas não devem alterar o status da assinatura):
+### Possível causa: Invoice sendo anexada à subscription existente
 
-```javascript
-if (lojista) {
-  // Só mudar para 'active' se for renovação real da assinatura
-  if (lojista.subscription_status === 'trialing' && billingReason !== 'subscription_cycle') {
-    console.log(`[STRIPE-WEBHOOK] ℹ️ Invoice não-subscription durante trial — mantendo 'trialing'`);
-  } else if (billingReason === 'manual') {
-    console.log(`[STRIPE-WEBHOOK] ℹ️ Invoice manual (taxas) — não altera subscription_status`);
-  } else {
-    lojista.subscription_status = 'active';
-  }
-}
-```
+Quando um customer tem uma subscription ativa, `stripe.invoices.create()` pode estar criando a invoice **vinculada à subscription** em vez de uma invoice avulsa. Isso faz com que o `invoiceItem` pendente seja absorvido pela próxima fatura da subscription, em vez de gerar uma cobrança imediata independente.
 
-Lógica: só seta `active` quando `billing_reason === 'subscription_cycle'` (renovação real do plano). Invoices manuais e de criação nunca alteram o status.
+### Correção necessária
 
-### Problema 2: Pagamento manual não aparece no Stripe
+Adicionar `collection_method: 'charge_automatically'` e **não vincular à subscription** passando explicitamente parâmetros que garantam uma invoice avulsa e independente. A Stripe API permite isso, mas o comportamento padrão pode puxar pending items para a subscription.
 
-**Causa provável:** O valor em centavos pode estar sendo `0` se `taxas_acumuladas` no banco era `0` ou muito pequeno. Ou o `stripe.invoices.pay()` pode estar falhando silenciosamente (o catch no `api/loja-extras.js` retorna erro genérico "Cartão recusado").
+### Plano de implementação
 
-**Correção em `lib/services/assinaturas/stripe.js`**, função `pagarTaxasManual` (linhas 385-423):
+**Arquivo:** `lib/services/assinaturas/stripe.js`
 
-- Adicionar logs detalhados antes de cada chamada Stripe para rastrear o fluxo
-- Validar que `amountCents > 0` antes de prosseguir
-- Garantir que a invoice criada realmente contém o item (log do invoice.id)
+1. **`pagarTaxasManual`** (linhas 415-421): Na criação da invoice, adicionar `collection_method: 'charge_automatically'` e `pending_invoice_items_behavior: 'exclude'` para garantir que a invoice seja independente da subscription. Depois usar `stripe.invoices.finalizeInvoice(invoice.id)` antes de `stripe.invoices.pay()` para forçar a finalização:
 
 ```javascript
-console.log(`[PAGAR-TAXAS-MANUAL] Lojista: ${lojista.email}, taxas: R$${lojista.taxas_acumuladas}, centavos: ${amountCents}, customer: ${lojista.stripe_customer_id}`);
+const invoiceItem = await stripe.invoiceItems.create({
+  customer: lojista.stripe_customer_id,
+  amount: amountCents,
+  currency: 'brl',
+  description: `Regularização manual de taxas — R$ ${lojista.taxas_acumuladas.toFixed(2)}`,
+});
 
-if (amountCents <= 0) {
-  return { error: 'Valor de taxas inválido para cobrança', httpStatus: 400 };
-}
+const invoice = await stripe.invoices.create({
+  customer: lojista.stripe_customer_id,
+  auto_advance: true,
+  collection_method: 'charge_automatically',
+  pending_invoice_items_behavior: 'include',
+});
 
-// ... invoiceItems.create + invoices.create + invoices.pay com logs
-console.log(`[PAGAR-TAXAS-MANUAL] ✅ Invoice ${invoice.id} criada e paga`);
+await stripe.invoices.finalizeInvoice(invoice.id);
+const paidInvoice = await stripe.invoices.pay(invoice.id);
 ```
 
-Também melhorar o catch em `api/loja-extras.js` para logar o erro real (atualmente só loga `err.message` mas retorna mensagem genérica).
+2. **`processarCronTaxas`** (linhas 339-343): Aplicar a mesma correção — adicionar `collection_method` e `finalizeInvoice` antes do `pay`.
 
-### Ação manual necessária
-Corrigir `subscription_status` no MongoDB de volta para `"trialing"` (foi alterado para `active` pelo bug).
+3. Adicionar logs para confirmar o `invoice.status` após cada etapa (draft → open → paid).
+
+### Detalhes técnicos
+
+- `pending_invoice_items_behavior: 'include'` garante que os items pendentes recém-criados sejam incluídos nessa invoice
+- `collection_method: 'charge_automatically'` força cobrança automática no cartão
+- `finalizeInvoice()` transiciona de `draft` para `open`, permitindo o `pay()`
+- Sem o `finalizeInvoice`, a invoice pode ficar em `draft` e o `pay()` pode não processar corretamente
 
