@@ -122,6 +122,14 @@ const PainelLayout = () => {
   }, []);
 
   useEffect(() => {
+    const handleRefresh = () => {
+      lojistaApi.perfil().then(prof => setLojistaProfile(prof)).catch(() => {});
+    };
+    window.addEventListener('refresh-lojista-profile', handleRefresh);
+    return () => window.removeEventListener('refresh-lojista-profile', handleRefresh);
+  }, []);
+
+  useEffect(() => {
     const safeLojas = Array.isArray(lojas) ? lojas : [];
     const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
     if (lojaMatch) {

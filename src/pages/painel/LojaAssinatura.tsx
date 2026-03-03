@@ -103,6 +103,7 @@ const LojaAssinatura = () => {
       const result = await stripeApi.pagarTaxasManual();
       toast({ title: '✅ Pagamento realizado!', description: result.message });
       await fetchData();
+      window.dispatchEvent(new Event('refresh-lojista-profile'));
     } catch (err: any) {
       toast({ title: 'Pagamento recusado', description: err?.message || 'Cartão recusado. Tente novamente.', variant: 'destructive' });
     } finally { setPayManualLoading(false); }
