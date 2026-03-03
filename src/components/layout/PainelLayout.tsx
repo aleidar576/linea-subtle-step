@@ -321,11 +321,13 @@ const PainelLayout = () => {
               </div>
             );
           }
+          const dataLimite = vencimento ? new Date(vencimento.getTime() + totalTolerancia * 24 * 60 * 60 * 1000) : null;
           return (
             <div className="mb-4 rounded-lg bg-yellow-500/15 border border-yellow-500/30 p-4 text-center">
               <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
               <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
-                Seu pagamento está pendente. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
+                Seu pagamento está pendente.{dataLimite && <> Regularize até <strong>{dataLimite.toLocaleDateString('pt-BR')}</strong>.</>}{' '}
+                <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
               </span>
             </div>
           );
