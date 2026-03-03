@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
 import { lojistaApi, planosApi, type LojistaProfile, type Plano } from '@/services/saas-api';
+import { settingsApi } from '@/services/api';
 import { useLojas, useCreateLoja } from '@/hooks/useLojas';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
@@ -102,11 +103,21 @@ const PainelLayout = () => {
   const [lojistaProfile, setLojistaProfile] = useState<LojistaProfile | null>(null);
   const [planosList, setPlanosList] = useState<Plano[]>([]);
   const { toast } = useToast();
+  const [diasToleranciaInadimplencia, setDiasToleranciaInadimplencia] = useState(5);
+  const [diasToleranciaTaxas, setDiasToleranciaTaxas] = useState(3);
   useFaviconUpdater();
 
   useEffect(() => {
     Promise.all([lojistaApi.perfil(), planosApi.list()])
       .then(([prof, pl]) => { setLojistaProfile(prof); setPlanosList(pl); })
+      .catch(() => {});
+    settingsApi.getByKeys(['dias_tolerancia_inadimplencia', 'dias_tolerancia_taxas'])
+      .then(settings => {
+        const sInad = settings.find(s => s.key === 'dias_tolerancia_inadimplencia');
+        if (sInad?.value) setDiasToleranciaInadimplencia(Number(sInad.value) || 5);
+        const sTaxas = settings.find(s => s.key === 'dias_tolerancia_taxas');
+        if (sTaxas?.value) setDiasToleranciaTaxas(Number(sTaxas.value) || 3);
+      })
       .catch(() => {});
   }, []);
 
@@ -283,7 +294,7 @@ const PainelLayout = () => {
       <main className="flex-1 p-6 overflow-y-auto">
         {/* Banner: Mensalidade past_due */}
         {lojistaProfile?.subscription_status === 'past_due' && (() => {
-          const toleranciaGlobal = Number((lojistaProfile as any)?.tolerancia_global_inadimplencia) || 5;
+          const toleranciaGlobal = diasToleranciaInadimplencia;
           const toleranciaExtra = (lojistaProfile as any)?.tolerancia_extra_dias || 0;
           const totalTolerancia = toleranciaGlobal + toleranciaExtra;
           const vencimento = lojistaProfile.data_vencimento ? new Date(lojistaProfile.data_vencimento) : null;
@@ -325,23 +336,28 @@ const PainelLayout = () => {
         {/* Banner: Taxas bloqueadas */}
         {lojistaProfile?.status_taxas === 'bloqueado' && (() => {
           const dataBloqueio = lojistaProfile.data_bloqueio_taxas ? new Date(lojistaProfile.data_bloqueio_taxas) : null;
-          if (!dataBloqueio) return null;
-          const toleranciaGlobalTaxas = 3; // fallback — real value loaded from settings in LojaAssinatura
-          const agora = new Date();
-          const diffDias = Math.floor((agora.getTime() - dataBloqueio.getTime()) / (1000 * 60 * 60 * 24));
-          const bloqueadoReal = diffDias > toleranciaGlobalTaxas;
+          const toleranciaExtraTaxas = (lojistaProfile as any)?.tolerancia_extra_dias_taxas || 0;
+          const totalToleranciaTaxas = diasToleranciaTaxas + toleranciaExtraTaxas;
 
-          if (bloqueadoReal) {
-            return (
-              <div
-                className="mb-4 rounded-lg bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold"
-                onClick={() => navigate('/painel/assinatura')}
-              >
-                <AlertTriangle className="h-5 w-5 inline mr-2" />
-                LOJA BLOQUEADA POR TAXAS PENDENTES — REGULARIZE AGORA
-              </div>
-            );
+          if (dataBloqueio) {
+            const agora = new Date();
+            const diffDias = Math.floor((agora.getTime() - dataBloqueio.getTime()) / (1000 * 60 * 60 * 24));
+            const bloqueadoReal = diffDias > totalToleranciaTaxas;
+
+            if (bloqueadoReal) {
+              return (
+                <div
+                  className="mb-4 rounded-lg bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold"
+                  onClick={() => navigate('/painel/assinatura')}
+                >
+                  <AlertTriangle className="h-5 w-5 inline mr-2" />
+                  LOJA BLOQUEADA POR TAXAS PENDENTES — REGULARIZE AGORA
+                </div>
+              );
+            }
           }
+
+          // Fallback: show warning banner (with or without date)
           return (
             <div className="mb-4 rounded-lg bg-destructive/15 border border-destructive/30 p-4 text-center">
               <AlertTriangle className="h-4 w-4 inline mr-2 text-destructive" />

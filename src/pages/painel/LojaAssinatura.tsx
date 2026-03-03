@@ -290,16 +290,21 @@ const LojaAssinatura = () => {
                   <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
                   <div className="text-sm text-destructive font-medium">
                     <p>Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} estão pendentes.</p>
-                    {profile.data_bloqueio_taxas && (() => {
+                    {profile.data_bloqueio_taxas ? (() => {
+                      const toleranciaExtra = (profile as any)?.tolerancia_extra_dias_taxas || 0;
                       const dataBloqueio = new Date(profile.data_bloqueio_taxas);
                       const dataLimite = new Date(dataBloqueio);
-                      dataLimite.setDate(dataLimite.getDate() + diasToleranciaTaxas);
+                      dataLimite.setDate(dataLimite.getDate() + diasToleranciaTaxas + toleranciaExtra);
                       return (
                         <p className="mt-1 font-bold">
                           Regularize até {dataLimite.toLocaleDateString('pt-BR')} para evitar a suspensão da sua loja.
                         </p>
                       );
-                    })()}
+                    })() : (
+                      <p className="mt-1 font-bold">
+                        Regularize o mais rápido possível para evitar a suspensão da sua loja.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Button onClick={handlePayManual} disabled={payManualLoading} variant="destructive" className="w-full gap-2">
