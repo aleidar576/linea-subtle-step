@@ -95,32 +95,11 @@ module.exports = async function handler(req, res) {
         frete_nome: body.frete_nome || null,
       });
 
-      // === ACUMULAR TAXAS DA PLATAFORMA (Stripe) quando pedido é criado já como pago ===
+      // === ACUMULAR TAXAS DA PLATAFORMA quando pedido é criado já como pago ===
       if (pedido.status === 'pago' && pedido.total > 0) {
         try {
-          const lojaDoc = await Loja.findById(pedido.loja_id).select('lojista_id').lean();
-          if (lojaDoc) {
-            const lojistaDoc = await Lojista.findById(lojaDoc.lojista_id);
-            if (lojistaDoc && lojistaDoc.modo_amigo) {
-              console.log(`[PEDIDO-CREATE] Lojista ${lojistaDoc.email} é VIP (modo_amigo) — taxa zerada para pedido ${pedido._id}`);
-            } else if (lojistaDoc && lojistaDoc.plano_id) {
-              const plano = await Plano.findById(lojistaDoc.plano_id).lean();
-              if (plano) {
-                const taxaPercentual = lojistaDoc.subscription_status === 'trialing'
-                  ? (plano.taxa_transacao_trial || 2.0)
-                  : (plano.taxa_transacao_percentual || plano.taxa_transacao || 1.5);
-                const taxaFixa = plano.taxa_transacao_fixa || 0;
-                const valorTaxa = (pedido.total * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
-                const valorTaxaArredondado = Math.round(valorTaxa * 100) / 100;
-                lojistaDoc.taxas_acumuladas = (lojistaDoc.taxas_acumuladas || 0) + valorTaxaArredondado;
-                if (!lojistaDoc.data_vencimento_taxas) {
-                  lojistaDoc.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-                }
-                await lojistaDoc.save();
-                console.log(`[PEDIDO-CREATE] Taxa acumulada: R$ ${valorTaxaArredondado.toFixed(2)} para lojista ${lojistaDoc.email} (total acumulado: R$ ${lojistaDoc.taxas_acumuladas.toFixed(2)})`);
-              }
-            }
-          }
+          const { acumularTaxasPlataforma } = require('../lib/services/pedidos/confirmarPagamento.js');
+          await acumularTaxasPlataforma(pedido, '[PEDIDO-CREATE]');
         } catch (taxErr) {
           console.error('[PEDIDO-CREATE] Erro ao acumular taxa:', taxErr.message);
         }
@@ -273,32 +252,11 @@ module.exports = async function handler(req, res) {
       if (novoStatus === 'pago') pedido.pagamento = { ...pedido.pagamento, pago_em: new Date() };
       await pedido.save();
 
-      // === ACUMULAR TAXAS quando pedido muda para pago ===
+      // === ACUMULAR TAXAS + CONVERTER CARRINHO quando pedido muda para pago ===
       if (novoStatus === 'pago' && pedido.total > 0) {
         try {
-          const lojaDoc = await Loja.findById(pedido.loja_id).select('lojista_id').lean();
-          if (lojaDoc) {
-            const lojistaDoc = await Lojista.findById(lojaDoc.lojista_id);
-            if (lojistaDoc && lojistaDoc.modo_amigo) {
-              console.log(`[PEDIDO] Lojista ${lojistaDoc.email} é VIP (modo_amigo) — taxa zerada para pedido ${pedido._id}`);
-            } else if (lojistaDoc && lojistaDoc.plano_id) {
-              const plano = await Plano.findById(lojistaDoc.plano_id).lean();
-              if (plano) {
-                const taxaPercentual = lojistaDoc.subscription_status === 'trialing'
-                  ? (plano.taxa_transacao_trial || 2.0)
-                  : (plano.taxa_transacao_percentual || plano.taxa_transacao || 1.5);
-                const taxaFixa = plano.taxa_transacao_fixa || 0;
-                const valorTaxa = (pedido.total * taxaPercentual / 100) + (taxaFixa > 0 ? taxaFixa : 0);
-                const valorTaxaArredondado = Math.round(valorTaxa * 100) / 100;
-                lojistaDoc.taxas_acumuladas = (lojistaDoc.taxas_acumuladas || 0) + valorTaxaArredondado;
-                if (!lojistaDoc.data_vencimento_taxas) {
-                  lojistaDoc.data_vencimento_taxas = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-                }
-                await lojistaDoc.save();
-                console.log(`[PEDIDO] Taxa acumulada: R$ ${valorTaxaArredondado.toFixed(2)} para lojista ${lojistaDoc.email} (total acumulado: R$ ${lojistaDoc.taxas_acumuladas.toFixed(2)})`);
-              }
-            }
-          }
+          const { acumularTaxasPlataforma } = require('../lib/services/pedidos/confirmarPagamento.js');
+          await acumularTaxasPlataforma(pedido, '[PEDIDO]');
         } catch (taxErr) {
           console.error('[PEDIDO] Erro ao acumular taxa:', taxErr.message);
         }
