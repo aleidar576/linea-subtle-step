@@ -33,8 +33,9 @@ const LojaConfiguracoes = () => {
     setDominioCustomizado(loja.dominio_customizado || '');
   }, [loja]);
 
-  const canAccessDomains = user?.plano === 'plus' || user?.modo_amigo || user?.liberar_visualizacao_subdominio;
-  const canEditCustomDomain = user?.plano === 'plus' || user?.modo_amigo;
+  const hasActiveSubscription = !!user?.subscription_status && ['trialing', 'active'].includes(user.subscription_status);
+  const canAccessDomains = hasActiveSubscription || user?.modo_amigo || user?.liberar_visualizacao_subdominio;
+  const canEditCustomDomain = hasActiveSubscription || user?.modo_amigo;
 
   const handleSave = async () => {
     if (!id) return;
@@ -174,10 +175,10 @@ const LojaConfiguracoes = () => {
           {!canAccessDomains && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl border border-border">
               <Lock className="h-8 w-8 text-muted-foreground mb-3" />
-              <p className="text-sm font-semibold text-center px-4 mb-1">A publicação de domínio e subdomínio é exclusiva para membros Plus.</p>
-              <p className="text-xs text-muted-foreground text-center px-4 mb-4">Faça upgrade para desbloquear domínios personalizados.</p>
+              <p className="text-sm font-semibold text-center px-4 mb-1">Domínio personalizado disponível apenas para assinantes.</p>
+              <p className="text-xs text-muted-foreground text-center px-4 mb-4">Assine um plano para desbloquear domínios personalizados.</p>
               <Button onClick={() => navigate('/painel/assinatura')} className="gap-2">
-                <Crown className="h-4 w-4" /> Quero ser Plus agora
+                <Crown className="h-4 w-4" /> Assinar um Plano
               </Button>
             </div>
           )}

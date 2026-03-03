@@ -44,6 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           email_verificado: lojista.email_verificado,
           modo_amigo: lojista.modo_amigo || false,
           liberar_visualizacao_subdominio: lojista.liberar_visualizacao_subdominio || false,
+          subscription_status: lojista.subscription_status || null,
           avatar_url: lojista.avatar_url || null,
         },
       });
@@ -295,6 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         liberar_visualizacao_subdominio: lojista.liberar_visualizacao_subdominio || false,
         bloqueado: lojista.bloqueado,
         email_verificado: lojista.email_verificado,
+        subscription_status: lojista.subscription_status || null,
         avatar_url: lojista.avatar_url || null,
       },
     });
@@ -339,6 +341,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         liberar_visualizacao_subdominio: lojista.liberar_visualizacao_subdominio || false,
         bloqueado: lojista.bloqueado,
         email_verificado: lojista.email_verificado,
+        subscription_status: lojista.subscription_status || null,
         avatar_url: lojista.avatar_url || null,
       },
     });
