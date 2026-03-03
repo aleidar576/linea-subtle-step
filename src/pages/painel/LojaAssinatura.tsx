@@ -147,6 +147,24 @@ const LojaAssinatura = () => {
               </div>
             )}
 
+            {isTrial && currentPlano && (
+              <div className="flex items-start gap-3 rounded-lg bg-blue-500/10 p-4 border border-blue-300">
+                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700 font-medium space-y-1">
+                  <p>
+                    Você está no <strong>período trial de 7 dias</strong>. Ao final, será cobrado automaticamente o plano{' '}
+                    <strong>{planoNome}</strong> de{' '}
+                    <strong>R$ {(precoPromocional ?? 0).toFixed(2).replace('.', ',')}/mês</strong>.
+                  </p>
+                  {profile.data_vencimento && (
+                    <p className="text-blue-600">
+                      O trial termina em <strong>{new Date(profile.data_vencimento).toLocaleDateString('pt-BR')}</strong>.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {isCancelScheduled && cancelDate && (
               <div className="flex items-center gap-3 rounded-lg bg-orange-500/10 p-4 border border-orange-300">
                 <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
@@ -193,12 +211,18 @@ const LojaAssinatura = () => {
               <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Taxas de Transação Acumuladas</p>
             </div>
 
-            {isTrial && (
-              <div className="flex items-center gap-2 rounded-lg bg-blue-500/10 p-3 border border-blue-300">
-                <Info className="h-4 w-4 text-blue-600 shrink-0" />
-                <p className="text-xs text-blue-700 font-medium">
-                  Taxa vigente durante o trial: <strong>{taxaVigente}%</strong> por transação.
-                </p>
+            {isTrial && currentPlano && (
+              <div className="flex items-start gap-2 rounded-lg bg-blue-500/10 p-3 border border-blue-300">
+                <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-blue-700 font-medium space-y-1">
+                  <p>
+                    Taxa vigente durante o trial: <strong>{taxaVigente}%</strong> por transação.
+                  </p>
+                  <p>
+                    Após o trial, a taxa será de <strong>{currentPlano.taxa_transacao_percentual ?? currentPlano.taxa_transacao ?? 1.5}%</strong>
+                    {(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${currentPlano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''} por transação.
+                  </p>
+                </div>
               </div>
             )}
 
