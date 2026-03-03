@@ -48,6 +48,8 @@ const LojistaSchema = new mongoose.Schema({
   data_vencimento_taxas: { type: Date, default: null },
   tentativas_taxas: { type: Number, default: 0 },
   status_taxas: { type: String, enum: ['ok', 'falha', 'bloqueado'], default: 'ok' },
+  tolerancia_extra_dias_taxas: { type: Number, default: 0 },
+  data_bloqueio_taxas: { type: Date, default: null },
   gateway_ativo: { type: String, default: null },
   gateways_config: { type: mongoose.Schema.Types.Mixed, default: {} },
   historico_assinatura: [{

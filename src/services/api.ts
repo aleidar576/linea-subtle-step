@@ -99,6 +99,7 @@ export interface AdminLojista {
   modo_amigo: boolean;
   liberar_visualizacao_subdominio: boolean;
   tolerancia_extra_dias: number;
+  tolerancia_extra_dias_taxas?: number;
   data_vencimento: string | null;
   criado_em: string;
   qtd_lojas: number;

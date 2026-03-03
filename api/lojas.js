@@ -163,7 +163,9 @@ module.exports = async function handler(req, res) {
 
     // Bloqueio por inadimplência (subscription past_due fora da carência)
     if (dono && dono.subscription_status === 'past_due' && !dono.modo_amigo) {
-      const toleranciaGlobal = 7; // dias padrão
+      const Setting = require('../models/Setting.js');
+      const tolSetting = await Setting.findOne({ key: 'dias_tolerancia_inadimplencia', loja_id: null }).lean();
+      const toleranciaGlobal = Number(tolSetting?.value) || 5;
       const toleranciaExtra = dono.tolerancia_extra_dias || 0;
       const totalTolerancia = toleranciaGlobal + toleranciaExtra;
       if (dono.data_vencimento) {
@@ -173,6 +175,21 @@ module.exports = async function handler(req, res) {
         if (diffDias > totalTolerancia) {
           return res.status(403).json({ error: 'Loja bloqueada', is_blocked: true });
         }
+      }
+    }
+
+    // Bloqueio por taxas pendentes (status_taxas === 'bloqueado' fora da carência)
+    if (dono && dono.status_taxas === 'bloqueado' && !dono.modo_amigo && dono.data_bloqueio_taxas) {
+      const Setting = require('../models/Setting.js');
+      const tolTaxasSetting = await Setting.findOne({ key: 'dias_tolerancia_taxas', loja_id: null }).lean();
+      const toleranciaTaxasGlobal = Number(tolTaxasSetting?.value) || 3;
+      const toleranciaTaxasExtra = dono.tolerancia_extra_dias_taxas || 0;
+      const totalToleranciaTaxas = toleranciaTaxasGlobal + toleranciaTaxasExtra;
+      const bloqueioDate = new Date(dono.data_bloqueio_taxas);
+      const agora = new Date();
+      const diffDias = Math.floor((agora.getTime() - bloqueioDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDias > totalToleranciaTaxas) {
+        return res.status(403).json({ error: 'Loja bloqueada por taxas pendentes', is_blocked: true });
       }
     }
 

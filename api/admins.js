@@ -262,8 +262,9 @@ module.exports = async function handler(req, res) {
         }
 
         if (tolerancia_extra_dias !== undefined) lojista.tolerancia_extra_dias = Number(tolerancia_extra_dias) || 0;
+        if (req.body.tolerancia_extra_dias_taxas !== undefined) lojista.tolerancia_extra_dias_taxas = Number(req.body.tolerancia_extra_dias_taxas) || 0;
         await lojista.save();
-        return res.status(200).json({ success: true, modo_amigo: lojista.modo_amigo, tolerancia_extra_dias: lojista.tolerancia_extra_dias });
+        return res.status(200).json({ success: true, modo_amigo: lojista.modo_amigo, tolerancia_extra_dias: lojista.tolerancia_extra_dias, tolerancia_extra_dias_taxas: lojista.tolerancia_extra_dias_taxas });
       }
 
       if (action === 'toggle-ver-subdominio') {
