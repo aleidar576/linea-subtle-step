@@ -262,10 +262,7 @@ module.exports = async function handler(req, res) {
       }
 
       if (novoStatus === 'pago' && pedido.pagamento?.txid) {
-        await CarrinhoAbandonado.updateOne(
-          { txid: pedido.pagamento.txid, convertido: false },
-          { convertido: true }
-        );
+        await CarrinhoAbandonado.deleteOne({ txid: pedido.pagamento.txid });
       }
 
       return res.status(200).json(pedido);
