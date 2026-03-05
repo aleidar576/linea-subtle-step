@@ -1,30 +1,33 @@
 
 
-## Correção: Banner não some após pagamento manual de taxas
+## Diagnóstico da Cobrança Dupla
 
-### Problema
-O `PainelLayout` carrega o perfil do lojista em seu próprio `useEffect` e guarda em estado local (`lojistaProfile`). Quando o `LojaAssinatura` faz o pagamento manual e chama `fetchData()`, só atualiza o estado **dele** — o PainelLayout continua com o `status_taxas: 'bloqueado'` em memória.
+### O que aconteceu (cronologia reconstruída)
 
-### Solução
-Adicionar um listener de `visibilitychange` ou, mais direto, usar um **evento customizado** para que o `LojaAssinatura` notifique o `PainelLayout` para recarregar o perfil após o pagamento.
+1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
+2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
+3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
 
-**Abordagem simples:** Disparar `window.dispatchEvent(new Event('refresh-lojista-profile'))` no `handlePayManual` do `LojaAssinatura`, e no `PainelLayout` ouvir esse evento para recarregar o perfil.
+### Causa raiz
 
-### Alterações
+O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
 
-#### 1. `src/pages/painel/LojaAssinatura.tsx`
-No `handlePayManual`, após `await fetchData()` com sucesso, disparar:
-```js
-window.dispatchEvent(new Event('refresh-lojista-profile'));
-```
+Isso acontece em **dois lugares** do código:
+- `processarCronTaxas()` (linha ~370 de `stripe.js`)
+- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
 
-#### 2. `src/components/layout/PainelLayout.tsx`
-Adicionar um `useEffect` que escuta o evento `refresh-lojista-profile` e re-executa o fetch do perfil do lojista.
+### Correção
 
-### Arquivos modificados
+Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
 
-| Arquivo | Alteração |
-|---|---|
-| `src/pages/painel/LojaAssinatura.tsx` | Disparar evento após pagamento manual |
-| `src/components/layout/PainelLayout.tsx` | Ouvir evento e recarregar perfil |
+**Arquivo:** `lib/services/assinaturas/stripe.js`
+
+1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
+2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+
+Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+
+### Bug secundário (menor)
+
+O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
 
