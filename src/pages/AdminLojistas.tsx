@@ -419,7 +419,7 @@ const AdminLojistas = () => {
                   </div>
                   <div className="bg-muted/50 rounded-lg p-3 text-center">
                     <DollarSign className="h-5 w-5 mx-auto mb-1 text-primary" />
-                    <p className="text-lg font-bold">{formatCurrency(metrics.totalVendas)}</p>
+                    <p className="text-lg font-bold">{formatCurrency(metrics.totalVendas / 100)}</p>
                     <p className="text-xs text-muted-foreground">Vendas</p>
                   </div>
                 </div>
