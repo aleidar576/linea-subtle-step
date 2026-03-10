@@ -31,6 +31,7 @@ const INTEGRATIONS = [
     description: 'Cálculo de frete automático e geração de etiquetas com descontos exclusivos.',
     icon: Truck,
     helpUrl: 'https://melhorenvio.com.br',
+    hasToken: true,
   },
   {
     id: 'kangu' as const,
@@ -38,6 +39,15 @@ const INTEGRATIONS = [
     description: 'Plataforma de envios com cotação multi-transportadora e coleta grátis.',
     icon: PackageCheck,
     helpUrl: 'https://www.kangu.com.br',
+    hasToken: true,
+  },
+  {
+    id: 'mux' as const,
+    name: 'Mux (Video Streaming)',
+    description: 'Ative o Video Commerce (Shoppertainment) para adicionar vídeos de produto com reprodução profissional.',
+    icon: Video,
+    helpUrl: 'https://mux.com',
+    hasToken: false,
   },
 ] as const;
 
@@ -47,6 +57,7 @@ type IntegrationId = typeof INTEGRATIONS[number]['id'];
 const DEFAULTS: Record<IntegrationId, any> = {
   melhor_envio: { ativo: false, token: '', sandbox: true },
   kangu: { ativo: false, token: '' },
+  mux: { ativo: false },
 };
 
 export default function LojaIntegracoes() {
