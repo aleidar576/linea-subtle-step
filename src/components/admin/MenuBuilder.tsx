@@ -3,7 +3,8 @@ import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Link2, Layers, File
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -262,7 +263,7 @@ function MenuItemCard({
             className="h-8 text-sm flex-1"
             maxLength={50}
           />
-          <Badge variant={typeBadge.variant as any} className="text-[10px] shrink-0">{typeBadge.label}</Badge>
+          <span className={cn(badgeVariants({ variant: typeBadge.variant }), "text-[10px] shrink-0")}>{typeBadge.label}</span>
 
           <div className="flex items-center gap-0.5 shrink-0">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onMove(item.id, 'up')} disabled={index === 0}>
