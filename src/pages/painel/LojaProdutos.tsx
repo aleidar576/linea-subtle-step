@@ -10,7 +10,7 @@ import { lojaProductsApi, lojistaApi, muxApi } from '@/services/saas-api';
 import { calculateAppmaxInstallments, type InstallmentConfig } from '@/utils/installments';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info, Video, AlertTriangle } from 'lucide-react';
+import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Users, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info, Video, AlertTriangle, ShoppingBag } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
