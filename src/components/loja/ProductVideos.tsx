@@ -146,7 +146,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
         </div>
 
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-          <DialogContent className="max-w-none w-screen h-screen max-h-screen p-0 m-0 border-none bg-black rounded-none gap-0 [&>button]:hidden">
+          <DialogContent className="max-w-none w-screen h-screen max-h-screen p-0 m-0 border-none bg-black rounded-none gap-0 [&>button.absolute.right-4.top-4]:hidden">
             <button
               onClick={handleClose}
               className="absolute top-6 left-6 z-[70] p-2 bg-black/40 rounded-full text-white backdrop-blur-md transition-opacity hover:opacity-80"
