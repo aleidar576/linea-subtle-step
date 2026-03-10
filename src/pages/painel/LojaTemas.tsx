@@ -122,6 +122,7 @@ const LojaTemas = () => {
   const [customCss, setCustomCss] = useState('');
   const [produtoConfig, setProdutoConfig] = useState<ProdutoConfig>({});
   const [cartConfig, setCartConfig] = useState<CartConfig>(DEFAULT_CART);
+  const [categoriaConfig, setCategoriaConfig] = useState<CategoriaConfig>({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
