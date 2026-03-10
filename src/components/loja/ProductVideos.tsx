@@ -18,9 +18,11 @@ const MUX_IMG = 'https://image.mux.com';
 export default function ProductVideos({ videos, layout }: ProductVideosProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(null);
+  const [showHint, setShowHint] = useState(false);
   const reelsRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const playerRefs = useRef<(any | null)[]>([]);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isOpen = activeIndex !== null;
 
