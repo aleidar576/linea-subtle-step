@@ -153,12 +153,6 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <button
-              onClick={handleClose}
-              className="absolute top-6 right-6 z-[60] p-2 bg-black/40 rounded-full text-white backdrop-blur-md transition-opacity hover:opacity-80"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
             <div
               ref={reelsRef}
