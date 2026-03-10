@@ -30,6 +30,7 @@ const LojaCategoria = () => {
   // Pagination state
   const [page, setPage] = useState(1);
   const [allProducts, setAllProducts] = useState<LojaProduct[]>([]);
+  const [categoryKey, setCategoryKey] = useState(0);
 
   // Filter state (draft)
   const [draftSubcats, setDraftSubcats] = useState<Set<string>>(new Set());
