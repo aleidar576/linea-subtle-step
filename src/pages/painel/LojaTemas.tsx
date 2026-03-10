@@ -342,7 +342,19 @@ const LojaTemas = () => {
           </Card>
         </TabsContent>
 
-        {/* ===== HOMEPAGE ===== */}
+        {/* ===== NAVEGAÇÃO ===== */}
+        <TabsContent value="navegacao" className="space-y-6">
+          <Card className="p-6">
+            <MenuBuilder
+              value={menuPrincipal}
+              onChange={setMenuPrincipal}
+              categories={categories}
+              pages={(paginas as any[]) || []}
+            />
+          </Card>
+        </TabsContent>
+
+
         <TabsContent value="homepage">
           <Accordion type="single" collapsible className="w-full space-y-4">
 

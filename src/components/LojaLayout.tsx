@@ -2,15 +2,18 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { GATEWAYS, getGatewayById } from '@/config/gateways';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag } from 'lucide-react';
+import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag, Menu, ChevronDown } from 'lucide-react';
 import { useLojaByDomain } from '@/hooks/useLojaPublica';
 import { LojaProvider } from '@/contexts/LojaContext';
 import { useCart } from '@/contexts/CartContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { leadsApi, cuponsPopupApi } from '@/services/saas-api';
-import type { FooterConfig, LogoConfig } from '@/services/saas-api';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from '@/components/ui/navigation-menu';
+import { leadsApi, cuponsPopupApi, lojaPublicaApi } from '@/services/saas-api';
+import type { FooterConfig, LogoConfig, MenuItemConfig } from '@/services/saas-api';
 import { toast } from 'sonner';
 
 // ── Hex to HSL converter ──
