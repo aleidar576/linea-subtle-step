@@ -1589,17 +1589,6 @@ const LojaProdutos = () => {
                   <AccordionTrigger className="text-base font-semibold"><Video className="w-4 h-4 mr-2 text-foreground" />Vídeos (Shoppertainment)</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
-                      {/* Check if Mux is active */}
-                      {!loja?.configuracoes?.integracoes?.mux?.ativo ? (
-                        <Alert>
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertDescription>
-                            O Video Commerce está desativado. Ative o recurso em{' '}
-                            <strong>Integrações → Mux (Video Streaming)</strong> para adicionar vídeos aos seus produtos.
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <>
                           {/* Video Layout Select */}
                           <div>
                             <Label>Layout dos vídeos na página do produto</Label>
