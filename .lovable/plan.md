@@ -31,3 +31,25 @@ Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
 
 O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
 
+---
+
+## Páginas de Categoria — Implementação Completa ✅
+
+### Arquivos modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Category.js` | +campo `banner` (Mixed) |
+| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
+| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
+| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
+| API | `api/categorias.js` | PUT aceita campo `banner` |
+| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
+| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
+| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
+| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
+| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
+| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
+| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
+| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
