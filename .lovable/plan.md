@@ -1,82 +1,55 @@
 
 
-## Correção de Performance: Filtros Server-Side + Aggregation Pipeline
+## Diagnóstico da Cobrança Dupla
 
-### Problema 1: Filtro de subcategoria client-side
-Atualmente `LojaCategoria.tsx` filtra subcategorias no frontend (linha 88-97), incompatível com paginação server-side.
+### O que aconteceu (cronologia reconstruída)
 
-### Problema 2: Ordenação por desconto em memória
-`api/products.ts` linhas 86-93 carrega todos os produtos e ordena em RAM.
+1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
+2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
+3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
+
+### Causa raiz
+
+O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
+
+Isso acontece em **dois lugares** do código:
+- `processarCronTaxas()` (linha ~370 de `stripe.js`)
+- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+
+### Correção
+
+Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+
+**Arquivo:** `lib/services/assinaturas/stripe.js`
+
+1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
+2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+
+Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+
+### Bug secundário (menor)
+
+O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
 
 ---
 
-### Correções (3 arquivos)
+## Páginas de Categoria — Implementação Completa ✅
 
-#### 1. `api/products.ts` — scope `categoria-publica` (linhas 46-95)
+### Arquivos modificados
 
-**Subcategoria como filtro server-side:**
-- Adicionar param `subcategory_ids` (comma-separated).
-- Se presente, substituir `allCatIds` no filtro por apenas os IDs recebidos (interseccionados com subcategorias válidas).
-
-**Paginação:**
-```ts
-const limit = Math.min(Number(req.query.limit) || 24, 48);
-const page = Math.max(Number(req.query.page) || 1, 1);
-const skip = (page - 1) * limit;
-```
-
-**Projeção (campos do card):**
-```ts
-const cardFields = 'product_id slug name image price original_price promotion rating rating_count variacoes sort_order vendas_count category_id category_ids is_active createdAt';
-```
-
-**Desconto via Aggregation Pipeline** (substituir o bloco `if sortParam === 'desconto'`):
-```ts
-if (sortParam === 'desconto') {
-  const pipeline = [
-    { $match: filter },
-    { $addFields: {
-      desconto_calc: {
-        $cond: [
-          { $and: [{ $gt: ['$original_price', 0] }, { $gt: ['$original_price', '$price'] }] },
-          { $subtract: ['$original_price', '$price'] },
-          0
-        ]
-      }
-    }},
-    { $sort: { desconto_calc: -1 as const } },
-    { $skip: skip },
-    { $limit: limit },
-    { $project: { /* cardFields como objeto */ } },
-  ];
-  const [products, countResult] = await Promise.all([
-    Product.aggregate(pipeline),
-    Product.countDocuments(filter),
-  ]);
-  return res.json({ category, products, subcategories, total: countResult, page, totalPages: Math.ceil(countResult / limit) });
-}
-```
-
-**Demais sorts** usam `.find(filter).select(cardFields).sort(sortObj).skip(skip).limit(limit).lean()` + `countDocuments` em paralelo.
-
-**Response shape:** `{ category, products, subcategories, total, page, totalPages }`
-
-#### 2. `src/services/saas-api.ts`
-
-- `CategoriaPublicaResponse`: adicionar `total`, `page`, `totalPages`.
-- `getCategoriaBySlug`: adicionar params `page`, `subcategory_ids` ao método.
-
-#### 3. `src/hooks/useLojaPublica.tsx`
-
-- `useLojaPublicaCategoria`: adicionar `page` e `subcategory_ids` aos params e queryKey.
-
-#### 4. `src/pages/loja/LojaCategoria.tsx`
-
-- Adicionar estado `page` (default 1) e `allProducts` (acumulador).
-- Mover `appliedSubcats` para ser enviado como param server-side (`subcategory_ids`).
-- Remover o `filteredProducts` client-side (linhas 88-97). Usar `allProducts` direto no grid.
-- Reset `page=1` e `allProducts=[]` quando qualquer filtro ou sort muda.
-- Append novos produtos quando `page > 1`.
-- Botão "Carregar Mais" visível quando `page < totalPages`.
-- Counter: `{allProducts.length} de {total}`.
-
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Category.js` | +campo `banner` (Mixed) |
+| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
+| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
+| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
+| API | `api/categorias.js` | PUT aceita campo `banner` |
+| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
+| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
+| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
+| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
+| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
+| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
+| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
+| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |

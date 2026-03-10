@@ -510,6 +510,9 @@ export interface CategoriaPublicaResponse {
   category: LojaCategory;
   products: LojaProduct[];
   subcategories: LojaCategory[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export interface CategoriesResponse {
@@ -1073,12 +1076,14 @@ export const lojaPublicaApi = {
     publicRequest<RegraFrete[]>(`/loja-extras?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
-  getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string }) => {
+  getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string; subcategory_ids?: string; page?: number }) => {
     const params = new URLSearchParams({ scope: 'categoria-publica', loja_id: lojaId, category_slug: slug });
     if (sort) params.set('sort', sort);
     if (filters?.price_min) params.set('price_min', String(filters.price_min));
     if (filters?.price_max) params.set('price_max', String(filters.price_max));
     if (filters?.variations) params.set('variations', filters.variations);
+    if (filters?.subcategory_ids) params.set('subcategory_ids', filters.subcategory_ids);
+    if (filters?.page && filters.page > 1) params.set('page', String(filters.page));
     return publicRequest<CategoriaPublicaResponse>(`/products?${params.toString()}`);
   },
   getPagina: (lojaId: string, slug: string) =>

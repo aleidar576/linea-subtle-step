@@ -51,12 +51,13 @@ export function useLojaPublicaCategoria(
   lojaId: string | undefined,
   slug: string | undefined,
   sort?: string,
-  filters?: { price_min?: number; price_max?: number; variations?: string }
+  filters?: { price_min?: number; price_max?: number; variations?: string; subcategory_ids?: string; page?: number }
 ) {
   return useQuery({
     queryKey: ['loja-publica-categoria', lojaId, slug, sort, filters],
     queryFn: () => lojaPublicaApi.getCategoriaBySlug(lojaId!, slug!, sort, filters),
     enabled: !!lojaId && !!slug,
     staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Filter, ChevronDown, Loader2, Star, X } from 'lucide-react';
@@ -28,6 +28,10 @@ const LojaCategoria = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [quickFilters, setQuickFilters] = useState<Set<string>>(new Set());
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [allProducts, setAllProducts] = useState<LojaProduct[]>([]);
+
   // Filter state (draft inside Sheet)
   const [draftSubcats, setDraftSubcats] = useState<Set<string>>(new Set());
   const [draftVariations, setDraftVariations] = useState<Set<string>>(new Set());
@@ -43,19 +47,39 @@ const LojaCategoria = () => {
     return all.size > 0 ? Array.from(all).join(',') : undefined;
   }, [appliedVariations, quickFilters]);
 
-  const { data, isLoading } = useLojaPublicaCategoria(
+  const subcatIdsParam = useMemo(() => {
+    return appliedSubcats.size > 0 ? Array.from(appliedSubcats).join(',') : undefined;
+  }, [appliedSubcats]);
+
+  const { data, isLoading, isFetching } = useLojaPublicaCategoria(
     lojaId, categorySlug, sort,
     {
       price_min: appliedPriceRange[0] > 0 ? appliedPriceRange[0] : undefined,
       price_max: appliedPriceRange[1] < 100000 ? appliedPriceRange[1] : undefined,
       variations: activeVariationsParam,
+      subcategory_ids: subcatIdsParam,
+      page,
     }
   );
 
   const category = data?.category;
-  const products = data?.products || [];
   const subcategories = data?.subcategories || [];
   const banner = category?.banner;
+  const totalProducts = data?.total || 0;
+  const totalPages = data?.totalPages || 1;
+
+  // Append/reset products based on page
+  useEffect(() => {
+    if (data?.products) {
+      setAllProducts(prev => page === 1 ? data.products : [...prev, ...data.products]);
+    }
+  }, [data, page]);
+
+  // Reset page when sort or filters change
+  useEffect(() => {
+    setPage(1);
+    setAllProducts([]);
+  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters, categorySlug]);
 
   // Set page title
   useEffect(() => {
@@ -64,10 +88,10 @@ const LojaCategoria = () => {
     }
   }, [category, nomeExibicao]);
 
-  // Extract unique variations from products for quick filter
+  // Extract unique variations from current page products for quick filter
   const allVariations = useMemo(() => {
     const map = new Map<string, Set<string>>();
-    products.forEach((p: LojaProduct) => {
+    allProducts.forEach((p: LojaProduct) => {
       (p.variacoes || []).forEach(v => {
         if (!v.tipo || !v.nome) return;
         if (!map.has(v.tipo)) map.set(v.tipo, new Set());
@@ -75,26 +99,14 @@ const LojaCategoria = () => {
       });
     });
     return map;
-  }, [products]);
+  }, [allProducts]);
 
-  // Price range from products
+  // Price range from loaded products
   const priceRange = useMemo(() => {
-    if (!products.length) return [0, 100000] as [number, number];
-    const prices = products.map((p: LojaProduct) => p.price);
+    if (!allProducts.length) return [0, 100000] as [number, number];
+    const prices = allProducts.map((p: LojaProduct) => p.price);
     return [Math.min(...prices), Math.max(...prices)] as [number, number];
-  }, [products]);
-
-  // Filter products client-side by subcategory if needed
-  const filteredProducts = useMemo(() => {
-    let result = products;
-    if (appliedSubcats.size > 0) {
-      result = result.filter((p: LojaProduct) =>
-        (p.category_id && appliedSubcats.has(p.category_id)) ||
-        (p.category_ids?.some(id => appliedSubcats.has(id)))
-      );
-    }
-    return result;
-  }, [products, appliedSubcats]);
+  }, [allProducts]);
 
   const handleApplyFilters = () => {
     setAppliedSubcats(new Set(draftSubcats));
@@ -124,6 +136,10 @@ const LojaCategoria = () => {
     });
   };
 
+  const handleLoadMore = useCallback(() => {
+    setPage(prev => prev + 1);
+  }, []);
+
   const hasActiveFilters = appliedSubcats.size > 0 || appliedVariations.size > 0 || quickFilters.size > 0 || appliedPriceRange[0] > 0 || appliedPriceRange[1] < 100000;
 
   // Grid classes based on config
@@ -132,7 +148,7 @@ const LojaCategoria = () => {
   const isMisto = config.layout_mobile === 'misto';
   const mobileCols = config.layout_mobile === '1col' ? 'grid-cols-1' : isMisto ? 'grid-cols-2' : 'grid-cols-2';
 
-  if (isLoading) {
+  if (isLoading && page === 1) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -236,7 +252,7 @@ const LojaCategoria = () => {
               </Button>
             )}
             <span className="text-sm text-muted-foreground hidden md:inline">
-              {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''}
+              {allProducts.length} de {totalProducts} produto{totalProducts !== 1 ? 's' : ''}
             </span>
           </div>
 
@@ -256,67 +272,84 @@ const LojaCategoria = () => {
         </div>
 
         {/* 6. Product Grid */}
-        {filteredProducts.length === 0 ? (
+        {allProducts.length === 0 && !isFetching ? (
           <div className="text-center py-16">
             <p className="text-muted-foreground">Nenhum produto encontrado nesta categoria.</p>
           </div>
         ) : (
-          <div className={`grid ${mobileCols} ${desktopCols} gap-3 md:gap-4`}>
-            {filteredProducts.map((product: LojaProduct, index: number) => {
-              const discount = product.original_price && product.original_price > product.price
-                ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
-                : 0;
+          <>
+            <div className={`grid ${mobileCols} ${desktopCols} gap-3 md:gap-4`}>
+              {allProducts.map((product: LojaProduct, index: number) => {
+                const discount = product.original_price && product.original_price > product.price
+                  ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+                  : 0;
 
-              // Misto layout: index 0 full-width, 1-2 half, 3 full, 4-5 half, etc.
-              const mistoClass = isMisto && (index % 3 === 0) ? 'col-span-2' : '';
+                const mistoClass = isMisto && (index % 3 === 0) ? 'col-span-2' : '';
 
-              return (
-                <motion.div
-                  key={product.product_id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
-                  className={mistoClass}
-                >
-                  <Link to={`/produto/${product.slug}`} className="group block">
-                    <div className="relative overflow-hidden rounded-lg bg-card border border-border aspect-square">
-                      <img
-                        src={product.image || '/placeholder.svg'}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      {discount > 0 && (
-                        <span className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded">
-                          -{discount}%
-                        </span>
-                      )}
-                      {product.promotion && (
-                        <span className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded">
-                          {product.promotion}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 px-1">
-                      <div className="flex items-center gap-1 mb-1">
-                        <Star className="h-3 w-3 fill-primary text-primary" />
-                        <span className="text-xs text-muted-foreground">{product.rating} ({product.rating_count})</span>
-                      </div>
-                      <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
-                        {product.name}
-                      </h3>
-                      <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-base font-bold text-foreground">{formatPrice(product.price)}</span>
-                        {product.original_price && product.original_price > product.price && (
-                          <span className="text-xs text-muted-foreground line-through">{formatPrice(product.original_price)}</span>
+                return (
+                  <motion.div
+                    key={product.product_id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
+                    className={mistoClass}
+                  >
+                    <Link to={`/produto/${product.slug}`} className="group block">
+                      <div className="relative overflow-hidden rounded-lg bg-card border border-border aspect-square">
+                        <img
+                          src={product.image || '/placeholder.svg'}
+                          alt={product.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        {discount > 0 && (
+                          <span className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded">
+                            -{discount}%
+                          </span>
+                        )}
+                        {product.promotion && (
+                          <span className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded">
+                            {product.promotion}
+                          </span>
                         )}
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
+                      <div className="mt-2 px-1">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Star className="h-3 w-3 fill-primary text-primary" />
+                          <span className="text-xs text-muted-foreground">{product.rating} ({product.rating_count})</span>
+                        </div>
+                        <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
+                          {product.name}
+                        </h3>
+                        <div className="mt-1 flex items-baseline gap-2">
+                          <span className="text-base font-bold text-foreground">{formatPrice(product.price)}</span>
+                          {product.original_price && product.original_price > product.price && (
+                            <span className="text-xs text-muted-foreground line-through">{formatPrice(product.original_price)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Load More Button */}
+            {page < totalPages && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleLoadMore}
+                  disabled={isFetching}
+                  className="gap-2"
+                >
+                  {isFetching && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Carregar Mais Produtos
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
