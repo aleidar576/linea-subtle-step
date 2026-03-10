@@ -240,7 +240,7 @@ function MenuItemCard({
   onRemove: (id: string) => void;
   onUpdateLabel: (id: string, label: string) => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
-  onAddChild: (parentId: string) => void;
+  onAddChild: (parentId?: string) => void;
 }) {
   const typeBadge = {
     category: { label: 'Categoria', variant: 'default' as const },
