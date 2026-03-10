@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { X } from 'lucide-react';
+import { X, ArrowLeft, ChevronsUp } from 'lucide-react';
 
 interface VideoItem {
   playback_id: string;
@@ -18,9 +18,11 @@ const MUX_IMG = 'https://image.mux.com';
 export default function ProductVideos({ videos, layout }: ProductVideosProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(null);
+  const [showHint, setShowHint] = useState(false);
   const reelsRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const playerRefs = useRef<(any | null)[]>([]);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isOpen = activeIndex !== null;
 
@@ -34,6 +36,21 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
       });
     }
   }, [activeIndex]);
+
+  // Scroll hint
+  const dismissHint = () => {
+    setShowHint(false);
+    if (hintTimerRef.current) { clearTimeout(hintTimerRef.current); hintTimerRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (activeIndex !== null && videos.length > 1) {
+      setShowHint(true);
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = setTimeout(() => setShowHint(false), 3000);
+    }
+    return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
+  }, [activeIndex, videos.length]);
 
   // IntersectionObserver for play/pause
   useEffect(() => {
@@ -85,6 +102,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
     });
     setCurrentPlayingIndex(null);
     setActiveIndex(null);
+    dismissHint();
   };
 
   if (!videos || videos.length === 0) return null;
@@ -131,13 +149,20 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
           <DialogContent className="max-w-none w-screen h-screen max-h-screen p-0 m-0 border-none bg-black rounded-none gap-0 [&>button]:hidden">
             <button
               onClick={handleClose}
-              className="absolute top-6 right-6 z-[60] p-2 bg-black/40 rounded-full text-white backdrop-blur-md"
+              className="absolute top-6 left-6 z-[70] p-2 bg-black/40 rounded-full text-white backdrop-blur-md transition-opacity hover:opacity-80"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleClose}
+              className="absolute top-6 right-6 z-[60] p-2 bg-black/40 rounded-full text-white backdrop-blur-md transition-opacity hover:opacity-80"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div
               ref={reelsRef}
+              onScroll={dismissHint}
               className="h-[100dvh] w-full overflow-y-scroll snap-y snap-mandatory"
               style={{ scrollbarWidth: 'none' }}
             >
@@ -157,6 +182,11 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
                   />
                 </div>
               ))}
+            </div>
+
+            <div className={`absolute inset-0 z-[65] flex flex-col items-center justify-center pointer-events-none bg-black/20 backdrop-blur-sm transition-opacity duration-500 ${showHint ? 'opacity-100' : 'opacity-0'}`}>
+              <ChevronsUp className="w-14 h-14 text-white/90 animate-pulse mb-3" />
+              <p className="text-xl font-medium text-white text-center">Deslize para ver mais</p>
             </div>
           </DialogContent>
         </Dialog>
