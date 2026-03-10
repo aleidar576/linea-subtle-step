@@ -141,6 +141,7 @@ const LojaTemas = () => {
     if (loja?.configuracoes?.logo) setLogo(loja.configuracoes.logo);
     if (loja?.configuracoes?.cart_config) setCartConfig({ ...DEFAULT_CART, ...loja.configuracoes.cart_config });
     if (loja?.configuracoes?.categoria_config) setCategoriaConfig({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false, ...loja.configuracoes.categoria_config });
+    if (loja?.configuracoes?.menu_principal) setMenuPrincipal(loja.configuracoes.menu_principal);
   }, [loja]);
 
   useEffect(() => {
