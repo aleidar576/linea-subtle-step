@@ -24,7 +24,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
     const v = videos[0];
     return (
       <div className="px-3 md:px-0 py-4">
-        <h2 className="text-xl font-bold text-foreground mb-4">Vídeo do Produto</h2>
+        <h2 className="text-base font-semibold text-foreground mb-3">Vídeo do Produto</h2>
         <MuxPlayer
           playbackId={v.playback_id}
           preload="none"
