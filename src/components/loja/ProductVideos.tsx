@@ -37,6 +37,21 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
     }
   }, [activeIndex]);
 
+  // Scroll hint
+  const dismissHint = () => {
+    setShowHint(false);
+    if (hintTimerRef.current) { clearTimeout(hintTimerRef.current); hintTimerRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (activeIndex !== null && videos.length > 1) {
+      setShowHint(true);
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = setTimeout(() => setShowHint(false), 3000);
+    }
+    return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
+  }, [activeIndex, videos.length]);
+
   // IntersectionObserver for play/pause
   useEffect(() => {
     if (!isOpen) return;
