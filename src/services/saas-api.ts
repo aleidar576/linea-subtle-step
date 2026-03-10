@@ -149,6 +149,7 @@ export interface Loja {
     empresa?: LojaEmpresa;
     endereco?: LojaEndereco;
     integracoes?: LojaIntegracoes;
+    categoria_config?: CategoriaConfig;
   };
   is_active: boolean;
   criado_em: string;
