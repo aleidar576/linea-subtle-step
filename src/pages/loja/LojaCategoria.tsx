@@ -107,6 +107,21 @@ const LojaCategoria = () => {
     return [Math.min(...prices), Math.max(...prices)] as [number, number];
   }, [allProducts]);
 
+  // Sync draft price range with actual product prices on first load
+  const priceRangeInitialized = useMemo(() => allProducts.length > 0, [allProducts.length]);
+  useEffect(() => {
+    if (!priceRangeInitialized) return;
+    // Only update if draft is still at default values (user hasn't touched it)
+    setDraftPriceRange(prev => {
+      if (prev[0] === 0 && prev[1] === 100000) return [priceRange[0], priceRange[1]];
+      return prev;
+    });
+    setAppliedPriceRange(prev => {
+      if (prev[0] === 0 && prev[1] === 100000) return [priceRange[0], priceRange[1]];
+      return prev;
+    });
+  }, [priceRangeInitialized, priceRange]);
+
   const handleApplyFilters = () => {
     setAppliedSubcats(new Set(draftSubcats));
     setAppliedVariations(new Set(draftVariations));
