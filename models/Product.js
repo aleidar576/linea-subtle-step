@@ -132,4 +132,11 @@ const ProductSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+// Compound indexes for category page queries
+ProductSchema.index({ loja_id: 1, category_id: 1, is_active: 1, sort_order: 1 });
+ProductSchema.index({ loja_id: 1, category_ids: 1, is_active: 1, sort_order: 1 });
+ProductSchema.index({ loja_id: 1, is_active: 1, vendas_count: -1 });
+ProductSchema.index({ loja_id: 1, is_active: 1, price: 1 });
+ProductSchema.index({ loja_id: 1, is_active: 1, createdAt: -1 });
+
 module.exports = mongoose.models.Product || mongoose.model('Product', ProductSchema);

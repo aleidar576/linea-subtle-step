@@ -42,24 +42,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(products);
       }
 
-      // PUBLIC: Produtos de uma categoria por slug
+      // PUBLIC: Produtos de uma categoria por slug (paginado + server-side filters)
       if (scope === 'categoria-publica' && loja_id) {
         const Category = require('../models/Category.js');
-        const { category_slug, sort: sortParam, price_min, price_max, variations: variationsParam } = req.query as Record<string, string | undefined>;
+        const { category_slug, sort: sortParam, price_min, price_max, variations: variationsParam, subcategory_ids: subcatParam, page: pageParam, limit: limitParam } = req.query as Record<string, string | undefined>;
         if (!category_slug) return res.status(400).json({ error: 'category_slug é obrigatório' });
 
         const category = await Category.findOne({ loja_id, slug: category_slug, is_active: true }).lean();
         if (!category) return res.status(404).json({ error: 'Categoria não encontrada' });
 
         const subcategories = await Category.find({ loja_id, parent_id: category._id, is_active: true }).sort({ ordem: 1 }).lean();
-        const allCatIds = [category._id, ...subcategories.map((s: any) => s._id)];
+
+        // Determine which category IDs to filter by
+        let filterCatIds: any[];
+        if (subcatParam) {
+          // Server-side subcategory filter: only use the requested subcategory IDs (validated against real subcats)
+          const validSubIds = new Set(subcategories.map((s: any) => s._id.toString()));
+          const requestedIds = subcatParam.split(',').filter((id: string) => validSubIds.has(id));
+          filterCatIds = requestedIds.length > 0
+            ? requestedIds.map((id: string) => new (require('mongoose')).Types.ObjectId(id))
+            : [category._id, ...subcategories.map((s: any) => s._id)];
+        } else {
+          filterCatIds = [category._id, ...subcategories.map((s: any) => s._id)];
+        }
 
         const filter: any = {
           loja_id,
           is_active: true,
           $or: [
-            { category_id: { $in: allCatIds } },
-            { category_ids: { $in: allCatIds } },
+            { category_id: { $in: filterCatIds } },
+            { category_ids: { $in: filterCatIds } },
           ],
         };
 
@@ -72,27 +84,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
+        // Pagination with anti-scraping limit
+        const limit = Math.min(Number(limitParam) || 24, 48);
+        const page = Math.max(Number(pageParam) || 1, 1);
+        const skip = (page - 1) * limit;
+
+        // Projection: only card fields
+        const cardFields = 'product_id slug name image price original_price promotion rating rating_count variacoes sort_order vendas_count category_id category_ids is_active createdAt';
+
         let sortObj: any = { sort_order: 1 };
         switch (sortParam) {
           case 'vendidos': sortObj = { vendas_count: -1 }; break;
           case 'recentes': sortObj = { createdAt: -1 }; break;
           case 'menor_preco': sortObj = { price: 1 }; break;
           case 'maior_preco': sortObj = { price: -1 }; break;
-          case 'desconto': sortObj = { sort_order: 1 }; break; // computed client-side
         }
 
-        const products = await Product.find(filter).sort(sortObj).lean();
-
-        // For discount sorting, sort in-memory
+        // Discount sort: use aggregation pipeline (never sort in memory)
         if (sortParam === 'desconto') {
-          products.sort((a: any, b: any) => {
-            const discA = a.original_price ? (a.original_price - a.price) / a.original_price : 0;
-            const discB = b.original_price ? (b.original_price - b.price) / b.original_price : 0;
-            return discB - discA;
-          });
+          const cardProject = {
+            product_id: 1, slug: 1, name: 1, image: 1, price: 1, original_price: 1,
+            promotion: 1, rating: 1, rating_count: 1, variacoes: 1, sort_order: 1,
+            vendas_count: 1, category_id: 1, category_ids: 1, is_active: 1, createdAt: 1,
+          };
+          const pipeline: any[] = [
+            { $match: filter },
+            { $addFields: {
+              desconto_calc: {
+                $cond: [
+                  { $and: [{ $gt: ['$original_price', 0] }, { $gt: ['$original_price', '$price'] }] },
+                  { $subtract: ['$original_price', '$price'] },
+                  0,
+                ],
+              },
+            }},
+            { $sort: { desconto_calc: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            { $project: { ...cardProject, desconto_calc: 0 } },
+          ];
+          const [products, total] = await Promise.all([
+            Product.aggregate(pipeline),
+            Product.countDocuments(filter),
+          ]);
+          return res.status(200).json({ category, products, subcategories, total, page, totalPages: Math.ceil(total / limit) });
         }
 
-        return res.status(200).json({ category, products, subcategories });
+        // Standard sort: find with projection + pagination
+        const [products, total] = await Promise.all([
+          Product.find(filter).select(cardFields).sort(sortObj).skip(skip).limit(limit).lean(),
+          Product.countDocuments(filter),
+        ]);
+
+        return res.status(200).json({ category, products, subcategories, total, page, totalPages: Math.ceil(total / limit) });
       }
 
       // PUBLIC: Produto por slug de loja (sem auth)
