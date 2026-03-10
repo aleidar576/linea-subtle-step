@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { lojasApi } from '@/services/saas-api';
 import type { FooterConfig, FooterColuna, CoresGlobais, HomepageConfig, LogoConfig, ProdutoConfig, CartConfig } from '@/services/saas-api';
 import ImageUploader from '@/components/ImageUploader';
+import MenuBuilder from '@/components/admin/MenuBuilder';
 
 const ICON_OPTIONS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'ShieldCheck', label: 'Garantia', Icon: ShieldCheck },
