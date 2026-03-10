@@ -275,6 +275,9 @@ const LojaProdutos = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<string[]>([]);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProcessing, setVideoProcessing] = useState<{ upload_id: string; progress: number } | null>(null);
+  const [videoDeleteAssetId, setVideoDeleteAssetId] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
