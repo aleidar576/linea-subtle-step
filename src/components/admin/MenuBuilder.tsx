@@ -262,7 +262,7 @@ function MenuItemCard({
             className="h-8 text-sm flex-1"
             maxLength={50}
           />
-          <Badge variant={typeBadge.variant} className="text-[10px] shrink-0">{typeBadge.label}</Badge>
+          <Badge variant={typeBadge.variant as any} className="text-[10px] shrink-0">{typeBadge.label}</Badge>
 
           <div className="flex items-center gap-0.5 shrink-0">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onMove(item.id, 'up')} disabled={index === 0}>
