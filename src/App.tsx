@@ -66,6 +66,7 @@ import AdminPacotesComentarios from "./pages/AdminPacotesComentarios";
 import AdminGateways from "./pages/AdminGateways";
 import AdminPlanos from "./pages/AdminPlanos";
 import SegurancaConfirmacao from "./pages/SegurancaConfirmacao";
+import AdminIntegracoes from "./pages/AdminIntegracoes";
 
 // Loja Pública (Host-Based)
 import LojaLayoutComponent from "./components/LojaLayout";
@@ -170,7 +171,7 @@ const SaaSApp = () => (
                     <Route path="tickets" element={<AdminTickets />} />
                     <Route path="configuracoes" element={<AdminConfigEmpresa />} />
                     <Route path="pacotes-comentarios" element={<AdminPacotesComentarios />} />
-                    <Route path="integracoes" element={<AdminGateways />} />
+                    <Route path="integracoes" element={<AdminIntegracoes />} />
                     <Route path="gateways" element={<AdminGateways />} />
                     <Route path="estatisticas" element={<AdminEstatisticas />} />
                   </Route>
