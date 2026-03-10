@@ -221,9 +221,7 @@ export default function LojaIntegracoes() {
                   })()}
                 </SheetTitle>
                 <SheetDescription>
-                  {activeSheet === 'mux'
-                    ? 'Ative ou desative o recurso de vídeos na sua loja.'
-                    : 'Configure as credenciais e ative a integração.'}
+                  Configure as credenciais e ative a integração.
                 </SheetDescription>
               </SheetHeader>
 
@@ -231,13 +229,9 @@ export default function LojaIntegracoes() {
                 {/* Switch Ativar */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">
-                      {activeSheet === 'mux' ? 'Ativar Video Commerce' : 'Ativar Integração'}
-                    </Label>
+                    <Label className="text-sm font-medium">Ativar Integração</Label>
                     <p className="text-xs text-muted-foreground">
-                      {activeSheet === 'mux'
-                        ? 'Permite adicionar vídeos demonstrativos nos produtos da sua loja.'
-                        : 'Habilita esta integração na sua loja.'}
+                      Habilita esta integração na sua loja.
                     </p>
                   </div>
                   <Switch
@@ -245,16 +239,6 @@ export default function LojaIntegracoes() {
                     onCheckedChange={(v) => setSheetData({ ...sheetData, ativo: v })}
                   />
                 </div>
-
-                {/* Mux: simple info only */}
-                {activeSheet === 'mux' && (
-                  <Alert className="bg-muted/50 border-border">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <AlertDescription className="text-xs text-muted-foreground">
-                      Ao ativar, a aba <strong>Extras</strong> do cadastro de produto exibirá a seção de upload de vídeos. Os vídeos são processados na nuvem com qualidade profissional e exibidos automaticamente na página do produto.
-                    </AlertDescription>
-                  </Alert>
-                )}
 
                 {/* Banner CEP ausente no sheet */}
                 {activeSheet === 'melhor_envio' && sheetData.ativo && !hasCompleteProfile && (
