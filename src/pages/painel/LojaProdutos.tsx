@@ -114,6 +114,8 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
     social_proof_gender: 'desativado',
     badge_imagem: null,
     dimensoes: { peso: 0, altura: 0, largura: 0, comprimento: 0 },
+    videos: [],
+    video_layout: 'auto',
   };
 }
 
