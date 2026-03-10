@@ -310,8 +310,8 @@ export default function LojaIntegracoes() {
                   );
                 })()}
 
-                {/* Help link — hide for mux */}
-                {activeSheet !== 'mux' && (() => {
+                {/* Help link */}
+                {(() => {
                   const integration = INTEGRATIONS.find(i => i.id === activeSheet)!;
                   if (!integration.helpUrl) return null;
                   return (
