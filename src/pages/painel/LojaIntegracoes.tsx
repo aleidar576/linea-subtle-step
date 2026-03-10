@@ -277,8 +277,8 @@ export default function LojaIntegracoes() {
                   </div>
                 )}
 
-                {/* Token Input — only for integrations that have tokens */}
-                {activeSheet !== 'mux' && (() => {
+                {/* Token Input */}
+                {(() => {
                   const integration = INTEGRATIONS.find(i => i.id === activeSheet);
                   if (!integration?.hasToken) return null;
                   return (
