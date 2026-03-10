@@ -196,6 +196,7 @@ const LojaPublicaApp = ({ hostname }: { hostname: string }) => (
         <Routes>
           <Route element={<LojaLayoutComponent hostname={hostname} />}>
             <Route index element={<LojaHome />} />
+            <Route path="/categoria/:categorySlug" element={<LojaCategoria />} />
             <Route path="/produto/:productSlug" element={<LojaProduto />} />
             <Route path="/cart" element={<LojaCart />} />
             <Route path="/checkout" element={<LojaCheckout />} />
