@@ -304,6 +304,27 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // test_mux: Testar conexão Mux
+    if (action === 'test_mux') {
+      const tokenId = process.env.MUX_TOKEN_ID;
+      const tokenSecret = process.env.MUX_TOKEN_SECRET;
+      if (!tokenId || !tokenSecret) {
+        return res.status(400).json({ error: 'Variáveis MUX_TOKEN_ID e MUX_TOKEN_SECRET não configuradas na Vercel.' });
+      }
+      try {
+        const credentials = Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
+        const testRes = await fetch('https://api.mux.com/video/v1/assets?limit=1', {
+          headers: { Authorization: `Basic ${credentials}` },
+        });
+        if (!testRes.ok) {
+          return res.status(500).json({ error: 'Falha na autenticação com Mux', status: testRes.status });
+        }
+        return res.json({ success: true, message: 'Conexão Mux OK!' });
+      } catch (error) {
+        return res.status(500).json({ error: 'Erro ao testar Mux', details: error.message });
+      }
+    }
+
     // test_bunny: Testar conexão Bunny.net
     if (action === 'test_bunny') {
       const apiKey = process.env.BUNNY_API_KEY;
