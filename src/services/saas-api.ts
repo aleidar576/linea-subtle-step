@@ -507,6 +507,15 @@ export interface CategoriaConfig {
   filtro_rapido: boolean;
 }
 
+export interface MenuItemConfig {
+  id: string;
+  type: 'category' | 'page' | 'custom';
+  reference_id: string;
+  label: string;
+  url: string;
+  children: MenuItemConfig[];
+}
+
 export interface CategoriaPublicaResponse {
   category: LojaCategory;
   products: LojaProduct[];
