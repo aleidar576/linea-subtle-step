@@ -482,6 +482,8 @@ export interface LojaProduct {
   pessoas_vendo?: { ativo: boolean; min: number; max: number };
   cross_sell?: { modo: string; categoria_manual_id: string | null };
   dimensoes?: { peso: number; altura: number; largura: number; comprimento: number };
+  videos?: { playback_id: string; asset_id: string }[];
+  video_layout?: 'stories' | 'carousel' | 'auto';
 }
 
 export interface CategoryBanner {
