@@ -1,113 +1,78 @@
+## Diagnóstico da Cobrança Dupla
 
+### O que aconteceu (cronologia reconstruída)
 
-## Plano: Refatoracao UX/UI da Pagina de Categoria
+1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
+2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
+3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
 
-### 1. Menu de Navegacao Desktop - Active State Minimalista
+### Causa raiz
 
-**Arquivo:** `src/components/ui/navigation-menu.tsx`
+O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
 
-Alterar `navigationMenuTriggerStyle` (linha 37-38):
-- Remover `rounded-md bg-background hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[active]:bg-accent/50 data-[state=open]:bg-accent/50`
-- Substituir por estilo limpo: fundo transparente, hover sutil com `border-b-2`, estado ativo com `font-semibold border-b-2 border-primary`
+Isso acontece em **dois lugares** do código:
+- `processarCronTaxas()` (linha ~370 de `stripe.js`)
+- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
 
-**Arquivo:** `src/components/LojaLayout.tsx` (linhas 1024-1031)
+### Correção
 
-Detectar rota ativa via `useLocation` e aplicar classe `font-semibold border-b-2 border-primary` no link correspondente, removendo o estilo de "pilula".
+Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
 
----
+**Arquivo:** `lib/services/assinaturas/stripe.js`
 
-### 2. Sidebar Fixa Desktop + Sheet Mobile
+1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
+2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
 
-**Novo arquivo:** `src/components/loja/CategoryFilters.tsx`
+Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
 
-Extrair todo o conteudo de filtro (subcategorias, variacoes, faixa de preco, botoes Limpar/Aplicar) do Sheet atual em `LojaCategoria.tsx` (linhas 363-437) para um componente reutilizavel:
+### Bug secundário (menor)
 
-```text
-<CategoryFilters
-  subcategories={subcategories}
-  allVariations={allVariations}
-  priceRange={priceRange}
-  draftSubcats / draftVariations / draftPriceRange  (state)
-  setDraftSubcats / setDraftVariations / setDraftPriceRange (setters)
-  onApply={() => ...}
-  onClear={() => ...}
-  formatPrice={formatPrice}
-/>
-```
-
-**Arquivo:** `src/pages/loja/LojaCategoria.tsx`
-
-Alterar o layout principal (atualmente `<div className="container py-4">`) para:
-
-```text
-<div className="container py-4 lg:flex lg:gap-6">
-  {/* Desktop sidebar - hidden on mobile */}
-  <aside className="hidden lg:block w-64 shrink-0">
-    <div className="sticky top-20">
-      <h2 className="font-semibold mb-4">Filtros</h2>
-      <CategoryFilters ... />
-    </div>
-  </aside>
-
-  {/* Main content */}
-  <div className="flex-1 min-w-0">
-    {/* Breadcrumbs, title, quick filters, controls, grid */}
-    {/* Botao "Filtrar" com classe lg:hidden */}
-  </div>
-</div>
-
-{/* Sheet mobile - only renders on mobile */}
-<Sheet ...>
-  <SheetContent>
-    <CategoryFilters ... />
-  </SheetContent>
-</Sheet>
-```
-
-O botao "Filtrar" recebe `className="lg:hidden"` para sumir no desktop.
+O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
 
 ---
 
-### 3. Dual Range Slider + Inputs de Preco
+## Páginas de Categoria — Implementação Completa ✅
 
-**Arquivo:** `src/components/ui/slider.tsx`
+### Arquivos modificados
 
-O componente atual renderiza apenas 1 `<Thumb>`. Radix `@radix-ui/react-slider` renderiza automaticamente um Thumb por valor no array, mas o componente precisa declarar os Thumbs. Alterar para renderizar dinamicamente com base nos valores:
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Category.js` | +campo `banner` (Mixed) |
+| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
+| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
+| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
+| API | `api/categorias.js` | PUT aceita campo `banner` |
+| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
+| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
+| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
+| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
+| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
+| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
+| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
+| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
 
-```tsx
-<SliderPrimitive.Root ...>
-  <SliderPrimitive.Track>
-    <SliderPrimitive.Range />
-  </SliderPrimitive.Track>
-  <SliderPrimitive.Thumb className="..." />
-  <SliderPrimitive.Thumb className="..." />
-</SliderPrimitive.Root>
+## Construtor de Navegação Visual (Menu Builder) ✅
+
+### Arquivos Modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
+| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
+| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
+| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
+| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
+
+### Estrutura do MenuItemConfig
+```ts
+{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
 ```
 
-Nota: Radix ignora Thumbs extras se so 1 valor for passado, entao 2 Thumbs fixos eh seguro.
-
-**Dentro de `CategoryFilters`** (novo componente):
-
-Abaixo do Slider, adicionar dois `<Input type="number">` sincronizados:
-
-```text
-[Slider dual-thumb ====o=========o====]
-[ R$ Min |______|]   [ R$ Max |______|]
-```
-
-- Input Min: `value={draftPriceRange[0] / 100}`, onChange converte para centavos e atualiza `draftPriceRange[0]`
-- Input Max: `value={draftPriceRange[1] / 100}`, onChange converte para centavos e atualiza `draftPriceRange[1]`
-- Slider e inputs compartilham o mesmo state, ficando sincronizados bidirecionalmente
-
----
-
-### Resumo de Arquivos
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/ui/navigation-menu.tsx` | Estilo minimalista no trigger |
-| `src/components/LojaLayout.tsx` | Active state por rota no menu desktop |
-| `src/components/loja/CategoryFilters.tsx` | **Novo** - componente de filtros extraido |
-| `src/pages/loja/LojaCategoria.tsx` | Layout grid responsivo + usar CategoryFilters |
-| `src/components/ui/slider.tsx` | Adicionar segundo Thumb para dual range |
-
+### Funcionalidades
+- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
+- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
+- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
+- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
+- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
