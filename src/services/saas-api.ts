@@ -150,6 +150,7 @@ export interface Loja {
     endereco?: LojaEndereco;
     integracoes?: LojaIntegracoes;
     categoria_config?: CategoriaConfig;
+    menu_principal?: MenuItemConfig[];
   };
   is_active: boolean;
   criado_em: string;

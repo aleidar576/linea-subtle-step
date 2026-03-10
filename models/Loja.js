@@ -47,6 +47,10 @@ const LojaSchema = new mongoose.Schema({
         filtro_rapido: false,
       },
     },
+    menu_principal: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
     checkout_config: { type: mongoose.Schema.Types.Mixed, default: null },
     empresa: {
       tipo_documento: { type: String, default: '' },
