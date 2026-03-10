@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { lojaPublicaApi, type Loja, type LojaProduct, type RegraFrete, type Cupom, type LojaCategory } from '@/services/saas-api';
+import { lojaPublicaApi, type Loja, type LojaProduct, type RegraFrete, type Cupom, type LojaCategory, type CategoriaPublicaResponse } from '@/services/saas-api';
 
 export function useLojaByDomain(hostname: string) {
   return useQuery({
