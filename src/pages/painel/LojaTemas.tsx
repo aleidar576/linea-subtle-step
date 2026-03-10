@@ -287,6 +287,56 @@ const LojaTemas = () => {
           <TabsTrigger value="footer" className="gap-1"><Globe className="h-3 w-3" /> Footer</TabsTrigger>
         </TabsList>
 
+        {/* ===== CATEGORIA ===== */}
+        <TabsContent value="categoria" className="space-y-6">
+          <Card className="p-6 space-y-6">
+            <div>
+              <h3 className="font-semibold mb-1">Configurações da Página de Categoria</h3>
+              <p className="text-sm text-muted-foreground">Defina como os produtos são exibidos nas páginas de categoria da loja pública.</p>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Layout Mobile</Label>
+                <Select value={categoriaConfig.layout_mobile} onValueChange={v => setCategoriaConfig({ ...categoriaConfig, layout_mobile: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1col">1 Coluna</SelectItem>
+                    <SelectItem value="2cols">2 Colunas (Padrão)</SelectItem>
+                    <SelectItem value="misto">Misto (Alternando 1 e 2 colunas)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Como os produtos aparecem em telas pequenas.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Layout Desktop</Label>
+                <Select value={categoriaConfig.layout_desktop} onValueChange={v => setCategoriaConfig({ ...categoriaConfig, layout_desktop: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3cols">3 Colunas</SelectItem>
+                    <SelectItem value="4cols">4 Colunas (Padrão)</SelectItem>
+                    <SelectItem value="5cols">5 Colunas</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Como os produtos aparecem em telas grandes.</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Filtro Rápido de Variações</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Exibe chips clicáveis no topo da categoria para filtrar por variações (cor, tamanho, etc).</p>
+              </div>
+              <Switch checked={categoriaConfig.filtro_rapido} onCheckedChange={v => setCategoriaConfig({ ...categoriaConfig, filtro_rapido: v })} />
+            </div>
+          </Card>
+        </TabsContent>
+
         {/* ===== HOMEPAGE ===== */}
         <TabsContent value="homepage">
           <Accordion type="single" collapsible className="w-full space-y-4">
