@@ -1073,6 +1073,14 @@ export const lojaPublicaApi = {
     publicRequest<RegraFrete[]>(`/loja-extras?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
+  getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string }) => {
+    const params = new URLSearchParams({ scope: 'categoria-publica', loja_id: lojaId, category_slug: slug });
+    if (sort) params.set('sort', sort);
+    if (filters?.price_min) params.set('price_min', String(filters.price_min));
+    if (filters?.price_max) params.set('price_max', String(filters.price_max));
+    if (filters?.variations) params.set('variations', filters.variations);
+    return publicRequest<CategoriaPublicaResponse>(`/products?${params.toString()}`);
+  },
   getPagina: (lojaId: string, slug: string) =>
     publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
   calcularFrete: (data: CalculateFreightRequest) =>
