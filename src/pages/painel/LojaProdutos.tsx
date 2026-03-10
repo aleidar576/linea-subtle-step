@@ -1586,7 +1586,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 4: Vídeos (Shoppertainment) ── */}
                 <AccordionItem value="videos">
-                  <AccordionTrigger className="text-base font-semibold">🎥 Vídeos (Shoppertainment)</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><Video className="w-4 h-4 mr-2 text-foreground" />Vídeos (Shoppertainment)</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Check if Mux is active */}
