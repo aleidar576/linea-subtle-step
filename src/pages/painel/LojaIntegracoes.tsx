@@ -41,14 +41,6 @@ const INTEGRATIONS = [
     helpUrl: 'https://www.kangu.com.br',
     hasToken: true,
   },
-  {
-    id: 'mux' as const,
-    name: 'Video Commerce',
-    description: 'Ative vídeos demonstrativos nos seus produtos para aumentar a conversão.',
-    icon: Video,
-    helpUrl: '',
-    hasToken: false,
-  },
 ] as const;
 
 type IntegrationId = typeof INTEGRATIONS[number]['id'];
@@ -57,7 +49,6 @@ type IntegrationId = typeof INTEGRATIONS[number]['id'];
 const DEFAULTS: Record<IntegrationId, any> = {
   melhor_envio: { ativo: false, token: '', sandbox: true },
   kangu: { ativo: false, token: '' },
-  mux: { ativo: false },
 };
 
 export default function LojaIntegracoes() {
