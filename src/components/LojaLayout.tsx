@@ -886,6 +886,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     gatewayLoading,
     metodosSuportados,
     installmentConfig,
+    categoriaConfig: config.categoria_config || null,
     isLoading: false,
     notFound: false,
   };

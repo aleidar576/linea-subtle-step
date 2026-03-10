@@ -42,6 +42,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(products);
       }
 
+      // PUBLIC: Produtos de uma categoria por slug
+      if (scope === 'categoria-publica' && loja_id) {
+        const Category = require('../models/Category.js');
+        const { category_slug, sort: sortParam, price_min, price_max, variations: variationsParam } = req.query as Record<string, string | undefined>;
+        if (!category_slug) return res.status(400).json({ error: 'category_slug é obrigatório' });
+
+        const category = await Category.findOne({ loja_id, slug: category_slug, is_active: true }).lean();
+        if (!category) return res.status(404).json({ error: 'Categoria não encontrada' });
+
+        const subcategories = await Category.find({ loja_id, parent_id: category._id, is_active: true }).sort({ ordem: 1 }).lean();
+        const allCatIds = [category._id, ...subcategories.map((s: any) => s._id)];
+
+        const filter: any = {
+          loja_id,
+          is_active: true,
+          $or: [
+            { category_id: { $in: allCatIds } },
+            { category_ids: { $in: allCatIds } },
+          ],
+        };
+
+        if (price_min) filter.price = { ...filter.price, $gte: Number(price_min) };
+        if (price_max) filter.price = { ...filter.price, $lte: Number(price_max) };
+        if (variationsParam) {
+          const vars = variationsParam.split(',').map(v => v.trim()).filter(Boolean);
+          if (vars.length > 0) {
+            filter['variacoes.nome'] = { $in: vars };
+          }
+        }
+
+        let sortObj: any = { sort_order: 1 };
+        switch (sortParam) {
+          case 'vendidos': sortObj = { vendas_count: -1 }; break;
+          case 'recentes': sortObj = { createdAt: -1 }; break;
+          case 'menor_preco': sortObj = { price: 1 }; break;
+          case 'maior_preco': sortObj = { price: -1 }; break;
+          case 'desconto': sortObj = { sort_order: 1 }; break; // computed client-side
+        }
+
+        const products = await Product.find(filter).sort(sortObj).lean();
+
+        // For discount sorting, sort in-memory
+        if (sortParam === 'desconto') {
+          products.sort((a: any, b: any) => {
+            const discA = a.original_price ? (a.original_price - a.price) / a.original_price : 0;
+            const discB = b.original_price ? (b.original_price - b.price) / b.original_price : 0;
+            return discB - discA;
+          });
+        }
+
+        return res.status(200).json({ category, products, subcategories });
+      }
+
       // PUBLIC: Produto por slug de loja (sem auth)
       if (scope === 'produto-publico' && loja_id && slug) {
         const product = await Product.findOne({ loja_id, slug, is_active: true }).lean();

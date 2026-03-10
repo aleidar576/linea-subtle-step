@@ -6,9 +6,10 @@ import { useTemaConfig, useUpdateTema, usePaginas, useCupons } from '@/hooks/use
 import {
   Palette, Check, Code, MessageSquare, Globe, Layout, ShoppingBag, Plus, Trash2, ShoppingCart, CreditCard as CreditCardIcon,
   ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame, Gift, Tag,
-  Store, Megaphone, Users, Sparkles, Link2, Shield,
+  Store, Megaphone, Users, Sparkles, Link2, Shield, Layers,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { CategoriaConfig } from '@/services/saas-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { lojasApi } from '@/services/saas-api';
 import type { FooterConfig, FooterColuna, CoresGlobais, HomepageConfig, LogoConfig, ProdutoConfig, CartConfig } from '@/services/saas-api';
@@ -121,6 +123,7 @@ const LojaTemas = () => {
   const [customCss, setCustomCss] = useState('');
   const [produtoConfig, setProdutoConfig] = useState<ProdutoConfig>({});
   const [cartConfig, setCartConfig] = useState<CartConfig>(DEFAULT_CART);
+  const [categoriaConfig, setCategoriaConfig] = useState<CategoriaConfig>({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -130,6 +133,13 @@ const LojaTemas = () => {
     if (temaConfig?.homepage_config) setHomepage({ ...DEFAULT_HOMEPAGE, ...temaConfig.homepage_config });
     if (temaConfig?.produto_config) setProdutoConfig(temaConfig.produto_config);
   }, [temaConfig]);
+
+  useEffect(() => {
+    if (loja?.configuracoes?.custom_css) setCustomCss(loja.configuracoes.custom_css);
+    if (loja?.configuracoes?.logo) setLogo(loja.configuracoes.logo);
+    if (loja?.configuracoes?.cart_config) setCartConfig({ ...DEFAULT_CART, ...loja.configuracoes.cart_config });
+    if (loja?.configuracoes?.categoria_config) setCategoriaConfig({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false, ...loja.configuracoes.categoria_config });
+  }, [loja]);
 
   useEffect(() => {
     if (loja?.configuracoes?.custom_css) setCustomCss(loja.configuracoes.custom_css);
@@ -161,7 +171,7 @@ const LojaTemas = () => {
         lojaId: id,
         data: { footer, whatsapp_numero: whatsapp, cores_globais: cores, homepage_config: homepage, produto_config: produtoConfig },
       });
-      await lojasApi.update(id, { configuracoes: { custom_css: customCss, logo, cart_config: cartConfig } } as any);
+      await lojasApi.update(id, { configuracoes: { custom_css: customCss, logo, cart_config: cartConfig, categoria_config: categoriaConfig } } as any);
       toast.success('Configurações de tema salvas!');
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -268,14 +278,65 @@ const LojaTemas = () => {
       </div>
 
       <Tabs defaultValue="homepage" className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-7 w-full">
           <TabsTrigger value="homepage" className="gap-1"><Layout className="h-3 w-3" /> Homepage</TabsTrigger>
           <TabsTrigger value="produto" className="gap-1"><ShoppingBag className="h-3 w-3" /> Produto</TabsTrigger>
+          <TabsTrigger value="categoria" className="gap-1"><Layers className="h-3 w-3" /> Categoria</TabsTrigger>
           <TabsTrigger value="carrinho" className="gap-1"><ShoppingCart className="h-3 w-3" /> Carrinho</TabsTrigger>
           <TabsTrigger value="checkout" className="gap-1"><CreditCardIcon className="h-3 w-3" /> Checkout</TabsTrigger>
           <TabsTrigger value="cores" className="gap-1"><Palette className="h-3 w-3" /> Cores</TabsTrigger>
           <TabsTrigger value="footer" className="gap-1"><Globe className="h-3 w-3" /> Footer</TabsTrigger>
         </TabsList>
+
+        {/* ===== CATEGORIA ===== */}
+        <TabsContent value="categoria" className="space-y-6">
+          <Card className="p-6 space-y-6">
+            <div>
+              <h3 className="font-semibold mb-1">Configurações da Página de Categoria</h3>
+              <p className="text-sm text-muted-foreground">Defina como os produtos são exibidos nas páginas de categoria da loja pública.</p>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Layout Mobile</Label>
+                <Select value={categoriaConfig.layout_mobile} onValueChange={v => setCategoriaConfig({ ...categoriaConfig, layout_mobile: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1col">1 Coluna</SelectItem>
+                    <SelectItem value="2cols">2 Colunas (Padrão)</SelectItem>
+                    <SelectItem value="misto">Misto (Alternando 1 e 2 colunas)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Como os produtos aparecem em telas pequenas.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Layout Desktop</Label>
+                <Select value={categoriaConfig.layout_desktop} onValueChange={v => setCategoriaConfig({ ...categoriaConfig, layout_desktop: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3cols">3 Colunas</SelectItem>
+                    <SelectItem value="4cols">4 Colunas (Padrão)</SelectItem>
+                    <SelectItem value="5cols">5 Colunas</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Como os produtos aparecem em telas grandes.</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Filtro Rápido de Variações</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Exibe chips clicáveis no topo da categoria para filtrar por variações (cor, tamanho, etc).</p>
+              </div>
+              <Switch checked={categoriaConfig.filtro_rapido} onCheckedChange={v => setCategoriaConfig({ ...categoriaConfig, filtro_rapido: v })} />
+            </div>
+          </Card>
+        </TabsContent>
 
         {/* ===== HOMEPAGE ===== */}
         <TabsContent value="homepage">

@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import ImageUploader from '@/components/ImageUploader';
 import type { LojaCategory } from '@/services/saas-api';
 
 type ViewMode = 'list' | 'editor';
@@ -62,6 +63,15 @@ const LojaCategorias = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
 
+  // Banner state
+  const [bannerImagem, setBannerImagem] = useState('');
+  const [bannerImagemMobile, setBannerImagemMobile] = useState('');
+  const [bannerLink, setBannerLink] = useState('');
+  const [bannerTitulo, setBannerTitulo] = useState('');
+  const [bannerTituloCor, setBannerTituloCor] = useState('#ffffff');
+  const [bannerSubtitulo, setBannerSubtitulo] = useState('');
+  const [bannerSubtituloCor, setBannerSubtituloCor] = useState('#ffffff');
+
   // Add products dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [allProducts, setAllProducts] = useState<CatProduct[]>([]);
@@ -90,6 +100,15 @@ const LojaCategorias = () => {
     setSelectedCat(cat);
     setEditorName(cat.nome);
     setEditorSlug(cat.slug);
+    // Load banner
+    const b = cat.banner || {} as any;
+    setBannerImagem(b.imagem || '');
+    setBannerImagemMobile(b.imagem_mobile || '');
+    setBannerLink(b.link || '');
+    setBannerTitulo(b.titulo || '');
+    setBannerTituloCor(b.titulo_cor || '#ffffff');
+    setBannerSubtitulo(b.subtitulo || '');
+    setBannerSubtituloCor(b.subtitulo_cor || '#ffffff');
     setMode('editor');
     loadCategoryProducts(cat._id);
   };
@@ -103,7 +122,16 @@ const LojaCategorias = () => {
   const handleSaveCategory = async () => {
     if (!selectedCat || !editorName.trim()) return;
     try {
-      await updateMut.mutateAsync({ id: selectedCat._id, data: { nome: editorName, slug: editorSlug || slugify(editorName) } });
+      const banner = bannerImagem ? {
+        imagem: bannerImagem,
+        imagem_mobile: bannerImagemMobile,
+        link: bannerLink,
+        titulo: bannerTitulo,
+        titulo_cor: bannerTituloCor,
+        subtitulo: bannerSubtitulo,
+        subtitulo_cor: bannerSubtituloCor,
+      } : null;
+      await updateMut.mutateAsync({ id: selectedCat._id, data: { nome: editorName, slug: editorSlug || slugify(editorName), banner } });
       toast({ title: 'Categoria atualizada!' });
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
@@ -219,6 +247,46 @@ const LojaCategorias = () => {
             <div>
               <Label>URL / Slug</Label>
               <Input value={editorSlug} onChange={e => setEditorSlug(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Banner da Categoria */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4 mb-6">
+          <h2 className="font-semibold flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Banner da Categoria</h2>
+          <p className="text-sm text-muted-foreground">Opcional. Exibido no topo da página de categoria.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <Label>Imagem Desktop</Label>
+              <ImageUploader lojaId={id} value={bannerImagem} onChange={setBannerImagem} placeholder="URL do banner desktop" />
+            </div>
+            <div>
+              <Label>Imagem Mobile</Label>
+              <ImageUploader lojaId={id} value={bannerImagemMobile} onChange={setBannerImagemMobile} placeholder="URL do banner mobile" />
+            </div>
+          </div>
+          <div>
+            <Label>Link de destino (opcional)</Label>
+            <Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} placeholder="https://..." />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <Label>Título</Label>
+              <Input value={bannerTitulo} onChange={e => setBannerTitulo(e.target.value)} placeholder="Título do banner" />
+            </div>
+            <div>
+              <Label>Cor do Título</Label>
+              <Input type="color" value={bannerTituloCor} onChange={e => setBannerTituloCor(e.target.value)} className="h-10 w-20" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <Label>Subtítulo</Label>
+              <Input value={bannerSubtitulo} onChange={e => setBannerSubtitulo(e.target.value)} placeholder="Subtítulo do banner" />
+            </div>
+            <div>
+              <Label>Cor do Subtítulo</Label>
+              <Input type="color" value={bannerSubtituloCor} onChange={e => setBannerSubtituloCor(e.target.value)} className="h-10 w-20" />
             </div>
           </div>
         </div>

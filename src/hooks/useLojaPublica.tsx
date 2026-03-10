@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { lojaPublicaApi, type Loja, type LojaProduct, type RegraFrete, type Cupom, type LojaCategory } from '@/services/saas-api';
+import { lojaPublicaApi, type Loja, type LojaProduct, type RegraFrete, type Cupom, type LojaCategory, type CategoriaPublicaResponse } from '@/services/saas-api';
 
 export function useLojaByDomain(hostname: string) {
   return useQuery({
@@ -44,5 +44,19 @@ export function useLojaPublicaCategorias(lojaId: string | undefined) {
     queryFn: () => lojaPublicaApi.getCategorias(lojaId!),
     enabled: !!lojaId,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useLojaPublicaCategoria(
+  lojaId: string | undefined,
+  slug: string | undefined,
+  sort?: string,
+  filters?: { price_min?: number; price_max?: number; variations?: string }
+) {
+  return useQuery({
+    queryKey: ['loja-publica-categoria', lojaId, slug, sort, filters],
+    queryFn: () => lojaPublicaApi.getCategoriaBySlug(lojaId!, slug!, sort, filters),
+    enabled: !!lojaId && !!slug,
+    staleTime: 2 * 60 * 1000,
   });
 }

@@ -39,6 +39,14 @@ const LojaSchema = new mongoose.Schema({
     scripts_customizados: { type: [mongoose.Schema.Types.Mixed], default: [] },
     logo: { type: mongoose.Schema.Types.Mixed, default: null },
     cart_config: { type: mongoose.Schema.Types.Mixed, default: null },
+    categoria_config: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        layout_mobile: '2cols',
+        layout_desktop: '4cols',
+        filtro_rapido: false,
+      },
+    },
     checkout_config: { type: mongoose.Schema.Types.Mixed, default: null },
     empresa: {
       tipo_documento: { type: String, default: '' },

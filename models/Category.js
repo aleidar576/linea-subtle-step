@@ -11,6 +11,11 @@ const CategorySchema = new mongoose.Schema({
   parent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   ordem: { type: Number, default: 0 },
   is_active: { type: Boolean, default: true },
+  banner: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+    // { imagem: '', imagem_mobile: '', link: '', titulo: '', titulo_cor: '', subtitulo: '', subtitulo_cor: '' }
+  },
 }, { timestamps: true });
 
 CategorySchema.index({ loja_id: 1, slug: 1 }, { unique: true });

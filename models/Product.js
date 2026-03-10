@@ -92,6 +92,7 @@ const ProductSchema = new mongoose.Schema({
 
   // Extras
   badge_imagem: { type: String, default: null },
+  vendas_count: { type: Number, default: 0, index: true },
   parcelas_fake: { type: String, default: null },
   vendas_fake: { type: Number, default: 0 },
   oferta_relampago: {

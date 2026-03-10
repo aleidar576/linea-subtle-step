@@ -149,6 +149,7 @@ export interface Loja {
     empresa?: LojaEmpresa;
     endereco?: LojaEndereco;
     integracoes?: LojaIntegracoes;
+    categoria_config?: CategoriaConfig;
   };
   is_active: boolean;
   criado_em: string;
@@ -467,6 +468,7 @@ export interface LojaProduct {
   fretes_vinculados?: Array<{ frete_id: string; valor_personalizado: number | null; exibir_no_produto?: boolean }>;
   parcelas_fake: string | null;
   vendas_fake: number;
+  vendas_count?: number;
   oferta_relampago: OfertaRelampago;
   vantagens?: { ativo: boolean; itens: string[] };
   vantagens_titulo?: string | null;
@@ -474,6 +476,16 @@ export interface LojaProduct {
   pessoas_vendo?: { ativo: boolean; min: number; max: number };
   cross_sell?: { modo: string; categoria_manual_id: string | null };
   dimensoes?: { peso: number; altura: number; largura: number; comprimento: number };
+}
+
+export interface CategoryBanner {
+  imagem: string;
+  imagem_mobile: string;
+  link: string;
+  titulo: string;
+  titulo_cor: string;
+  subtitulo: string;
+  subtitulo_cor: string;
 }
 
 export interface LojaCategory {
@@ -485,6 +497,19 @@ export interface LojaCategory {
   ordem: number;
   is_active: boolean;
   qtd_produtos?: number;
+  banner?: CategoryBanner | null;
+}
+
+export interface CategoriaConfig {
+  layout_mobile: '1col' | '2cols' | 'misto';
+  layout_desktop: '3cols' | '4cols' | '5cols';
+  filtro_rapido: boolean;
+}
+
+export interface CategoriaPublicaResponse {
+  category: LojaCategory;
+  products: LojaProduct[];
+  subcategories: LojaCategory[];
 }
 
 export interface CategoriesResponse {
@@ -1048,6 +1073,14 @@ export const lojaPublicaApi = {
     publicRequest<RegraFrete[]>(`/loja-extras?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
+  getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string }) => {
+    const params = new URLSearchParams({ scope: 'categoria-publica', loja_id: lojaId, category_slug: slug });
+    if (sort) params.set('sort', sort);
+    if (filters?.price_min) params.set('price_min', String(filters.price_min));
+    if (filters?.price_max) params.set('price_max', String(filters.price_max));
+    if (filters?.variations) params.set('variations', filters.variations);
+    return publicRequest<CategoriaPublicaResponse>(`/products?${params.toString()}`);
+  },
   getPagina: (lojaId: string, slug: string) =>
     publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
   calcularFrete: (data: CalculateFreightRequest) =>

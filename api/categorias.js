@@ -94,7 +94,7 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    const { nome, slug: newSlug, ordem: newOrdem } = req.body;
+    const { nome, slug: newSlug, ordem: newOrdem, banner } = req.body;
     if (nome) {
       cat.nome = nome;
       cat.slug = newSlug || slugify(nome);
@@ -102,6 +102,10 @@ module.exports = async function handler(req, res) {
       cat.slug = newSlug;
     }
     if (newOrdem !== undefined) cat.ordem = newOrdem;
+    if (banner !== undefined) {
+      cat.banner = banner;
+      cat.markModified('banner');
+    }
     await cat.save();
     return res.status(200).json(cat);
   }
