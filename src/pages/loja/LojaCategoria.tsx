@@ -68,12 +68,12 @@ const LojaCategoria = () => {
   const totalProducts = data?.total || 0;
   const totalPages = data?.totalPages || 1;
 
-  // Append/reset products based on page
+  // Append/reset products based on page — categoryKey forces re-run on category switch
   useEffect(() => {
     if (data?.products) {
       setAllProducts(prev => page === 1 ? data.products : [...prev, ...data.products]);
     }
-  }, [data, page]);
+  }, [data, page, categoryKey]);
 
   // Flag to skip filter-reset effect when category changes
   const categoryChangingRef = useRef(false);
