@@ -736,6 +736,29 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     link.href = faviconHref;
   }, [loja]);
 
+  // Extract config early so hooks below can reference it before early returns
+  const config = (loja?.configuracoes || {}) as any;
+
+  // Fallback: fetch categories if menu_principal is empty
+  useEffect(() => {
+    if ((config.menu_principal || []).length > 0 || !loja?._id) return;
+    lojaPublicaApi.getCategorias(loja._id)
+      .then((cats: any[]) => setFallbackCategories(cats.filter((c: any) => c.is_active !== false && !c.parent_id)))
+      .catch(() => {});
+  }, [loja?._id, config.menu_principal]);
+
+  const menuItems: MenuItemConfig[] = useMemo(() => {
+    if ((config.menu_principal || []).length > 0) return config.menu_principal;
+    return fallbackCategories.map((cat: any) => ({
+      id: cat._id,
+      type: 'category' as const,
+      reference_id: cat._id,
+      label: cat.nome,
+      url: `/categoria/${cat.slug}`,
+      children: [],
+    }));
+  }, [config.menu_principal, fallbackCategories]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
