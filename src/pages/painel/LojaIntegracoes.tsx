@@ -286,32 +286,48 @@ export default function LojaIntegracoes() {
                   </div>
                 )}
 
-                {/* Token Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="token">Token de Acesso</Label>
-                  <div className="relative">
-                    <Input
-                      id="token"
-                      type={showToken ? 'text' : 'password'}
-                      placeholder="Cole seu token aqui..."
-                      value={sheetData.token}
-                      onChange={(e) => setSheetData({ ...sheetData, token: e.target.value })}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowToken(!showToken)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {activeSheet === 'melhor_envio'
-                      ? 'Token Bearer gerado no painel do Melhor Envio.'
-                      : 'Token de acesso gerado no painel da Kangu.'}
-                  </p>
-                </div>
+                {/* Token Input — only for integrations that have tokens */}
+                {(() => {
+                  const integration = INTEGRATIONS.find(i => i.id === activeSheet);
+                  if (!integration?.hasToken) return null;
+                  return (
+                    <div className="space-y-2">
+                      <Label htmlFor="token">Token de Acesso</Label>
+                      <div className="relative">
+                        <Input
+                          id="token"
+                          type={showToken ? 'text' : 'password'}
+                          placeholder="Cole seu token aqui..."
+                          value={sheetData.token || ''}
+                          onChange={(e) => setSheetData({ ...sheetData, token: e.target.value })}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowToken(!showToken)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {activeSheet === 'melhor_envio'
+                          ? 'Token Bearer gerado no painel do Melhor Envio.'
+                          : 'Token de acesso gerado no painel da Kangu.'}
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* Mux Info Banner */}
+                {activeSheet === 'mux' && (
+                  <Alert className="bg-muted/50 border-border">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <AlertDescription className="text-xs text-muted-foreground">
+                      O Video Commerce permite adicionar vídeos demonstrativos nos seus produtos. Os vídeos são processados na nuvem com qualidade profissional. Após ativar, vá na aba <strong>Extras</strong> do cadastro de produto para fazer upload.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* Help link */}
                 {(() => {

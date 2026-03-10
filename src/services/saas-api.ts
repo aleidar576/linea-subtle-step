@@ -974,6 +974,17 @@ export const pixelsApi = {
     request<{ success: boolean }>(`/loja-extras?scope=pixel&id=${id}`, { method: 'DELETE' }),
 };
 
+// === Mux Video API ===
+
+export const muxApi = {
+  getUploadUrl: (lojaId: string) =>
+    request<{ upload_url: string; upload_id: string }>(`/loja-extras?scope=mux-upload&loja_id=${lojaId}`, { method: 'POST' }),
+  getStatus: (lojaId: string, uploadId: string) =>
+    request<{ status: string; asset_id: string | null; playback_id: string | null }>(`/loja-extras?scope=mux-status&loja_id=${lojaId}&upload_id=${uploadId}`),
+  deleteVideo: (lojaId: string, assetId: string, productId?: string) =>
+    request<{ success: boolean }>(`/loja-extras?scope=mux-delete&loja_id=${lojaId}&asset_id=${assetId}${productId ? `&product_id=${productId}` : ''}`, { method: 'DELETE' }),
+};
+
 // === Páginas API ===
 
 export const paginasApi = {
