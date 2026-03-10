@@ -6,7 +6,7 @@ import { useLojaCategories } from '@/hooks/useLojaCategories';
 import { useFretes } from '@/hooks/useLojaExtras';
 import { settingsApi } from '@/services/api';
 import type { LojaProduct, Variacao, AvaliacaoManual, AvaliacoesConfig, FreteConfig, OfertaRelampago, RegraFrete } from '@/services/saas-api';
-import { lojaProductsApi, lojistaApi } from '@/services/saas-api';
+import { lojaProductsApi, lojistaApi, muxApi } from '@/services/saas-api';
 import { calculateAppmaxInstallments, type InstallmentConfig } from '@/utils/installments';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
