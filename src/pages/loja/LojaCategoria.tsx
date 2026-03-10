@@ -30,6 +30,7 @@ const LojaCategoria = () => {
   // Pagination state
   const [page, setPage] = useState(1);
   const [allProducts, setAllProducts] = useState<LojaProduct[]>([]);
+  const [categoryKey, setCategoryKey] = useState(0);
 
   // Filter state (draft)
   const [draftSubcats, setDraftSubcats] = useState<Set<string>>(new Set());
@@ -67,12 +68,12 @@ const LojaCategoria = () => {
   const totalProducts = data?.total || 0;
   const totalPages = data?.totalPages || 1;
 
-  // Append/reset products based on page
+  // Append/reset products based on page — categoryKey forces re-run on category switch
   useEffect(() => {
     if (data?.products) {
       setAllProducts(prev => page === 1 ? data.products : [...prev, ...data.products]);
     }
-  }, [data, page]);
+  }, [data, page, categoryKey]);
 
   // Flag to skip filter-reset effect when category changes
   const categoryChangingRef = useRef(false);
@@ -83,6 +84,7 @@ const LojaCategoria = () => {
     if (prevCategoryRef.current !== categorySlug) {
       categoryChangingRef.current = true;
       prevCategoryRef.current = categorySlug;
+      setCategoryKey(k => k + 1); // force product sync effect to re-run
       setAppliedPriceRange([0, 100000]);
       setDraftPriceRange([0, 100000]);
       setAppliedSubcats(new Set());
