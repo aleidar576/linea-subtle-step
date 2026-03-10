@@ -1044,47 +1044,48 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
 
         {/* Mobile Menu Sheet */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetContent side="left" className="w-[280px] p-0">
+          <SheetContent side="left" className="w-[300px] p-0">
             <SheetHeader className="p-4 border-b border-border">
               <SheetTitle className="text-left">{displayName}</SheetTitle>
             </SheetHeader>
-            <nav className="p-4 space-y-1">
+            <nav className="overflow-y-auto">
               {menuItems.map(item => (
                 item.children && item.children.length > 0 ? (
-                  <Collapsible key={item.id}>
-                    <div className="flex items-center">
-                      <Link
-                        to={item.url}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex-1 py-3 px-2 text-sm font-medium hover:text-primary transition-colors"
-                      >
-                        {item.label}
-                      </Link>
-                      <CollapsibleTrigger className="p-2 hover:bg-accent rounded-md transition-colors">
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </CollapsibleTrigger>
-                    </div>
-                    <CollapsibleContent>
-                      <div className="pb-2">
+                  <div key={item.id} className="border-b border-border/50">
+                    <Collapsible className="group">
+                      <div className="flex items-center justify-between">
+                        <Link
+                          to={item.url}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex-1 py-4 pl-4 text-base font-semibold text-foreground"
+                        >
+                          {item.label}
+                        </Link>
+                        <CollapsibleTrigger className="px-6 py-4 text-foreground flex items-center justify-center">
+                          <Plus className="h-5 w-5 stroke-[2.5px] group-data-[state=open]:hidden" />
+                          <Minus className="h-5 w-5 stroke-[2.5px] hidden group-data-[state=open]:block" />
+                        </CollapsibleTrigger>
+                      </div>
+                      <CollapsibleContent>
                         {item.children.map(child => (
                           <Link
                             key={child.id}
                             to={child.url}
                             onClick={() => setMobileMenuOpen(false)}
-                            className="block py-2 px-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            className="block py-3 pl-8 text-base font-medium text-foreground hover:bg-muted/30 transition-colors"
                           >
                             {child.label}
                           </Link>
                         ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
                 ) : (
                   <Link
                     key={item.id}
                     to={item.url}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block py-3 px-2 text-sm font-medium hover:text-primary transition-colors"
+                    className="block py-4 pl-4 text-base font-semibold text-foreground border-b border-border/50"
                   >
                     {item.label}
                   </Link>
