@@ -277,9 +277,10 @@ const LojaTemas = () => {
       </div>
 
       <Tabs defaultValue="homepage" className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-7 w-full">
           <TabsTrigger value="homepage" className="gap-1"><Layout className="h-3 w-3" /> Homepage</TabsTrigger>
           <TabsTrigger value="produto" className="gap-1"><ShoppingBag className="h-3 w-3" /> Produto</TabsTrigger>
+          <TabsTrigger value="categoria" className="gap-1"><Layers className="h-3 w-3" /> Categoria</TabsTrigger>
           <TabsTrigger value="carrinho" className="gap-1"><ShoppingCart className="h-3 w-3" /> Carrinho</TabsTrigger>
           <TabsTrigger value="checkout" className="gap-1"><CreditCardIcon className="h-3 w-3" /> Checkout</TabsTrigger>
           <TabsTrigger value="cores" className="gap-1"><Palette className="h-3 w-3" /> Cores</TabsTrigger>

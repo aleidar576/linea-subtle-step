@@ -250,6 +250,46 @@ const LojaCategorias = () => {
           </div>
         </div>
 
+        {/* Banner da Categoria */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4 mb-6">
+          <h2 className="font-semibold flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Banner da Categoria</h2>
+          <p className="text-sm text-muted-foreground">Opcional. Exibido no topo da página de categoria.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <Label>Imagem Desktop</Label>
+              <ImageUploader lojaId={id} value={bannerImagem} onChange={setBannerImagem} placeholder="URL do banner desktop" />
+            </div>
+            <div>
+              <Label>Imagem Mobile</Label>
+              <ImageUploader lojaId={id} value={bannerImagemMobile} onChange={setBannerImagemMobile} placeholder="URL do banner mobile" />
+            </div>
+          </div>
+          <div>
+            <Label>Link de destino (opcional)</Label>
+            <Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} placeholder="https://..." />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <Label>Título</Label>
+              <Input value={bannerTitulo} onChange={e => setBannerTitulo(e.target.value)} placeholder="Título do banner" />
+            </div>
+            <div>
+              <Label>Cor do Título</Label>
+              <Input type="color" value={bannerTituloCor} onChange={e => setBannerTituloCor(e.target.value)} className="h-10 w-20" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <Label>Subtítulo</Label>
+              <Input value={bannerSubtitulo} onChange={e => setBannerSubtitulo(e.target.value)} placeholder="Subtítulo do banner" />
+            </div>
+            <div>
+              <Label>Cor do Subtítulo</Label>
+              <Input type="color" value={bannerSubtituloCor} onChange={e => setBannerSubtituloCor(e.target.value)} className="h-10 w-20" />
+            </div>
+          </div>
+        </div>
+
         {/* Products in category */}
         <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
