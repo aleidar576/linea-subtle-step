@@ -18,7 +18,7 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet';
-import { Truck, PackageCheck, ExternalLink, Eye, EyeOff, Loader2, AlertTriangle, Blocks, Info, Video } from 'lucide-react';
+import { Truck, PackageCheck, ExternalLink, Eye, EyeOff, Loader2, AlertTriangle, Blocks, Info } from 'lucide-react';
 
 // ============================================
 // 📦 Integrations Hub — App Store Style
@@ -41,14 +41,6 @@ const INTEGRATIONS = [
     helpUrl: 'https://www.kangu.com.br',
     hasToken: true,
   },
-  {
-    id: 'mux' as const,
-    name: 'Video Commerce',
-    description: 'Ative vídeos demonstrativos nos seus produtos para aumentar a conversão.',
-    icon: Video,
-    helpUrl: '',
-    hasToken: false,
-  },
 ] as const;
 
 type IntegrationId = typeof INTEGRATIONS[number]['id'];
@@ -57,7 +49,6 @@ type IntegrationId = typeof INTEGRATIONS[number]['id'];
 const DEFAULTS: Record<IntegrationId, any> = {
   melhor_envio: { ativo: false, token: '', sandbox: true },
   kangu: { ativo: false, token: '' },
-  mux: { ativo: false },
 };
 
 export default function LojaIntegracoes() {
@@ -230,9 +221,7 @@ export default function LojaIntegracoes() {
                   })()}
                 </SheetTitle>
                 <SheetDescription>
-                  {activeSheet === 'mux'
-                    ? 'Ative ou desative o recurso de vídeos na sua loja.'
-                    : 'Configure as credenciais e ative a integração.'}
+                  Configure as credenciais e ative a integração.
                 </SheetDescription>
               </SheetHeader>
 
@@ -240,13 +229,9 @@ export default function LojaIntegracoes() {
                 {/* Switch Ativar */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">
-                      {activeSheet === 'mux' ? 'Ativar Video Commerce' : 'Ativar Integração'}
-                    </Label>
+                    <Label className="text-sm font-medium">Ativar Integração</Label>
                     <p className="text-xs text-muted-foreground">
-                      {activeSheet === 'mux'
-                        ? 'Permite adicionar vídeos demonstrativos nos produtos da sua loja.'
-                        : 'Habilita esta integração na sua loja.'}
+                      Habilita esta integração na sua loja.
                     </p>
                   </div>
                   <Switch
@@ -254,16 +239,6 @@ export default function LojaIntegracoes() {
                     onCheckedChange={(v) => setSheetData({ ...sheetData, ativo: v })}
                   />
                 </div>
-
-                {/* Mux: simple info only */}
-                {activeSheet === 'mux' && (
-                  <Alert className="bg-muted/50 border-border">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <AlertDescription className="text-xs text-muted-foreground">
-                      Ao ativar, a aba <strong>Extras</strong> do cadastro de produto exibirá a seção de upload de vídeos. Os vídeos são processados na nuvem com qualidade profissional e exibidos automaticamente na página do produto.
-                    </AlertDescription>
-                  </Alert>
-                )}
 
                 {/* Banner CEP ausente no sheet */}
                 {activeSheet === 'melhor_envio' && sheetData.ativo && !hasCompleteProfile && (
@@ -302,8 +277,8 @@ export default function LojaIntegracoes() {
                   </div>
                 )}
 
-                {/* Token Input — only for integrations that have tokens */}
-                {activeSheet !== 'mux' && (() => {
+                {/* Token Input */}
+                {(() => {
                   const integration = INTEGRATIONS.find(i => i.id === activeSheet);
                   if (!integration?.hasToken) return null;
                   return (
@@ -335,8 +310,8 @@ export default function LojaIntegracoes() {
                   );
                 })()}
 
-                {/* Help link — hide for mux */}
-                {activeSheet !== 'mux' && (() => {
+                {/* Help link */}
+                {(() => {
                   const integration = INTEGRATIONS.find(i => i.id === activeSheet)!;
                   if (!integration.helpUrl) return null;
                   return (
