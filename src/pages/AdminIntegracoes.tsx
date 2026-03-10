@@ -22,6 +22,10 @@ const AdminIntegracoes = () => {
   const [bunnyLoading, setBunnyLoading] = useState(false);
   const [bunnyStatus, setBunnyStatus] = useState<'idle' | 'ok' | 'error'>('idle');
 
+  // Mux test
+  const [muxLoading, setMuxLoading] = useState(false);
+  const [muxStatus, setMuxStatus] = useState<'idle' | 'ok' | 'error'>('idle');
+
   useEffect(() => {
     settingsApi.getByKeys(['messaging_token']).then(settings => {
       const map: Record<string, string> = {};
