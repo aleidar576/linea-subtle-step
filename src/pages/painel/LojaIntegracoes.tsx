@@ -18,7 +18,7 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet';
-import { Truck, PackageCheck, ExternalLink, Eye, EyeOff, Loader2, AlertTriangle, Blocks, Info } from 'lucide-react';
+import { Truck, PackageCheck, ExternalLink, Eye, EyeOff, Loader2, AlertTriangle, Blocks, Info, Video } from 'lucide-react';
 
 // ============================================
 // 📦 Integrations Hub — App Store Style
