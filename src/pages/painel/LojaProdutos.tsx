@@ -1348,7 +1348,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 1: Gatilhos de Escassez ── */}
                 <AccordionItem value="escassez">
-                  <AccordionTrigger className="text-base font-semibold"><Zap className="w-4 h-4 mr-2 text-foreground" />Gatilhos de Escassez</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><span className="flex items-center gap-2"><Zap className="w-4 h-4 shrink-0 text-foreground" />Gatilhos de Escassez</span></AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1439,7 +1439,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 2: Prova Social ── */}
                 <AccordionItem value="social">
-                  <AccordionTrigger className="text-base font-semibold"><Users className="w-4 h-4 mr-2 text-foreground" />Prova Social</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><span className="flex items-center gap-2"><Users className="w-4 h-4 shrink-0 text-foreground" />Prova Social</span></AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Pessoas Vendo Agora */}
@@ -1485,7 +1485,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 3: Upsell e Exibição ── */}
                 <AccordionItem value="upsell">
-                  <AccordionTrigger className="text-base font-semibold"><ShoppingBag className="w-4 h-4 mr-2 text-foreground" />Upsell e Exibição</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><span className="flex items-center gap-2"><ShoppingBag className="w-4 h-4 shrink-0 text-foreground" />Upsell e Exibição</span></AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Badge da Imagem */}
@@ -1586,7 +1586,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 4: Vídeos (Shoppertainment) ── */}
                 <AccordionItem value="videos">
-                  <AccordionTrigger className="text-base font-semibold"><Video className="w-4 h-4 mr-2 text-foreground" />Vídeos (Shoppertainment)</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><span className="flex items-center gap-2"><Video className="w-4 h-4 shrink-0 text-foreground" />Vídeos (Shoppertainment)</span></AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                           {/* Video Layout Select */}
