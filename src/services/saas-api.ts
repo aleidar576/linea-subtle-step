@@ -510,6 +510,9 @@ export interface CategoriaPublicaResponse {
   category: LojaCategory;
   products: LojaProduct[];
   subcategories: LojaCategory[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export interface CategoriesResponse {
