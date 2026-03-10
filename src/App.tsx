@@ -66,6 +66,7 @@ import AdminPacotesComentarios from "./pages/AdminPacotesComentarios";
 import AdminGateways from "./pages/AdminGateways";
 import AdminPlanos from "./pages/AdminPlanos";
 import SegurancaConfirmacao from "./pages/SegurancaConfirmacao";
+import AdminIntegracoes from "./pages/AdminIntegracoes";
 
 // Loja Pública (Host-Based)
 import LojaLayoutComponent from "./components/LojaLayout";
