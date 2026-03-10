@@ -24,15 +24,14 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
     const v = videos[0];
     return (
       <div className="px-3 md:px-0 py-4">
-        <h3 className="text-base font-semibold text-foreground mb-3">🎥 Vídeo do Produto</h3>
-        <div className="w-full max-h-[600px] rounded-xl overflow-hidden" style={{ aspectRatio: '9/16' }}>
-          <MuxPlayer
-            playbackId={v.playback_id}
-            preload="none"
-            poster={`${MUX_IMG}/${v.playback_id}/thumbnail.jpg`}
-            style={{ width: '100%', height: '100%', borderRadius: '0.75rem' }}
-          />
-        </div>
+        <h2 className="text-xl font-bold text-foreground mb-4">Vídeo do Produto</h2>
+        <MuxPlayer
+          playbackId={v.playback_id}
+          preload="none"
+          poster={`${MUX_IMG}/${v.playback_id}/thumbnail.jpg`}
+          className="w-full aspect-[9/16] rounded-xl overflow-hidden"
+          style={{ '--media-object-fit': 'cover', backgroundColor: 'transparent' } as any}
+        />
       </div>
     );
   }
@@ -41,7 +40,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
   if (layout === 'stories' || layout === 'auto') {
     return (
       <div className="px-3 md:px-0 py-4">
-        <h3 className="text-base font-semibold text-foreground mb-3">🎥 Vídeos</h3>
+        <h2 className="text-xl font-bold text-foreground mb-4">Vídeos</h2>
         <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
           {videos.map((v, i) => (
             <button
@@ -76,7 +75,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
   // === CAROUSEL ===
   return (
     <div className="px-3 md:px-0 py-4">
-      <h3 className="text-base font-semibold text-foreground mb-3">🎥 Vídeos</h3>
+      <h2 className="text-xl font-bold text-foreground mb-4">Vídeos</h2>
       <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
         {videos.map((v, i) => (
           <div key={v.playback_id} className="w-[250px] shrink-0 rounded-lg overflow-hidden relative">
