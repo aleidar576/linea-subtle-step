@@ -6,6 +6,7 @@ import { useTemaConfig, useUpdateTema, usePaginas, useCupons } from '@/hooks/use
 import {
   Palette, Check, Code, MessageSquare, Globe, Layout, ShoppingBag, Plus, Trash2, ShoppingCart, CreditCard as CreditCardIcon,
   ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame, Gift, Tag,
+  Store, Megaphone, Users, Sparkles,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +17,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { lojasApi } from '@/services/saas-api';
 import type { FooterConfig, FooterColuna, CoresGlobais, HomepageConfig, LogoConfig, ProdutoConfig, CartConfig } from '@/services/saas-api';
@@ -96,8 +99,6 @@ const FONT_OPTIONS = [
   { value: 'Playfair Display', label: 'Playfair Display' },
   { value: 'Montserrat', label: 'Montserrat' },
 ];
-
-// Removed FLAME_ICON_OPTIONS - now Flame is part of ICON_OPTIONS
 
 const LojaTemas = () => {
   const { id } = useParams<{ id: string }>();
@@ -236,7 +237,7 @@ const LojaTemas = () => {
   const updateSecaoSec = (partial: Partial<typeof secaoSec>) => setHp({ secao_secundaria: { ...secaoSec, ...partial } } as any);
 
   return (
-    <div>
+    <div className="pb-20">
       <h1 className="text-2xl font-bold mb-6">Temas — {loja?.nome}</h1>
 
       {temaError && (
@@ -277,700 +278,777 @@ const LojaTemas = () => {
         </TabsList>
 
         {/* ===== HOMEPAGE ===== */}
-        <TabsContent value="homepage" className="space-y-6">
+        <TabsContent value="homepage">
+          <Accordion type="single" collapsible className="w-full space-y-4">
 
-          {/* Identidade Visual (Logo) */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <Label className="text-base font-semibold block">Identidade Visual (Logo)</Label>
-            <p className="text-sm text-muted-foreground">Defina como a logo aparece no header da loja.</p>
-            <RadioGroup value={logo.tipo} onValueChange={(v: 'upload' | 'url' | 'texto') => setLogo({ ...logo, tipo: v })} className="flex gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="upload" id="logo-upload" /><Label htmlFor="logo-upload" className="text-sm cursor-pointer">Upload</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="url" id="logo-url" /><Label htmlFor="logo-url" className="text-sm cursor-pointer">URL</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="texto" id="logo-texto" /><Label htmlFor="logo-texto" className="text-sm cursor-pointer">Texto</Label></div>
-            </RadioGroup>
-            {logo.tipo === 'upload' && id && <ImageUploader lojaId={id} value={logo.imagem_url} onChange={url => setLogo({ ...logo, imagem_url: url })} placeholder="Envie a logo da loja" />}
-            {logo.tipo === 'url' && <Input value={logo.imagem_url} onChange={e => setLogo({ ...logo, imagem_url: e.target.value })} placeholder="https://minha-loja.com/logo.png" />}
-            {logo.tipo === 'texto' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label className="text-xs">Nome da Loja</Label><Input value={logo.texto} onChange={e => setLogo({ ...logo, texto: e.target.value })} placeholder="Minha Loja" /></div>
-                <div><Label className="text-xs">Fonte</Label><Select value={logo.fonte} onValueChange={v => setLogo({ ...logo, fonte: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs">Tamanho (px)</Label><Input type="number" min={24} max={120} value={logo.tamanho || 48} onChange={e => setLogo({ ...logo, tamanho: parseInt(e.target.value) || 48 })} /></div>
-              <div><Label className="text-xs">Posição</Label><Select value={logo.posicao || 'esquerda'} onValueChange={(v: 'esquerda' | 'centro') => setLogo({ ...logo, posicao: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="esquerda">Esquerda</SelectItem><SelectItem value="centro">Centralizado</SelectItem></SelectContent></Select></div>
-            </div>
-            <div className="pt-2">
-              <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
-              <div className="border border-border rounded-lg p-4 bg-background flex items-center min-h-[64px]" style={{ justifyContent: (logo.posicao || 'esquerda') === 'centro' ? 'center' : 'flex-start' }}>
-                {(logo.tipo === 'upload' || logo.tipo === 'url') && logo.imagem_url ? (
-                  <img src={logo.imagem_url} alt="Logo" style={{ maxHeight: `${logo.tamanho || 48}px` }} className="object-contain" />
-                ) : logo.tipo === 'texto' && logo.texto ? (
-                  <span className="font-bold max-w-[200px] truncate" style={{ fontFamily: logo.fonte, fontSize: `${Math.min((logo.tamanho || 48) * 0.5, 32)}px` }}>{logo.texto}</span>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Nenhuma logo configurada</span>
-                )}
-              </div>
-            </div>
-          </div>
+            {/* ─── Seção 1: Cabeçalho da Loja ─── */}
+            <AccordionItem value="cabecalho" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <Store className="h-5 w-5 text-primary" /> Cabeçalho da Loja
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 border-0 shadow-none space-y-6">
 
-          {/* 2. Tarja do Topo */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-semibold block">Tarja do Topo</Label>
-                <p className="text-xs text-muted-foreground mt-1">Barra entre a logo e o banner com mensagem promocional.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={tarjaTopo.ativo} onCheckedChange={v => updateTarjaTopo({ ativo: v })} />
-                <Label className="text-xs">{tarjaTopo.ativo ? 'Ativa' : 'Desativada'}</Label>
-              </div>
-            </div>
-            {tarjaTopo.ativo && (
-              <>
-                <div>
-                  <Label className="text-xs">Texto</Label>
-                  <Input value={tarjaTopo.texto} onChange={e => updateTarjaTopo({ texto: e.target.value })} placeholder="Ex: Frete grátis para todo o Brasil" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Cor de Fundo</Label>
-                    <div className="flex gap-1">
-                      <Input value={tarjaTopo.cor_fundo || ''} onChange={e => updateTarjaTopo({ cor_fundo: e.target.value })} className="flex-1 text-xs" placeholder="Cor primária do tema" />
-                      <input type="color" value={tarjaTopo.cor_fundo || '#10b981'} onChange={e => updateTarjaTopo({ cor_fundo: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Cor do Texto</Label>
-                    <div className="flex gap-1">
-                      <Input value={tarjaTopo.cor_texto || '#ffffff'} onChange={e => updateTarjaTopo({ cor_texto: e.target.value })} className="flex-1 text-xs" />
-                      <input type="color" value={tarjaTopo.cor_texto || '#ffffff'} onChange={e => updateTarjaTopo({ cor_texto: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs">Fonte</Label>
-                    <Select value={tarjaTopo.fonte || 'inherit'} onValueChange={v => updateTarjaTopo({ fonte: v })}>
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="inherit">Padrão</SelectItem>
-                        {FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2 pt-5">
-                    <Switch checked={tarjaTopo.negrito} onCheckedChange={v => updateTarjaTopo({ negrito: v })} />
-                    <Label className="text-xs">Negrito</Label>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Ícone</Label>
-                    <Select
-                      value={tarjaTopo.icone_ativo && tarjaTopo.icone ? tarjaTopo.icone : '_none'}
-                      onValueChange={v => {
-                        if (v === '_none') {
-                          updateTarjaTopo({ icone: '', icone_ativo: false });
-                        } else {
-                          updateTarjaTopo({ icone: v, icone_ativo: true });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">Nenhum</SelectItem>
-                        {ICON_OPTIONS.map(opt => {
-                          const OptIcon = opt.Icon;
-                          return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Banners do Carrossel */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-semibold block">Banners do Carrossel</Label>
-                <p className="text-xs text-muted-foreground mt-1">Adicione imagens ao carrossel. Ative "Imagem Mobile" para uma versão específica para celulares.</p>
-              </div>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => setHp({ banners: [...banners, { imagem: '', imagem_mobile_ativo: false, imagem_mobile: '', titulo: '', titulo_cor: '#000000', titulo_tamanho: 'text-2xl', subtitulo: '', subtitulo_cor: '#666666', subtitulo_tamanho: 'text-sm', badge_texto: '', badge_cor_texto: '#ffffff', badge_cor_fundo: '#ff6666', badge_icone: '', badge_transparencia: 100, botao_ativo: false, botao_texto: '', botao_link: '', botao_cor_texto: '#ffffff', botao_cor_fundo: '#000000' }] })}><Plus className="h-3 w-3" /> Banner</Button>
-            </div>
-
-            {banners.map((banner: any, idx: number) => (
-              <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">Banner {idx + 1}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setHp({ banners: banners.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </div>
-
-                {/* Imagem principal */}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs">Imagem</Label>
-                    <span className="text-[10px] text-muted-foreground">Desktop: 1440×500px | Mobile: 768×400px</span>
-                  </div>
-                  {banner.imagem && <img src={banner.imagem} alt="Preview" className="w-full max-h-32 object-cover rounded-lg border border-border mb-2" />}
-                  {id && <ImageUploader lojaId={id} value={banner.imagem || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem" />}
-                </div>
-
-                {/* Toggle imagem mobile */}
-                <div className="flex items-center gap-2">
-                  <Switch checked={banner.imagem_mobile_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile_ativo: v }; setHp({ banners: u }); }} />
-                  <Label className="text-xs">Imagem específica para Mobile</Label>
-                </div>
-                {banner.imagem_mobile_ativo && (
-                  <div>
-                    <Label className="text-xs">Imagem Mobile <span className="text-muted-foreground">(768×400px)</span></Label>
-                    {banner.imagem_mobile && <img src={banner.imagem_mobile} alt="Preview mobile" className="w-full max-h-24 object-cover rounded-lg border border-border mb-2" />}
-                    {id && <ImageUploader lojaId={id} value={banner.imagem_mobile || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem mobile" />}
-                  </div>
-                )}
-                <p className="text-[10px] text-muted-foreground">💡 Se apenas uma imagem for enviada, será usada tanto no desktop quanto no mobile.</p>
-
-                {/* Badge */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Badge (texto)</Label>
-                    <Input value={banner.badge_texto || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_texto: e.target.value }; setHp({ banners: u }); }} placeholder="Ex: Tempo Limitado!" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Ícone do Badge</Label>
-                    <Select value={banner.badge_icone || '_none'} onValueChange={v => { const u = [...banners]; u[idx] = { ...banner, badge_icone: v === '_none' ? '' : v }; setHp({ banners: u }); }}>
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">Sem ícone</SelectItem>
-                        {ICON_OPTIONS.map(opt => {
-                          const OptIcon = opt.Icon;
-                          return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs">Cor Texto Badge</Label>
-                    <div className="flex gap-1">
-                      <Input value={banner.badge_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_texto: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
-                      <input type="color" value={banner.badge_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_texto: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Cor Fundo Badge</Label>
-                    <div className="flex gap-1">
-                      <Input value={banner.badge_cor_fundo || '#ff6666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
-                      <input type="color" value={banner.badge_cor_fundo || '#ff6666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Transparência (%)</Label>
-                    <Input type="number" min={0} max={100} value={banner.badge_transparencia ?? 100} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_transparencia: parseInt(e.target.value) || 100 }; setHp({ banners: u }); }} className="text-xs" />
-                  </div>
-                </div>
-
-                {/* Título */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div><Label className="text-xs">Título</Label><Input value={banner.titulo || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, titulo: e.target.value }; setHp({ banners: u }); }} placeholder="Título principal" /></div>
-                  <div>
-                    <Label className="text-xs">Cor Título</Label>
-                    <div className="flex gap-1">
-                      <Input value={banner.titulo_cor || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, titulo_cor: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
-                      <input type="color" value={banner.titulo_cor || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, titulo_cor: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Tamanho Título</Label>
-                    <Select value={banner.titulo_tamanho || 'text-2xl'} onValueChange={v => { const u = [...banners]; u[idx] = { ...banner, titulo_tamanho: v }; setHp({ banners: u }); }}>
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text-xl">Pequeno</SelectItem>
-                        <SelectItem value="text-2xl">Médio</SelectItem>
-                        <SelectItem value="text-3xl">Grande</SelectItem>
-                        <SelectItem value="text-4xl">Extra Grande</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Subtítulo */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div><Label className="text-xs">Subtítulo</Label><Input value={banner.subtitulo || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, subtitulo: e.target.value }; setHp({ banners: u }); }} placeholder="Texto secundário" /></div>
-                  <div>
-                    <Label className="text-xs">Cor Subtítulo</Label>
-                    <div className="flex gap-1">
-                      <Input value={banner.subtitulo_cor || '#666666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, subtitulo_cor: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
-                      <input type="color" value={banner.subtitulo_cor || '#666666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, subtitulo_cor: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Tamanho Subtítulo</Label>
-                    <Select value={banner.subtitulo_tamanho || 'text-sm'} onValueChange={v => { const u = [...banners]; u[idx] = { ...banner, subtitulo_tamanho: v }; setHp({ banners: u }); }}>
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text-sm">Pequeno</SelectItem>
-                        <SelectItem value="text-base">Médio</SelectItem>
-                        <SelectItem value="text-lg">Grande</SelectItem>
-                        <SelectItem value="text-xl">Extra Grande</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Botão */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Switch checked={banner.botao_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, botao_ativo: v }; setHp({ banners: u }); }} />
-                    <Label className="text-xs">Botão de Ação</Label>
-                  </div>
-                  {banner.botao_ativo && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><Label className="text-xs">Texto</Label><Input value={banner.botao_texto || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_texto: e.target.value }; setHp({ banners: u }); }} placeholder="Ver Agora" /></div>
-                      <div><Label className="text-xs">Link</Label><Input value={banner.botao_link || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_link: e.target.value }; setHp({ banners: u }); }} placeholder="/produto/meu-produto" /></div>
-                      <div>
-                        <Label className="text-xs">Cor Texto Botão</Label>
-                        <div className="flex gap-1">
-                          <Input value={banner.botao_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_texto: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
-                          <input type="color" value={banner.botao_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_texto: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                        </div>
+                  {/* Identidade Visual (Logo) */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+                    <Label className="text-base font-semibold block">Identidade Visual (Logo)</Label>
+                    <p className="text-sm text-muted-foreground">Defina como a logo aparece no header da loja.</p>
+                    <RadioGroup value={logo.tipo} onValueChange={(v: 'upload' | 'url' | 'texto') => setLogo({ ...logo, tipo: v })} className="flex gap-4">
+                      <div className="flex items-center gap-2"><RadioGroupItem value="upload" id="logo-upload" /><Label htmlFor="logo-upload" className="text-sm cursor-pointer">Upload</Label></div>
+                      <div className="flex items-center gap-2"><RadioGroupItem value="url" id="logo-url" /><Label htmlFor="logo-url" className="text-sm cursor-pointer">URL</Label></div>
+                      <div className="flex items-center gap-2"><RadioGroupItem value="texto" id="logo-texto" /><Label htmlFor="logo-texto" className="text-sm cursor-pointer">Texto</Label></div>
+                    </RadioGroup>
+                    {logo.tipo === 'upload' && id && <ImageUploader lojaId={id} value={logo.imagem_url} onChange={url => setLogo({ ...logo, imagem_url: url })} placeholder="Envie a logo da loja" />}
+                    {logo.tipo === 'url' && <Input value={logo.imagem_url} onChange={e => setLogo({ ...logo, imagem_url: e.target.value })} placeholder="https://minha-loja.com/logo.png" />}
+                    {logo.tipo === 'texto' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><Label className="text-xs">Nome da Loja</Label><Input value={logo.texto} onChange={e => setLogo({ ...logo, texto: e.target.value })} placeholder="Minha Loja" /></div>
+                        <div><Label className="text-xs">Fonte</Label><Select value={logo.fonte} onValueChange={v => setLogo({ ...logo, fonte: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
                       </div>
-                      <div>
-                        <Label className="text-xs">Cor Fundo Botão</Label>
-                        <div className="flex gap-1">
-                          <Input value={banner.botao_cor_fundo || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
-                          <input type="color" value={banner.botao_cor_fundo || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <p className="text-[10px] text-muted-foreground">💡 Campos vazios (título, subtítulo, badge, botão) não aparecerão no carrossel.</p>
-
-                {/* Blur */}
-                <div className="space-y-2 border-t border-border pt-3">
-                  <div className="flex items-center gap-2">
-                    <Switch checked={banner.blur_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, blur_ativo: v }; setHp({ banners: u }); }} />
-                    <Label className="text-xs">Blur na imagem</Label>
-                  </div>
-                  {banner.blur_ativo && (
-                    <div>
-                      <Label className="text-xs">Intensidade do Blur ({banner.blur_intensidade ?? 30}%)</Label>
-                      <Input type="range" min={0} max={100} value={banner.blur_intensidade ?? 30} onChange={e => { const u = [...banners]; u[idx] = { ...banner, blur_intensidade: parseInt(e.target.value) }; setHp({ banners: u }); }} className="w-full" />
-                      <p className="text-[10px] text-muted-foreground">O blur é aplicado apenas na imagem. Textos e botões permanecem nítidos.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Setas do Carrossel + Altura do Banner */}
-            <div className="border-t border-border pt-4 space-y-3">
-              <Label className="text-sm font-semibold">Altura do Banner</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Desktop</Label>
-                  <Select value={(hp as any).banner_altura_desktop || 'medio'} onValueChange={v => setHp({ banner_altura_desktop: v } as any)}>
-                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pequeno">Pequeno (3:1)</SelectItem>
-                      <SelectItem value="medio">Médio (2.5:1)</SelectItem>
-                      <SelectItem value="grande">Grande (2:1)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Mobile</Label>
-                  <Select value={(hp as any).banner_altura_mobile || 'medio'} onValueChange={v => setHp({ banner_altura_mobile: v } as any)}>
-                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pequeno">Pequeno (16:9)</SelectItem>
-                      <SelectItem value="medio">Médio (1:1)</SelectItem>
-                      <SelectItem value="grande">Grande (3:4)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {(() => {
-                      const v = (hp as any).banner_altura_mobile || 'medio';
-                      if (v === 'pequeno') return '📐 Recomendado: 768 × 432px (16:9)';
-                      if (v === 'grande') return '📐 Recomendado: 768 × 1024px (3:4)';
-                      return '📐 Recomendado: 768 × 768px (1:1)';
-                    })()}
-                  </p>
-                </div>
-              </div>
-
-              <Label className="text-sm font-semibold">Setas de Navegação</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Cor da Seta</Label>
-                  <div className="flex gap-1">
-                    <Input value={hp.setas_cor_seta || '#000000'} onChange={e => setHp({ setas_cor_seta: e.target.value })} className="flex-1 text-xs" />
-                    <input type="color" value={hp.setas_cor_seta || '#000000'} onChange={e => setHp({ setas_cor_seta: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Cor do Fundo</Label>
-                  <div className="flex gap-1 items-center">
-                    <Input value={hp.setas_cor_fundo || '#ffffff'} onChange={e => setHp({ setas_cor_fundo: e.target.value })} className="flex-1 text-xs" disabled={hp.setas_fundo_invisivel || false} />
-                    <input type="color" value={hp.setas_cor_fundo || '#ffffff'} onChange={e => setHp({ setas_cor_fundo: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" disabled={hp.setas_fundo_invisivel || false} />
-                    <div className="flex items-center gap-1 ml-1">
-                      <Switch checked={hp.setas_fundo_invisivel || false} onCheckedChange={v => setHp({ setas_fundo_invisivel: v })} />
-                      <Label className="text-[10px] whitespace-nowrap">Invisível</Label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Destaques (barra abaixo do banner) */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-semibold block">Barra de Destaques</Label>
-                <p className="text-xs text-muted-foreground mt-1">Ícones informativos logo abaixo do banner (ex: Entrega Rápida, Compra Segura). Máximo 4 itens.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={destaquesData.ativo} onCheckedChange={v => updateDestaques({ ativo: v })} />
-                <Label className="text-xs">{destaquesData.ativo ? 'Ativo' : 'Desativado'}</Label>
-              </div>
-            </div>
-            {destaquesData.ativo && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Cor de Fundo</Label>
-                    <div className="flex gap-1">
-                      <Input value={destaquesData.cor_fundo || '#f5f5f5'} onChange={e => updateDestaques({ cor_fundo: e.target.value })} className="flex-1 text-xs" />
-                      <input type="color" value={destaquesData.cor_fundo || '#f5f5f5'} onChange={e => updateDestaques({ cor_fundo: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Cor do Texto</Label>
-                    <div className="flex gap-1">
-                      <Input value={destaquesData.cor_texto || '#555555'} onChange={e => updateDestaques({ cor_texto: e.target.value })} className="flex-1 text-xs" />
-                      <input type="color" value={destaquesData.cor_texto || '#555555'} onChange={e => updateDestaques({ cor_texto: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                </div>
-                {destaquesData.itens.map((item: any, idx: number) => {
-                  const IconComp = getIconComponent(item.icone);
-                  return (
-                    <div key={idx} className="flex items-center gap-3">
-                      <IconComp className="h-5 w-5 text-primary shrink-0" />
-                      <Select value={item.icone} onValueChange={v => { const u = [...destaquesData.itens]; u[idx] = { ...item, icone: v }; updateDestaques({ itens: u }); }}>
-                        <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {ICON_OPTIONS.map(opt => {
-                            const OptIcon = opt.Icon;
-                            return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
-                          })}
-                        </SelectContent>
-                      </Select>
-                      <Input value={item.texto} onChange={e => { const u = [...destaquesData.itens]; u[idx] = { ...item, texto: e.target.value }; updateDestaques({ itens: u }); }} placeholder="Ex: Entrega Rápida" className="flex-1" />
-                      <Button variant="ghost" size="icon" onClick={() => updateDestaques({ itens: destaquesData.itens.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
-                  );
-                })}
-                {destaquesData.itens.length < 4 && (
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => updateDestaques({ itens: [...destaquesData.itens, { texto: '', icone: 'Truck' }] })}><Plus className="h-3 w-3" /> Destaque</Button>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Seções de Produtos */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-semibold mb-1 block">Seções de Produtos</Label>
-                <p className="text-sm text-muted-foreground">Adicione seções de produtos por categoria na página inicial.</p>
-              </div>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => {
-                const secoes = (hp as any).secoes_produtos || [];
-                setHp({ secoes_produtos: [...secoes, { titulo: '', categoria_id: 'all' }] } as any);
-              }}><Plus className="h-3 w-3" /> Adicionar Seção</Button>
-            </div>
-
-            {(() => {
-              // Migrate old format to new array format
-              let secoes = (hp as any).secoes_produtos;
-              if (!secoes || !Array.isArray(secoes) || secoes.length === 0) {
-                secoes = [{ titulo: hp.titulo_secao_produtos || 'Mais Vendidos', categoria_id: categoriaHomeId || 'all' }];
-                if (secaoSec.ativo && secaoSec.categoria_id) {
-                  secoes.push({ titulo: secaoSec.titulo || 'Novidades', categoria_id: secaoSec.categoria_id });
-                }
-              }
-              return secoes.map((secao: any, idx: number) => (
-                <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">Seção {idx + 1}</span>
-                    {secoes.length > 1 && (
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        const u = [...secoes];
-                        u.splice(idx, 1);
-                        setHp({ secoes_produtos: u } as any);
-                      }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">Título</Label>
-                      <Input value={secao.titulo || ''} onChange={e => {
-                        const u = [...secoes];
-                        u[idx] = { ...secao, titulo: e.target.value };
-                        setHp({ secoes_produtos: u } as any);
-                      }} placeholder="Ex: Mais Vendidos" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label className="text-xs">Tamanho (px)</Label><Input type="number" min={24} max={120} value={logo.tamanho || 48} onChange={e => setLogo({ ...logo, tamanho: parseInt(e.target.value) || 48 })} /></div>
+                      <div><Label className="text-xs">Posição</Label><Select value={logo.posicao || 'esquerda'} onValueChange={(v: 'esquerda' | 'centro') => setLogo({ ...logo, posicao: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="esquerda">Esquerda</SelectItem><SelectItem value="centro">Centralizado</SelectItem></SelectContent></Select></div>
                     </div>
-                    <div>
-                      <Label className="text-xs">Categoria</Label>
-                      <Select value={secao.categoria_id || 'all'} onValueChange={v => {
-                        const u = [...secoes];
-                        u[idx] = { ...secao, categoria_id: v };
-                        setHp({ secoes_produtos: u } as any);
-                        // Keep backward compat for first section
-                        if (idx === 0) handleCategoriaChange(v);
-                      }}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos os produtos</SelectItem>
-                          {categories.map(c => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                    <div className="pt-2">
+                      <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
+                      <div className="border border-border rounded-lg p-4 bg-background flex items-center min-h-[64px]" style={{ justifyContent: (logo.posicao || 'esquerda') === 'centro' ? 'center' : 'flex-start' }}>
+                        {(logo.tipo === 'upload' || logo.tipo === 'url') && logo.imagem_url ? (
+                          <img src={logo.imagem_url} alt="Logo" style={{ maxHeight: `${logo.tamanho || 48}px` }} className="object-contain" />
+                        ) : logo.tipo === 'texto' && logo.texto ? (
+                          <span className="font-bold max-w-[200px] truncate" style={{ fontFamily: logo.fonte, fontSize: `${Math.min((logo.tamanho || 48) * 0.5, 32)}px` }}>{logo.texto}</span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Nenhuma logo configurada</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ));
-            })()}
-          </div>
 
-          {/* 8. Social Proof */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Avaliações na Home (Social Proof)</Label>
-              <div className="flex items-center gap-2">
-                <Switch checked={sp.ativo !== false} onCheckedChange={v => updateSp({ ativo: v })} />
-                <Label className="text-xs">{sp.ativo !== false ? 'Ativo' : 'Desativado'}</Label>
-              </div>
-            </div>
-
-            {sp.ativo !== false && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label className="text-xs">Título</Label><Input value={sp.titulo} onChange={e => updateSp({ titulo: e.target.value })} placeholder="Avaliações dos Clientes" /></div>
-                  <div>
-                    <Label className="text-xs">Nota Média (0.0 - 5.0)</Label>
-                    <Input type="number" step="0.1" min="0" max="5" value={sp.nota_media} onChange={e => updateSp({ nota_media: parseFloat(e.target.value) || 0 })} />
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Use uma casa decimal. Ex: 4.8, 5.0, 3.5</p>
-                  </div>
-                </div>
-                <div><Label className="text-xs">Subtexto</Label><Input value={sp.subtexto} onChange={e => updateSp({ subtexto: e.target.value })} placeholder="Baseado em +11 Milhões de avaliações" /></div>
-
-                {/* Imagem de avaliações */}
-                <div>
-                  <Label className="text-xs">Imagem de Avaliações (opcional)</Label>
-                  <p className="text-[10px] text-muted-foreground mb-1">Adicione uma imagem para ser exibida na seção de avaliações. Se vazia, não aparecerá.</p>
-                  {sp.imagem_url && <img src={sp.imagem_url} alt="Avaliações" className="w-full max-h-32 object-cover rounded-lg border border-border mb-2" />}
-                  {id && <ImageUploader lojaId={id} value={sp.imagem_url || ''} onChange={url => updateSp({ imagem_url: url })} placeholder="Imagem de avaliações" />}
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <Label className="text-sm font-medium">Comentários Destacados</Label>
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => updateSp({ comentarios: [...sp.comentarios, { nome: '', texto: '', nota: 5, foto: false, foto_url: '' }] })}><Plus className="h-3 w-3" /> Comentário</Button>
-                </div>
-                {sp.comentarios.map((c: any, idx: number) => (
-                  <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                  {/* Tarja do Topo */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Comentário {idx + 1}</span>
-                      <Button variant="ghost" size="icon" onClick={() => updateSp({ comentarios: sp.comentarios.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                    </div>
-
-                    {/* Photo preview above name */}
-                    <div className="flex items-center gap-3">
-                      {c.foto && c.foto_url ? (
-                        <img src={c.foto_url} alt={c.nome} className="h-10 w-10 rounded-full object-cover border border-border" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border">
-                          <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <Input value={c.nome} onChange={e => { const u = [...sp.comentarios]; u[idx] = { ...c, nome: e.target.value }; updateSp({ comentarios: u }); }} placeholder="Nome do avaliador" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label className="text-xs">Nota (0.0 - 5.0)</Label>
-                        <Input type="number" step="0.1" min="0" max="5" value={c.nota} onChange={e => { const u = [...sp.comentarios]; u[idx] = { ...c, nota: parseFloat(e.target.value) || 5 }; updateSp({ comentarios: u }); }} />
+                        <Label className="text-base font-semibold block">Tarja do Topo</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Barra entre a logo e o banner com mensagem promocional.</p>
                       </div>
-                      <div className="flex items-center gap-2 pt-5">
-                        <Switch checked={c.foto} onCheckedChange={v => { const u = [...sp.comentarios]; u[idx] = { ...c, foto: v, foto_url: v ? c.foto_url || '' : '' }; updateSp({ comentarios: u }); }} />
-                        <Label className="text-xs">Foto do avaliador</Label>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={tarjaTopo.ativo} onCheckedChange={v => updateTarjaTopo({ ativo: v })} />
+                        <Label className="text-xs">{tarjaTopo.ativo ? 'Ativa' : 'Desativada'}</Label>
                       </div>
                     </div>
-                    <Textarea rows={2} value={c.texto} onChange={e => { const u = [...sp.comentarios]; u[idx] = { ...c, texto: e.target.value }; updateSp({ comentarios: u }); }} placeholder="Texto da avaliação..." />
-                    {c.foto && id && (
-                      <ImageUploader lojaId={id} value={c.foto_url || ''} onChange={url => { const u = [...sp.comentarios]; u[idx] = { ...c, foto_url: url }; updateSp({ comentarios: u }); }} placeholder="Foto do avaliador" />
+                    {tarjaTopo.ativo && (
+                      <>
+                        <div>
+                          <Label className="text-xs">Texto</Label>
+                          <Input value={tarjaTopo.texto} onChange={e => updateTarjaTopo({ texto: e.target.value })} placeholder="Ex: Frete grátis para todo o Brasil" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">Cor de Fundo</Label>
+                            <div className="flex gap-1">
+                              <Input value={tarjaTopo.cor_fundo || ''} onChange={e => updateTarjaTopo({ cor_fundo: e.target.value })} className="flex-1 text-xs" placeholder="Cor primária do tema" />
+                              <input type="color" value={tarjaTopo.cor_fundo || '#10b981'} onChange={e => updateTarjaTopo({ cor_fundo: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Cor do Texto</Label>
+                            <div className="flex gap-1">
+                              <Input value={tarjaTopo.cor_texto || '#ffffff'} onChange={e => updateTarjaTopo({ cor_texto: e.target.value })} className="flex-1 text-xs" />
+                              <input type="color" value={tarjaTopo.cor_texto || '#ffffff'} onChange={e => updateTarjaTopo({ cor_texto: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">Fonte</Label>
+                            <Select value={tarjaTopo.fonte || 'inherit'} onValueChange={v => updateTarjaTopo({ fonte: v })}>
+                              <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="inherit">Padrão</SelectItem>
+                                {FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-2 pt-5">
+                            <Switch checked={tarjaTopo.negrito} onCheckedChange={v => updateTarjaTopo({ negrito: v })} />
+                            <Label className="text-xs">Negrito</Label>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Ícone</Label>
+                            <Select
+                              value={tarjaTopo.icone_ativo && tarjaTopo.icone ? tarjaTopo.icone : '_none'}
+                              onValueChange={v => {
+                                if (v === '_none') {
+                                  updateTarjaTopo({ icone: '', icone_ativo: false });
+                                } else {
+                                  updateTarjaTopo({ icone: v, icone_ativo: true });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">Nenhum</SelectItem>
+                                {ICON_OPTIONS.map(opt => {
+                                  const OptIcon = opt.Icon;
+                                  return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
-                ))}
-              </>
-            )}
-          </div>
 
-          {/* 9. Tarja Inferior */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <Label className="text-base font-semibold">Tarja Inferior (Call to Action)</Label>
-            <div>
-              <Label className="text-xs">Cor de Fundo</Label>
-              <div className="flex gap-2">
-                <Input value={tarja.cor_fundo} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} placeholder="#1a1a2e" className="flex-1" />
-                <input type="color" value={tarja.cor_fundo || '#1a1a2e'} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} className="w-10 h-10 rounded border border-input cursor-pointer" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs">Título</Label><Input value={tarja.titulo} onChange={e => setHp({ tarja: { ...tarja, titulo: e.target.value } })} placeholder="Garanta seu desconto exclusivo!" /></div>
-              <div><Label className="text-xs">Subtítulo</Label><Input value={tarja.subtitulo} onChange={e => setHp({ tarja: { ...tarja, subtitulo: e.target.value } })} placeholder="Últimas unidades com frete grátis." /></div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2"><Label className="text-xs">Botão</Label><Switch checked={tarja.botao_ativo} onCheckedChange={v => setHp({ tarja: { ...tarja, botao_ativo: v } })} /></div>
-              {tarja.botao_ativo && (
-                <>
-                  <Input value={tarja.botao_texto} onChange={e => setHp({ tarja: { ...tarja, botao_texto: e.target.value } })} placeholder="Aproveitar Oferta" className="flex-1" />
-                  <Input value={tarja.botao_link} onChange={e => setHp({ tarja: { ...tarja, botao_link: e.target.value } })} placeholder="/link" className="flex-1" />
-                </>
-              )}
-            </div>
-          </div>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* 10. Trust Badges */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Ícones de Confiança (Trust Badges)</Label>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => setHp({ trust_badges: [...badges, { texto: '', icone: 'ShieldCheck' }] })}><Plus className="h-3 w-3" /> Badge</Button>
-            </div>
-            {badges.map((b: any, idx: number) => {
-              const IconComp = getIconComponent(b.icone);
-              return (
-                <div key={idx} className="flex items-center gap-3">
-                  <IconComp className="h-5 w-5 text-primary shrink-0" />
-                  <Select value={b.icone} onValueChange={v => { const u = [...badges]; u[idx] = { ...b, icone: v }; setHp({ trust_badges: u }); }}>
-                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {ICON_OPTIONS.map(opt => {
-                        const OptIcon = opt.Icon;
-                        return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <Input value={b.texto} onChange={e => { const u = [...badges]; u[idx] = { ...b, texto: e.target.value }; setHp({ trust_badges: u }); }} placeholder="Compra Segura" className="flex-1" />
-                  <Button variant="ghost" size="icon" onClick={() => setHp({ trust_badges: badges.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </div>
-              );
-            })}
-          </div>
+            {/* ─── Seção 2: Banners e Destaques ─── */}
+            <AccordionItem value="banners" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <ImageIcon className="h-5 w-5 text-primary" /> Banners e Destaques
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 border-0 shadow-none space-y-6">
 
-          {/* Popup de Boas-Vindas */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-semibold block">Popup de Boas-Vindas</Label>
-                <p className="text-xs text-muted-foreground mt-1">Exibido 1x por sessão ao visitar a loja.</p>
-              </div>
-              <Switch checked={hp.popup?.ativo ?? false} onCheckedChange={v => setHp({ popup: { ...(hp.popup || { tipo: 'NEWSLETTER', titulo: '', subtitulo: '', texto_botao: '', imagem_url: '', cupons_ids: [] }), ativo: v } as any })} />
-            </div>
-            {hp.popup?.ativo && (() => {
-              const popup = hp.popup!;
-              const updatePopup = (partial: Partial<typeof popup>) => setHp({ popup: { ...popup, ...partial } as any });
-              // cuponsData comes from useCupons(id) at the top level
-              return (
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-xs">Tipo</Label>
-                    <Select value={popup.tipo || 'NEWSLETTER'} onValueChange={(v: any) => updatePopup({ tipo: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CUPONS">Cupons</SelectItem>
-                        <SelectItem value="NEWSLETTER">Newsletter</SelectItem>
-                        <SelectItem value="BANNER">Banner</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label className="text-xs">Título (máx 60)</Label><Input maxLength={60} value={popup.titulo || ''} onChange={e => updatePopup({ titulo: e.target.value })} placeholder="Bem-vindo!" /></div>
-                    <div><Label className="text-xs">Subtítulo (máx 120)</Label><Input maxLength={120} value={popup.subtitulo || ''} onChange={e => updatePopup({ subtitulo: e.target.value })} placeholder="Aproveite nossas ofertas" /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label className="text-xs">Texto do Botão (máx 30)</Label><Input maxLength={30} value={popup.texto_botao || ''} onChange={e => updatePopup({ texto_botao: e.target.value })} placeholder="Quero meu cupom!" /></div>
-                    <div>
-                      <Label className="text-xs">Imagem</Label>
-                      {id && <ImageUploader lojaId={id} value={popup.imagem_url || ''} onChange={url => updatePopup({ imagem_url: url })} placeholder="Imagem do popup" />}
+                  {/* Configurações globais do banner */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                    <Label className="text-sm font-semibold">Altura do Banner</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Desktop</Label>
+                        <Select value={(hp as any).banner_altura_desktop || 'medio'} onValueChange={v => setHp({ banner_altura_desktop: v } as any)}>
+                          <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pequeno">Pequeno (3:1)</SelectItem>
+                            <SelectItem value="medio">Médio (2.5:1)</SelectItem>
+                            <SelectItem value="grande">Grande (2:1)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Mobile</Label>
+                        <Select value={(hp as any).banner_altura_mobile || 'medio'} onValueChange={v => setHp({ banner_altura_mobile: v } as any)}>
+                          <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pequeno">Pequeno (16:9)</SelectItem>
+                            <SelectItem value="medio">Médio (1:1)</SelectItem>
+                            <SelectItem value="grande">Grande (3:4)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {(() => {
+                            const v = (hp as any).banner_altura_mobile || 'medio';
+                            if (v === 'pequeno') return '📐 Recomendado: 768 × 432px (16:9)';
+                            if (v === 'grande') return '📐 Recomendado: 768 × 1024px (3:4)';
+                            return '📐 Recomendado: 768 × 768px (1:1)';
+                          })()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  {(popup.tipo || '').toUpperCase() === 'CUPONS' && (
-                    <div className="border border-border rounded-lg p-4 space-y-3">
-                      <Label className="text-sm font-medium">Selecione os Cupons</Label>
-                      <p className="text-xs text-muted-foreground">Escolha quais cupons ativos serão exibidos no popup.</p>
-                      {(!cuponsData || cuponsData.length === 0) ? (
-                        <p className="text-xs text-muted-foreground italic">Nenhum cupom cadastrado. Crie cupons na seção Cupons.</p>
-                      ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {cuponsData.filter(c => c.is_active).map(cupom => {
-                            const selected = popup.cupons_ids?.includes(cupom._id) ?? false;
-                            const descricao = cupom.tipo === 'percentual' ? `${cupom.valor}% de desconto` : `R$ ${cupom.valor.toFixed(2)} de desconto`;
-                            return (
-                              <label key={cupom._id} className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  onChange={() => {
-                                    const ids = popup.cupons_ids || [];
-                                    const next = selected ? ids.filter((i: string) => i !== cupom._id) : [...ids, cupom._id];
-                                    updatePopup({ cupons_ids: next });
-                                  }}
-                                  className="rounded border-input"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-sm font-semibold">{cupom.codigo}</span>
-                                  <span className="text-xs text-muted-foreground ml-2">{descricao}</span>
-                                </div>
-                                <Tag className="h-4 w-4 text-primary shrink-0" />
-                              </label>
-                            );
-                          })}
+
+                    <Label className="text-sm font-semibold">Setas de Navegação</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Cor da Seta</Label>
+                        <div className="flex gap-1">
+                          <Input value={hp.setas_cor_seta || '#000000'} onChange={e => setHp({ setas_cor_seta: e.target.value })} className="flex-1 text-xs" />
+                          <input type="color" value={hp.setas_cor_seta || '#000000'} onChange={e => setHp({ setas_cor_seta: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
                         </div>
-                      )}
+                      </div>
+                      <div>
+                        <Label className="text-xs">Cor do Fundo</Label>
+                        <div className="flex gap-1 items-center">
+                          <Input value={hp.setas_cor_fundo || '#ffffff'} onChange={e => setHp({ setas_cor_fundo: e.target.value })} className="flex-1 text-xs" disabled={hp.setas_fundo_invisivel || false} />
+                          <input type="color" value={hp.setas_cor_fundo || '#ffffff'} onChange={e => setHp({ setas_cor_fundo: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" disabled={hp.setas_fundo_invisivel || false} />
+                          <div className="flex items-center gap-1 ml-1">
+                            <Switch checked={hp.setas_fundo_invisivel || false} onCheckedChange={v => setHp({ setas_fundo_invisivel: v })} />
+                            <Label className="text-[10px] whitespace-nowrap">Invisível</Label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  {popup.tipo === 'BANNER' && (
-                    <div><Label className="text-xs">Link do Botão (máx 500)</Label><Input maxLength={500} value={popup.botao_link || ''} onChange={e => updatePopup({ botao_link: e.target.value })} placeholder="https://..." /></div>
-                  )}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  </div>
+
+                  {/* Banners do Carrossel */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base font-semibold block">Banners do Carrossel</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Adicione imagens ao carrossel. Ative "Imagem Mobile" para uma versão específica para celulares.</p>
+                      </div>
+                      <Button size="sm" variant="outline" className="gap-1" onClick={() => setHp({ banners: [...banners, { imagem: '', imagem_mobile_ativo: false, imagem_mobile: '', titulo: '', titulo_cor: '#000000', titulo_tamanho: 'text-2xl', subtitulo: '', subtitulo_cor: '#666666', subtitulo_tamanho: 'text-sm', badge_texto: '', badge_cor_texto: '#ffffff', badge_cor_fundo: '#ff6666', badge_icone: '', badge_transparencia: 100, botao_ativo: false, botao_texto: '', botao_link: '', botao_cor_texto: '#ffffff', botao_cor_fundo: '#000000' }] })}><Plus className="h-3 w-3" /> Banner</Button>
+                    </div>
+
+                    {banners.map((banner: any, idx: number) => (
+                      <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">Banner {idx + 1}</span>
+                          <Button variant="ghost" size="icon" onClick={() => setHp({ banners: banners.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+
+                        {/* Inner Tabs for each banner */}
+                        <Tabs defaultValue="midia" className="w-full">
+                          <TabsList className="grid grid-cols-4 w-full">
+                            <TabsTrigger value="midia" className="text-xs">Mídia</TabsTrigger>
+                            <TabsTrigger value="conteudo" className="text-xs">Conteúdo</TabsTrigger>
+                            <TabsTrigger value="badge" className="text-xs">Badge</TabsTrigger>
+                            <TabsTrigger value="cores" className="text-xs">Cores</TabsTrigger>
+                          </TabsList>
+
+                          {/* Aba Mídia */}
+                          <TabsContent value="midia" className="space-y-3 pt-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Label className="text-xs">Imagem</Label>
+                                <span className="text-[10px] text-muted-foreground">Desktop: 1440×500px | Mobile: 768×400px</span>
+                              </div>
+                              {banner.imagem && <img src={banner.imagem} alt="Preview" className="w-full max-h-32 object-cover rounded-lg border border-border mb-2" />}
+                              {id && <ImageUploader lojaId={id} value={banner.imagem || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem" />}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch checked={banner.imagem_mobile_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile_ativo: v }; setHp({ banners: u }); }} />
+                              <Label className="text-xs">Imagem específica para Mobile</Label>
+                            </div>
+                            {banner.imagem_mobile_ativo && (
+                              <div>
+                                <Label className="text-xs">Imagem Mobile <span className="text-muted-foreground">(768×400px)</span></Label>
+                                {banner.imagem_mobile && <img src={banner.imagem_mobile} alt="Preview mobile" className="w-full max-h-24 object-cover rounded-lg border border-border mb-2" />}
+                                {id && <ImageUploader lojaId={id} value={banner.imagem_mobile || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem mobile" />}
+                              </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">💡 Se apenas uma imagem for enviada, será usada tanto no desktop quanto no mobile.</p>
+                            {/* Blur */}
+                            <div className="space-y-2 border-t border-border pt-3">
+                              <div className="flex items-center gap-2">
+                                <Switch checked={banner.blur_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, blur_ativo: v }; setHp({ banners: u }); }} />
+                                <Label className="text-xs">Blur na imagem</Label>
+                              </div>
+                              {banner.blur_ativo && (
+                                <div>
+                                  <Label className="text-xs">Intensidade do Blur ({banner.blur_intensidade ?? 30}%)</Label>
+                                  <Input type="range" min={0} max={100} value={banner.blur_intensidade ?? 30} onChange={e => { const u = [...banners]; u[idx] = { ...banner, blur_intensidade: parseInt(e.target.value) }; setHp({ banners: u }); }} className="w-full" />
+                                  <p className="text-[10px] text-muted-foreground">O blur é aplicado apenas na imagem. Textos e botões permanecem nítidos.</p>
+                                </div>
+                              )}
+                            </div>
+                          </TabsContent>
+
+                          {/* Aba Conteúdo */}
+                          <TabsContent value="conteudo" className="space-y-3 pt-2">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div><Label className="text-xs">Título</Label><Input value={banner.titulo || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, titulo: e.target.value }; setHp({ banners: u }); }} placeholder="Título principal" /></div>
+                              <div><Label className="text-xs">Subtítulo</Label><Input value={banner.subtitulo || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, subtitulo: e.target.value }; setHp({ banners: u }); }} placeholder="Texto secundário" /></div>
+                            </div>
+                            {/* Botão */}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Switch checked={banner.botao_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, botao_ativo: v }; setHp({ banners: u }); }} />
+                                <Label className="text-xs">Botão de Ação</Label>
+                              </div>
+                              {banner.botao_ativo && (
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div><Label className="text-xs">Texto</Label><Input value={banner.botao_texto || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_texto: e.target.value }; setHp({ banners: u }); }} placeholder="Ver Agora" /></div>
+                                  <div><Label className="text-xs">Link</Label><Input value={banner.botao_link || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_link: e.target.value }; setHp({ banners: u }); }} placeholder="/produto/meu-produto" /></div>
+                                  <div>
+                                    <Label className="text-xs">Cor Texto Botão</Label>
+                                    <div className="flex gap-1">
+                                      <Input value={banner.botao_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_texto: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
+                                      <input type="color" value={banner.botao_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_texto: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Cor Fundo Botão</Label>
+                                    <div className="flex gap-1">
+                                      <Input value={banner.botao_cor_fundo || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
+                                      <input type="color" value={banner.botao_cor_fundo || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, botao_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">💡 Campos vazios (título, subtítulo, badge, botão) não aparecerão no carrossel.</p>
+                          </TabsContent>
+
+                          {/* Aba Badge */}
+                          <TabsContent value="badge" className="space-y-3 pt-2">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Badge (texto)</Label>
+                                <Input value={banner.badge_texto || ''} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_texto: e.target.value }; setHp({ banners: u }); }} placeholder="Ex: Tempo Limitado!" />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Ícone do Badge</Label>
+                                <Select value={banner.badge_icone || '_none'} onValueChange={v => { const u = [...banners]; u[idx] = { ...banner, badge_icone: v === '_none' ? '' : v }; setHp({ banners: u }); }}>
+                                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="_none">Sem ícone</SelectItem>
+                                    {ICON_OPTIONS.map(opt => {
+                                      const OptIcon = opt.Icon;
+                                      return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Cor Texto Badge</Label>
+                                <div className="flex gap-1">
+                                  <Input value={banner.badge_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_texto: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
+                                  <input type="color" value={banner.badge_cor_texto || '#ffffff'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_texto: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Cor Fundo Badge</Label>
+                                <div className="flex gap-1">
+                                  <Input value={banner.badge_cor_fundo || '#ff6666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
+                                  <input type="color" value={banner.badge_cor_fundo || '#ff6666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_cor_fundo: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Transparência (%)</Label>
+                              <Input type="number" min={0} max={100} value={banner.badge_transparencia ?? 100} onChange={e => { const u = [...banners]; u[idx] = { ...banner, badge_transparencia: parseInt(e.target.value) || 100 }; setHp({ banners: u }); }} className="text-xs w-32" />
+                            </div>
+                          </TabsContent>
+
+                          {/* Aba Cores */}
+                          <TabsContent value="cores" className="space-y-3 pt-2">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Cor Título</Label>
+                                <div className="flex gap-1">
+                                  <Input value={banner.titulo_cor || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, titulo_cor: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
+                                  <input type="color" value={banner.titulo_cor || '#000000'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, titulo_cor: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Tamanho Título</Label>
+                                <Select value={banner.titulo_tamanho || 'text-2xl'} onValueChange={v => { const u = [...banners]; u[idx] = { ...banner, titulo_tamanho: v }; setHp({ banners: u }); }}>
+                                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text-xl">Pequeno</SelectItem>
+                                    <SelectItem value="text-2xl">Médio</SelectItem>
+                                    <SelectItem value="text-3xl">Grande</SelectItem>
+                                    <SelectItem value="text-4xl">Extra Grande</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Cor Subtítulo</Label>
+                                <div className="flex gap-1">
+                                  <Input value={banner.subtitulo_cor || '#666666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, subtitulo_cor: e.target.value }; setHp({ banners: u }); }} className="flex-1 text-xs" />
+                                  <input type="color" value={banner.subtitulo_cor || '#666666'} onChange={e => { const u = [...banners]; u[idx] = { ...banner, subtitulo_cor: e.target.value }; setHp({ banners: u }); }} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Tamanho Subtítulo</Label>
+                                <Select value={banner.subtitulo_tamanho || 'text-sm'} onValueChange={v => { const u = [...banners]; u[idx] = { ...banner, subtitulo_tamanho: v }; setHp({ banners: u }); }}>
+                                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text-sm">Pequeno</SelectItem>
+                                    <SelectItem value="text-base">Médio</SelectItem>
+                                    <SelectItem value="text-lg">Grande</SelectItem>
+                                    <SelectItem value="text-xl">Extra Grande</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Barra de Destaques */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base font-semibold block">Barra de Destaques</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Ícones informativos logo abaixo do banner (ex: Entrega Rápida, Compra Segura). Máximo 4 itens.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={destaquesData.ativo} onCheckedChange={v => updateDestaques({ ativo: v })} />
+                        <Label className="text-xs">{destaquesData.ativo ? 'Ativo' : 'Desativado'}</Label>
+                      </div>
+                    </div>
+                    {destaquesData.ativo && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">Cor de Fundo</Label>
+                            <div className="flex gap-1">
+                              <Input value={destaquesData.cor_fundo || '#f5f5f5'} onChange={e => updateDestaques({ cor_fundo: e.target.value })} className="flex-1 text-xs" />
+                              <input type="color" value={destaquesData.cor_fundo || '#f5f5f5'} onChange={e => updateDestaques({ cor_fundo: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Cor do Texto</Label>
+                            <div className="flex gap-1">
+                              <Input value={destaquesData.cor_texto || '#555555'} onChange={e => updateDestaques({ cor_texto: e.target.value })} className="flex-1 text-xs" />
+                              <input type="color" value={destaquesData.cor_texto || '#555555'} onChange={e => updateDestaques({ cor_texto: e.target.value })} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                            </div>
+                          </div>
+                        </div>
+                        {destaquesData.itens.map((item: any, idx: number) => {
+                          const IconComp = getIconComponent(item.icone);
+                          return (
+                            <div key={idx} className="flex items-center gap-3">
+                              <IconComp className="h-5 w-5 text-primary shrink-0" />
+                              <Select value={item.icone} onValueChange={v => { const u = [...destaquesData.itens]; u[idx] = { ...item, icone: v }; updateDestaques({ itens: u }); }}>
+                                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {ICON_OPTIONS.map(opt => {
+                                    const OptIcon = opt.Icon;
+                                    return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
+                                  })}
+                                </SelectContent>
+                              </Select>
+                              <Input value={item.texto} onChange={e => { const u = [...destaquesData.itens]; u[idx] = { ...item, texto: e.target.value }; updateDestaques({ itens: u }); }} placeholder="Ex: Entrega Rápida" className="flex-1" />
+                              <Button variant="ghost" size="icon" onClick={() => updateDestaques({ itens: destaquesData.itens.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </div>
+                          );
+                        })}
+                        {destaquesData.itens.length < 4 && (
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => updateDestaques({ itens: [...destaquesData.itens, { texto: '', icone: 'Truck' }] })}><Plus className="h-3 w-3" /> Destaque</Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* ─── Seção 3: Vitrines e Produtos ─── */}
+            <AccordionItem value="vitrines" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <ShoppingBag className="h-5 w-5 text-primary" /> Vitrines e Produtos
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 border-0 shadow-none space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold mb-1 block">Seções de Produtos</Label>
+                      <p className="text-sm text-muted-foreground">Adicione seções de produtos por categoria na página inicial.</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => {
+                      const secoes = (hp as any).secoes_produtos || [];
+                      setHp({ secoes_produtos: [...secoes, { titulo: '', categoria_id: 'all' }] } as any);
+                    }}><Plus className="h-3 w-3" /> Adicionar Seção</Button>
+                  </div>
+
+                  {(() => {
+                    let secoes = (hp as any).secoes_produtos;
+                    if (!secoes || !Array.isArray(secoes) || secoes.length === 0) {
+                      secoes = [{ titulo: hp.titulo_secao_produtos || 'Mais Vendidos', categoria_id: categoriaHomeId || 'all' }];
+                      if (secaoSec.ativo && secaoSec.categoria_id) {
+                        secoes.push({ titulo: secaoSec.titulo || 'Novidades', categoria_id: secaoSec.categoria_id });
+                      }
+                    }
+                    return secoes.map((secao: any, idx: number) => (
+                      <div key={idx} className="bg-muted/30 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">Seção {idx + 1}</span>
+                          {secoes.length > 1 && (
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              const u = [...secoes];
+                              u.splice(idx, 1);
+                              setHp({ secoes_produtos: u } as any);
+                            }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">Título</Label>
+                            <Input value={secao.titulo || ''} onChange={e => {
+                              const u = [...secoes];
+                              u[idx] = { ...secao, titulo: e.target.value };
+                              setHp({ secoes_produtos: u } as any);
+                            }} placeholder="Ex: Mais Vendidos" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Categoria</Label>
+                            <Select value={secao.categoria_id || 'all'} onValueChange={v => {
+                              const u = [...secoes];
+                              u[idx] = { ...secao, categoria_id: v };
+                              setHp({ secoes_produtos: u } as any);
+                              if (idx === 0) handleCategoriaChange(v);
+                            }}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todos os produtos</SelectItem>
+                                {categories.map(c => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* ─── Seção 4: Prova Social e Confiança ─── */}
+            <AccordionItem value="prova-social" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <Users className="h-5 w-5 text-primary" /> Prova Social e Confiança
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 border-0 shadow-none space-y-6">
+
+                  {/* Social Proof */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Avaliações na Home (Social Proof)</Label>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={sp.ativo !== false} onCheckedChange={v => updateSp({ ativo: v })} />
+                        <Label className="text-xs">{sp.ativo !== false ? 'Ativo' : 'Desativado'}</Label>
+                      </div>
+                    </div>
+
+                    {sp.ativo !== false && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div><Label className="text-xs">Título</Label><Input value={sp.titulo} onChange={e => updateSp({ titulo: e.target.value })} placeholder="Avaliações dos Clientes" /></div>
+                          <div>
+                            <Label className="text-xs">Nota Média (0.0 - 5.0)</Label>
+                            <Input type="number" step="0.1" min="0" max="5" value={sp.nota_media} onChange={e => updateSp({ nota_media: parseFloat(e.target.value) || 0 })} />
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Use uma casa decimal. Ex: 4.8, 5.0, 3.5</p>
+                          </div>
+                        </div>
+                        <div><Label className="text-xs">Subtexto</Label><Input value={sp.subtexto} onChange={e => updateSp({ subtexto: e.target.value })} placeholder="Baseado em +11 Milhões de avaliações" /></div>
+
+                        <div>
+                          <Label className="text-xs">Imagem de Avaliações (opcional)</Label>
+                          <p className="text-[10px] text-muted-foreground mb-1">Adicione uma imagem para ser exibida na seção de avaliações. Se vazia, não aparecerá.</p>
+                          {sp.imagem_url && <img src={sp.imagem_url} alt="Avaliações" className="w-full max-h-32 object-cover rounded-lg border border-border mb-2" />}
+                          {id && <ImageUploader lojaId={id} value={sp.imagem_url || ''} onChange={url => updateSp({ imagem_url: url })} placeholder="Imagem de avaliações" />}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2">
+                          <Label className="text-sm font-medium">Comentários Destacados</Label>
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => updateSp({ comentarios: [...sp.comentarios, { nome: '', texto: '', nota: 5, foto: false, foto_url: '' }] })}><Plus className="h-3 w-3" /> Comentário</Button>
+                        </div>
+                        {sp.comentarios.map((c: any, idx: number) => (
+                          <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Comentário {idx + 1}</span>
+                              <Button variant="ghost" size="icon" onClick={() => updateSp({ comentarios: sp.comentarios.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {c.foto && c.foto_url ? (
+                                <img src={c.foto_url} alt={c.nome} className="h-10 w-10 rounded-full object-cover border border-border" />
+                              ) : (
+                                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border">
+                                  <User className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <Input value={c.nome} onChange={e => { const u = [...sp.comentarios]; u[idx] = { ...c, nome: e.target.value }; updateSp({ comentarios: u }); }} placeholder="Nome do avaliador" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Nota (0.0 - 5.0)</Label>
+                                <Input type="number" step="0.1" min="0" max="5" value={c.nota} onChange={e => { const u = [...sp.comentarios]; u[idx] = { ...c, nota: parseFloat(e.target.value) || 5 }; updateSp({ comentarios: u }); }} />
+                              </div>
+                              <div className="flex items-center gap-2 pt-5">
+                                <Switch checked={c.foto} onCheckedChange={v => { const u = [...sp.comentarios]; u[idx] = { ...c, foto: v, foto_url: v ? c.foto_url || '' : '' }; updateSp({ comentarios: u }); }} />
+                                <Label className="text-xs">Foto do avaliador</Label>
+                              </div>
+                            </div>
+                            <Textarea rows={2} value={c.texto} onChange={e => { const u = [...sp.comentarios]; u[idx] = { ...c, texto: e.target.value }; updateSp({ comentarios: u }); }} placeholder="Texto da avaliação..." />
+                            {c.foto && id && (
+                              <ImageUploader lojaId={id} value={c.foto_url || ''} onChange={url => { const u = [...sp.comentarios]; u[idx] = { ...c, foto_url: url }; updateSp({ comentarios: u }); }} placeholder="Foto do avaliador" />
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Trust Badges */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Ícones de Confiança (Trust Badges)</Label>
+                      <Button size="sm" variant="outline" className="gap-1" onClick={() => setHp({ trust_badges: [...badges, { texto: '', icone: 'ShieldCheck' }] })}><Plus className="h-3 w-3" /> Badge</Button>
+                    </div>
+                    {badges.map((b: any, idx: number) => {
+                      const IconComp = getIconComponent(b.icone);
+                      return (
+                        <div key={idx} className="flex items-center gap-3">
+                          <IconComp className="h-5 w-5 text-primary shrink-0" />
+                          <Select value={b.icone} onValueChange={v => { const u = [...badges]; u[idx] = { ...b, icone: v }; setHp({ trust_badges: u }); }}>
+                            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {ICON_OPTIONS.map(opt => {
+                                const OptIcon = opt.Icon;
+                                return <SelectItem key={opt.value} value={opt.value}><span className="flex items-center gap-2"><OptIcon className="h-4 w-4" /> {opt.label}</span></SelectItem>;
+                              })}
+                            </SelectContent>
+                          </Select>
+                          <Input value={b.texto} onChange={e => { const u = [...badges]; u[idx] = { ...b, texto: e.target.value }; setHp({ trust_badges: u }); }} placeholder="Compra Segura" className="flex-1" />
+                          <Button variant="ghost" size="icon" onClick={() => setHp({ trust_badges: badges.filter((_: any, i: number) => i !== idx) })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* ─── Seção 5: Engajamento e Rodapé ─── */}
+            <AccordionItem value="engajamento" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                <span className="flex items-center gap-2 text-base font-semibold">
+                  <Megaphone className="h-5 w-5 text-primary" /> Engajamento e Rodapé
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 border-0 shadow-none space-y-6">
+
+                  {/* Tarja Inferior */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+                    <Label className="text-base font-semibold">Tarja Inferior (Call to Action)</Label>
                     <div>
                       <Label className="text-xs">Cor de Fundo</Label>
-                      <div className="flex gap-1"><Input value={popup.cores?.fundo || ''} onChange={e => updatePopup({ cores: { ...popup.cores, fundo: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.fundo || '#ffffff'} onChange={e => updatePopup({ cores: { ...popup.cores, fundo: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                      <div className="flex gap-2">
+                        <Input value={tarja.cor_fundo} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} placeholder="#1a1a2e" className="flex-1" />
+                        <input type="color" value={tarja.cor_fundo || '#1a1a2e'} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} className="w-10 h-10 rounded border border-input cursor-pointer" />
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-xs">Cor do Texto</Label>
-                      <div className="flex gap-1"><Input value={popup.cores?.texto || ''} onChange={e => updatePopup({ cores: { ...popup.cores, texto: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.texto || '#000000'} onChange={e => updatePopup({ cores: { ...popup.cores, texto: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label className="text-xs">Título</Label><Input value={tarja.titulo} onChange={e => setHp({ tarja: { ...tarja, titulo: e.target.value } })} placeholder="Garanta seu desconto exclusivo!" /></div>
+                      <div><Label className="text-xs">Subtítulo</Label><Input value={tarja.subtitulo} onChange={e => setHp({ tarja: { ...tarja, subtitulo: e.target.value } })} placeholder="Últimas unidades com frete grátis." /></div>
                     </div>
-                    <div>
-                      <Label className="text-xs">Cor Botão Fundo</Label>
-                      <div className="flex gap-1"><Input value={popup.cores?.botao_fundo || ''} onChange={e => updatePopup({ cores: { ...popup.cores, botao_fundo: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.botao_fundo || '#000000'} onChange={e => updatePopup({ cores: { ...popup.cores, botao_fundo: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Cor Botão Texto</Label>
-                      <div className="flex gap-1"><Input value={popup.cores?.botao_texto || ''} onChange={e => updatePopup({ cores: { ...popup.cores, botao_texto: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.botao_texto || '#ffffff'} onChange={e => updatePopup({ cores: { ...popup.cores, botao_texto: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2"><Label className="text-xs">Botão</Label><Switch checked={tarja.botao_ativo} onCheckedChange={v => setHp({ tarja: { ...tarja, botao_ativo: v } })} /></div>
+                      {tarja.botao_ativo && (
+                        <>
+                          <Input value={tarja.botao_texto} onChange={e => setHp({ tarja: { ...tarja, botao_texto: e.target.value } })} placeholder="Aproveitar Oferta" className="flex-1" />
+                          <Input value={tarja.botao_link} onChange={e => setHp({ tarja: { ...tarja, botao_link: e.target.value } })} placeholder="/link" className="flex-1" />
+                        </>
+                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })()}
-          </div>
+
+                  {/* Popup de Boas-Vindas */}
+                  <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base font-semibold block">Popup de Boas-Vindas</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Exibido 1x por sessão ao visitar a loja.</p>
+                      </div>
+                      <Switch checked={hp.popup?.ativo ?? false} onCheckedChange={v => setHp({ popup: { ...(hp.popup || { tipo: 'NEWSLETTER', titulo: '', subtitulo: '', texto_botao: '', imagem_url: '', cupons_ids: [] }), ativo: v } as any })} />
+                    </div>
+                    {hp.popup?.ativo && (() => {
+                      const popup = hp.popup!;
+                      const updatePopup = (partial: Partial<typeof popup>) => setHp({ popup: { ...popup, ...partial } as any });
+                      return (
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-xs">Tipo</Label>
+                            <Select value={popup.tipo || 'NEWSLETTER'} onValueChange={(v: any) => updatePopup({ tipo: v })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CUPONS">Cupons</SelectItem>
+                                <SelectItem value="NEWSLETTER">Newsletter</SelectItem>
+                                <SelectItem value="BANNER">Banner</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div><Label className="text-xs">Título (máx 60)</Label><Input maxLength={60} value={popup.titulo || ''} onChange={e => updatePopup({ titulo: e.target.value })} placeholder="Bem-vindo!" /></div>
+                            <div><Label className="text-xs">Subtítulo (máx 120)</Label><Input maxLength={120} value={popup.subtitulo || ''} onChange={e => updatePopup({ subtitulo: e.target.value })} placeholder="Aproveite nossas ofertas" /></div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div><Label className="text-xs">Texto do Botão (máx 30)</Label><Input maxLength={30} value={popup.texto_botao || ''} onChange={e => updatePopup({ texto_botao: e.target.value })} placeholder="Quero meu cupom!" /></div>
+                            <div>
+                              <Label className="text-xs">Imagem</Label>
+                              {id && <ImageUploader lojaId={id} value={popup.imagem_url || ''} onChange={url => updatePopup({ imagem_url: url })} placeholder="Imagem do popup" />}
+                            </div>
+                          </div>
+                          {(popup.tipo || '').toUpperCase() === 'CUPONS' && (
+                            <div className="border border-border rounded-lg p-4 space-y-3">
+                              <Label className="text-sm font-medium">Selecione os Cupons</Label>
+                              <p className="text-xs text-muted-foreground">Escolha quais cupons ativos serão exibidos no popup.</p>
+                              {(!cuponsData || cuponsData.length === 0) ? (
+                                <p className="text-xs text-muted-foreground italic">Nenhum cupom cadastrado. Crie cupons na seção Cupons.</p>
+                              ) : (
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                  {cuponsData.filter(c => c.is_active).map(cupom => {
+                                    const selected = popup.cupons_ids?.includes(cupom._id) ?? false;
+                                    const descricao = cupom.tipo === 'percentual' ? `${cupom.valor}% de desconto` : `R$ ${cupom.valor.toFixed(2)} de desconto`;
+                                    return (
+                                      <label key={cupom._id} className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
+                                        <input
+                                          type="checkbox"
+                                          checked={selected}
+                                          onChange={() => {
+                                            const ids = popup.cupons_ids || [];
+                                            const next = selected ? ids.filter((i: string) => i !== cupom._id) : [...ids, cupom._id];
+                                            updatePopup({ cupons_ids: next });
+                                          }}
+                                          className="rounded border-input"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <span className="text-sm font-semibold">{cupom.codigo}</span>
+                                          <span className="text-xs text-muted-foreground ml-2">{descricao}</span>
+                                        </div>
+                                        <Tag className="h-4 w-4 text-primary shrink-0" />
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {popup.tipo === 'BANNER' && (
+                            <div><Label className="text-xs">Link do Botão (máx 500)</Label><Input maxLength={500} value={popup.botao_link || ''} onChange={e => updatePopup({ botao_link: e.target.value })} placeholder="https://..." /></div>
+                          )}
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div>
+                              <Label className="text-xs">Cor de Fundo</Label>
+                              <div className="flex gap-1"><Input value={popup.cores?.fundo || ''} onChange={e => updatePopup({ cores: { ...popup.cores, fundo: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.fundo || '#ffffff'} onChange={e => updatePopup({ cores: { ...popup.cores, fundo: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Cor do Texto</Label>
+                              <div className="flex gap-1"><Input value={popup.cores?.texto || ''} onChange={e => updatePopup({ cores: { ...popup.cores, texto: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.texto || '#000000'} onChange={e => updatePopup({ cores: { ...popup.cores, texto: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Cor Botão Fundo</Label>
+                              <div className="flex gap-1"><Input value={popup.cores?.botao_fundo || ''} onChange={e => updatePopup({ cores: { ...popup.cores, botao_fundo: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.botao_fundo || '#000000'} onChange={e => updatePopup({ cores: { ...popup.cores, botao_fundo: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Cor Botão Texto</Label>
+                              <div className="flex gap-1"><Input value={popup.cores?.botao_texto || ''} onChange={e => updatePopup({ cores: { ...popup.cores, botao_texto: e.target.value } })} className="flex-1 text-xs" placeholder="Tema" /><input type="color" value={popup.cores?.botao_texto || '#ffffff'} onChange={e => updatePopup({ cores: { ...popup.cores, botao_texto: e.target.value } })} className="w-8 h-8 rounded border border-input cursor-pointer" /></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+          </Accordion>
         </TabsContent>
 
         {/* ===== PRODUTO ===== */}
@@ -998,7 +1076,6 @@ const LojaTemas = () => {
             </div>
           </div>
 
-          {/* Social Proof Toast (Notificações de Compra) */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1139,7 +1216,6 @@ const LojaTemas = () => {
               <p className="text-sm text-muted-foreground mt-1">Defina as cores que serão aplicadas em toda a loja pública.</p>
             </div>
 
-            {/* 5 main semantic colors */}
             {[
               { key: 'brand_primary', label: 'Cor de Ação Principal', desc: 'Botões de compra, tags de desconto, steps ativos', defaultVal: '#E60023' },
               { key: 'brand_secondary', label: 'Cor de Ação Secundária', desc: 'Botão Adicionar ao Carrinho, badges', defaultVal: '#F1F1F2' },
@@ -1167,7 +1243,6 @@ const LojaTemas = () => {
               </div>
             ))}
 
-            {/* Separator */}
             <div className="border-t border-border pt-4 mt-2">
               <div className="flex items-center gap-2 mb-1">
                 <MessageSquare className="h-4 w-4 text-green-500" />
@@ -1190,15 +1265,12 @@ const LojaTemas = () => {
               </div>
             </div>
 
-            {/* Mini Preview */}
             <div className="border-t border-border pt-4 mt-2">
               <Label className="text-xs text-muted-foreground mb-2 block">Preview</Label>
               <div className="rounded-xl border border-border overflow-hidden" style={{ backgroundColor: cores.bg_base || '#F8F8F8' }}>
-                {/* Header bar */}
                 <div className="h-8 flex items-center px-3" style={{ backgroundColor: cores.bg_surface || '#FFFFFF', borderBottom: '1px solid #e5e7eb' }}>
                   <span className="text-xs font-bold" style={{ color: cores.text_primary || '#111111' }}>Minha Loja</span>
                 </div>
-                {/* Body */}
                 <div className="p-4 space-y-3">
                   <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: cores.bg_surface || '#FFFFFF' }}>
                     <div className="h-3 w-24 rounded" style={{ backgroundColor: cores.text_primary || '#111111', opacity: 0.8 }} />
@@ -1243,7 +1315,6 @@ const LojaTemas = () => {
             <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="5511999999999" />
           </div>
 
-          {/* Cores do Rodapé */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <Label className="text-base font-semibold">Cores do Rodapé</Label>
             <p className="text-xs text-muted-foreground">Defina cores independentes para o rodapé. Se vazio, herda as cores do tema global.</p>
@@ -1268,7 +1339,6 @@ const LojaTemas = () => {
             )}
           </div>
 
-          {/* Colunas do Rodapé */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Colunas do Rodapé</Label>
@@ -1304,13 +1374,11 @@ const LojaTemas = () => {
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <Label className="text-base font-semibold block">Newsletter e Redes Sociais</Label>
 
-            {/* Newsletter toggle */}
             <div className="flex items-center justify-between">
               <Label className="text-sm">Ativar Newsletter no Rodapé</Label>
               <Switch checked={footer.newsletter} onCheckedChange={v => setFooter({ ...footer, newsletter: v })} />
             </div>
 
-            {/* Newsletter colors (only when newsletter is active) */}
             {footer.newsletter && (
               <div className="border border-border rounded-lg p-4 space-y-3">
                 <Label className="text-sm font-medium">Cores da Newsletter</Label>
@@ -1337,7 +1405,6 @@ const LojaTemas = () => {
               </div>
             )}
 
-            {/* Redes Sociais */}
             <Label className="text-sm font-medium block pt-2">Redes Sociais</Label>
             {(['instagram', 'tiktok', 'facebook', 'youtube'] as const).map(rede => {
               const redeData = (footer.redes_sociais as any)[rede];
@@ -1430,7 +1497,12 @@ const LojaTemas = () => {
         </TabsContent>
       </Tabs>
 
-      <Button className="mt-6 gap-2" onClick={handleSaveAll} disabled={saving}>{saving ? 'Salvando...' : 'Salvar Todas as Configurações'}</Button>
+      {/* Sticky Save Bar */}
+      <div className="sticky bottom-0 z-50 bg-background/80 backdrop-blur-md border-t p-4 flex justify-end -mx-6 px-6 mt-6">
+        <Button onClick={handleSaveAll} disabled={saving} className="gap-2">
+          {saving ? 'Salvando...' : 'Salvar Todas as Configurações'}
+        </Button>
+      </div>
     </div>
   );
 };
