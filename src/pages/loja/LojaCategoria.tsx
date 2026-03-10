@@ -74,11 +74,25 @@ const LojaCategoria = () => {
     }
   }, [data, page]);
 
+  // Full reset when category changes
+  useEffect(() => {
+    setAppliedPriceRange([0, 100000]);
+    setDraftPriceRange([0, 100000]);
+    setAppliedSubcats(new Set());
+    setDraftSubcats(new Set());
+    setAppliedVariations(new Set());
+    setDraftVariations(new Set());
+    setQuickFilters(new Set());
+    setSort('relevancia');
+    setPage(1);
+    setAllProducts([]);
+  }, [categorySlug]);
+
   // Reset page when sort or filters change
   useEffect(() => {
     setPage(1);
     setAllProducts([]);
-  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters, categorySlug]);
+  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters]);
 
   // Set page title
   useEffect(() => {
