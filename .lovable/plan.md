@@ -1,86 +1,33 @@
 
 
-## Refatoração UX da aba Footer — LojaTemas.tsx
+## Diagnóstico da Cobrança Dupla
 
-### Escopo
-Linhas 1308-1497: substituir o conteúdo de `<TabsContent value="footer">` por um `<Accordion>` com 4 seções colapsáveis. Zero alterações em state/handlers.
+### O que aconteceu (cronologia reconstruída)
 
-### Imports
-Adicionar `Palette, Link2, Shield` aos ícones já importados (linha 7-9). `MessageSquare` já existe.
+1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
+2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
+3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
 
-### Nova estrutura JSX
+### Causa raiz
 
-```
-<TabsContent value="footer" className="space-y-4">
-  <Accordion type="single" collapsible className="w-full space-y-4">
+O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
 
-    <!-- Seção 1: Estilo e Identidade -->
-    <AccordionItem value="estilo" className="border rounded-xl shadow-sm">
-      <AccordionTrigger> <Palette /> Estilo e Identidade </AccordionTrigger>
-      <AccordionContent>
-        <Card className="p-6 space-y-6">
-          <!-- Cores do Rodapé (grid-cols-2) + botão Resetar -->
-          <!-- L1318-1340 movido para cá -->
-          
-          <Separator />
-          
-          <!-- Personalizar Logo do Footer -->
-          <!-- L1434-1488 movido para cá -->
-        </Card>
-      </AccordionContent>
-    </AccordionItem>
+Isso acontece em **dois lugares** do código:
+- `processarCronTaxas()` (linha ~370 de `stripe.js`)
+- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
 
-    <!-- Seção 2: Colunas e Navegação -->
-    <AccordionItem value="colunas" className="border rounded-xl shadow-sm">
-      <AccordionTrigger> <Link2 /> Colunas e Navegação </AccordionTrigger>
-      <AccordionContent>
-        <Card className="p-6 space-y-4">
-          <!-- Construtor de colunas -->
-          <!-- L1342-1372 movido para cá -->
-          <!-- Cada coluna envolta em border rounded-md p-4 mb-4 bg-muted/10 -->
-        </Card>
-      </AccordionContent>
-    </AccordionItem>
+### Correção
 
-    <!-- Seção 3: Engajamento e Redes Sociais -->
-    <AccordionItem value="engajamento" className="border rounded-xl shadow-sm">
-      <AccordionTrigger> <MessageSquare /> Engajamento e Redes Sociais </AccordionTrigger>
-      <AccordionContent>
-        <Card className="p-6 space-y-6">
-          <!-- WhatsApp Flutuante (L1309-1316) -->
-          <Separator />
-          <!-- Newsletter toggle + cores (L1377-1406) -->
-          <Separator />
-          <!-- Redes Sociais em grid-cols-1 md:grid-cols-2 (L1408-1425) -->
-        </Card>
-      </AccordionContent>
-    </AccordionItem>
+Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
 
-    <!-- Seção 4: Informações Legais e Confiança -->
-    <AccordionItem value="legal" className="border rounded-xl shadow-sm">
-      <AccordionTrigger> <Shield /> Informações Legais e Confiança </AccordionTrigger>
-      <AccordionContent>
-        <Card className="p-6 space-y-6">
-          <!-- Textos do Rodapé (L1491-1496) -->
-          <Separator />
-          <!-- Selos de Segurança (L1426-1432) -->
-        </Card>
-      </AccordionContent>
-    </AccordionItem>
+**Arquivo:** `lib/services/assinaturas/stripe.js`
 
-  </Accordion>
-</TabsContent>
-```
+1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
+2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
 
-### Mudanças de estilização
-- Remover todas as `div className="bg-card border border-border rounded-xl p-6"` externas (substituídas pelos AccordionItems + Card internos)
-- Colunas do rodapé: cada coluna com `bg-muted/10` em vez de `border-border`
-- Redes sociais: envolver em `grid grid-cols-1 md:grid-cols-2 gap-4`
-- Inputs de cor já estão em `grid-cols-2` — manter
+Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
 
-### Preservação de estado
-Nenhum `useState`, handler ou lógica alterados. Apenas reorganização do JSX.
+### Bug secundário (menor)
 
-### Arquivo
-`src/pages/painel/LojaTemas.tsx` — linhas 1306-1497
+O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
 
