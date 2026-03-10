@@ -137,6 +137,13 @@ const LojaTemas = () => {
     if (loja?.configuracoes?.custom_css) setCustomCss(loja.configuracoes.custom_css);
     if (loja?.configuracoes?.logo) setLogo(loja.configuracoes.logo);
     if (loja?.configuracoes?.cart_config) setCartConfig({ ...DEFAULT_CART, ...loja.configuracoes.cart_config });
+    if (loja?.configuracoes?.categoria_config) setCategoriaConfig({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false, ...loja.configuracoes.categoria_config });
+  }, [loja]);
+
+  useEffect(() => {
+    if (loja?.configuracoes?.custom_css) setCustomCss(loja.configuracoes.custom_css);
+    if (loja?.configuracoes?.logo) setLogo(loja.configuracoes.logo);
+    if (loja?.configuracoes?.cart_config) setCartConfig({ ...DEFAULT_CART, ...loja.configuracoes.cart_config });
   }, [loja]);
 
   const handleCategoriaChange = async (value: string) => {
