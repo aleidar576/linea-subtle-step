@@ -102,6 +102,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
     });
     setCurrentPlayingIndex(null);
     setActiveIndex(null);
+    dismissHint();
   };
 
   if (!videos || videos.length === 0) return null;
