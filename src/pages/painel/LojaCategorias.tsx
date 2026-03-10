@@ -121,7 +121,16 @@ const LojaCategorias = () => {
   const handleSaveCategory = async () => {
     if (!selectedCat || !editorName.trim()) return;
     try {
-      await updateMut.mutateAsync({ id: selectedCat._id, data: { nome: editorName, slug: editorSlug || slugify(editorName) } });
+      const banner = bannerImagem ? {
+        imagem: bannerImagem,
+        imagem_mobile: bannerImagemMobile,
+        link: bannerLink,
+        titulo: bannerTitulo,
+        titulo_cor: bannerTituloCor,
+        subtitulo: bannerSubtitulo,
+        subtitulo_cor: bannerSubtituloCor,
+      } : null;
+      await updateMut.mutateAsync({ id: selectedCat._id, data: { nome: editorName, slug: editorSlug || slugify(editorName), banner } });
       toast({ title: 'Categoria atualizada!' });
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
