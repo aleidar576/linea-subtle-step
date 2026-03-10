@@ -125,12 +125,8 @@ const LojaCategoria = () => {
   const priceRangeInitialized = useMemo(() => allProducts.length > 0, [allProducts.length]);
   useEffect(() => {
     if (!priceRangeInitialized) return;
-    // Only update if draft is still at default values (user hasn't touched it)
+    // Only sync draft (UI display) — do NOT set appliedPriceRange here to avoid reset loop
     setDraftPriceRange(prev => {
-      if (prev[0] === 0 && prev[1] === 100000) return [priceRange[0], priceRange[1]];
-      return prev;
-    });
-    setAppliedPriceRange(prev => {
       if (prev[0] === 0 && prev[1] === 100000) return [priceRange[0], priceRange[1]];
       return prev;
     });
