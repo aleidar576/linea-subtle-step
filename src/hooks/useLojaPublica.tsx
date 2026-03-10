@@ -58,6 +58,5 @@ export function useLojaPublicaCategoria(
     queryFn: () => lojaPublicaApi.getCategoriaBySlug(lojaId!, slug!, sort, filters),
     enabled: !!lojaId && !!slug,
     staleTime: 2 * 60 * 1000,
-    placeholderData: (prev) => prev,
   });
 }
