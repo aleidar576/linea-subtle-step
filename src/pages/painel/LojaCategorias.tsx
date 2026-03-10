@@ -62,6 +62,15 @@ const LojaCategorias = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
 
+  // Banner state
+  const [bannerImagem, setBannerImagem] = useState('');
+  const [bannerImagemMobile, setBannerImagemMobile] = useState('');
+  const [bannerLink, setBannerLink] = useState('');
+  const [bannerTitulo, setBannerTitulo] = useState('');
+  const [bannerTituloCor, setBannerTituloCor] = useState('#ffffff');
+  const [bannerSubtitulo, setBannerSubtitulo] = useState('');
+  const [bannerSubtituloCor, setBannerSubtituloCor] = useState('#ffffff');
+
   // Add products dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [allProducts, setAllProducts] = useState<CatProduct[]>([]);
