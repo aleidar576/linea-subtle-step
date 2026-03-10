@@ -653,6 +653,14 @@ const LojaProduto = () => {
             </div>
             <BlockDivider />
 
+            {/* ========== BLOCO 5.5: Vídeos (Shoppertainment) ========== */}
+            {product.videos && product.videos.length > 0 && (
+              <>
+                <ProductVideos videos={product.videos} layout={product.video_layout || 'auto'} />
+                <BlockDivider />
+              </>
+            )}
+
             {/* ========== BLOCO 6: Avaliações ========== */}
             {avaliacoes.length > 0 && (
               <>
