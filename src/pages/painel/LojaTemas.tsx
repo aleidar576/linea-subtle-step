@@ -6,10 +6,10 @@ import { useTemaConfig, useUpdateTema, usePaginas, useCupons } from '@/hooks/use
 import {
   Palette, Check, Code, MessageSquare, Globe, Layout, ShoppingBag, Plus, Trash2, ShoppingCart, CreditCard as CreditCardIcon,
   ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame, Gift, Tag,
-  Store, Megaphone, Users, Sparkles, Link2, Shield, Layers,
+  Store, Megaphone, Users, Sparkles, Link2, Shield, Layers, Menu,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { CategoriaConfig } from '@/services/saas-api';
+import type { CategoriaConfig, MenuItemConfig } from '@/services/saas-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { lojasApi } from '@/services/saas-api';
 import type { FooterConfig, FooterColuna, CoresGlobais, HomepageConfig, LogoConfig, ProdutoConfig, CartConfig } from '@/services/saas-api';
 import ImageUploader from '@/components/ImageUploader';
+import MenuBuilder from '@/components/admin/MenuBuilder';
 
 const ICON_OPTIONS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'ShieldCheck', label: 'Garantia', Icon: ShieldCheck },
@@ -124,6 +125,7 @@ const LojaTemas = () => {
   const [produtoConfig, setProdutoConfig] = useState<ProdutoConfig>({});
   const [cartConfig, setCartConfig] = useState<CartConfig>(DEFAULT_CART);
   const [categoriaConfig, setCategoriaConfig] = useState<CategoriaConfig>({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false });
+  const [menuPrincipal, setMenuPrincipal] = useState<MenuItemConfig[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -139,6 +141,7 @@ const LojaTemas = () => {
     if (loja?.configuracoes?.logo) setLogo(loja.configuracoes.logo);
     if (loja?.configuracoes?.cart_config) setCartConfig({ ...DEFAULT_CART, ...loja.configuracoes.cart_config });
     if (loja?.configuracoes?.categoria_config) setCategoriaConfig({ layout_mobile: '2cols', layout_desktop: '4cols', filtro_rapido: false, ...loja.configuracoes.categoria_config });
+    if (loja?.configuracoes?.menu_principal) setMenuPrincipal(loja.configuracoes.menu_principal);
   }, [loja]);
 
   useEffect(() => {
@@ -171,7 +174,7 @@ const LojaTemas = () => {
         lojaId: id,
         data: { footer, whatsapp_numero: whatsapp, cores_globais: cores, homepage_config: homepage, produto_config: produtoConfig },
       });
-      await lojasApi.update(id, { configuracoes: { custom_css: customCss, logo, cart_config: cartConfig, categoria_config: categoriaConfig } } as any);
+      await lojasApi.update(id, { configuracoes: { custom_css: customCss, logo, cart_config: cartConfig, categoria_config: categoriaConfig, menu_principal: menuPrincipal } } as any);
       toast.success('Configurações de tema salvas!');
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -278,10 +281,11 @@ const LojaTemas = () => {
       </div>
 
       <Tabs defaultValue="homepage" className="space-y-6">
-        <TabsList className="grid grid-cols-7 w-full">
+        <TabsList className="grid grid-cols-8 w-full">
           <TabsTrigger value="homepage" className="gap-1"><Layout className="h-3 w-3" /> Homepage</TabsTrigger>
           <TabsTrigger value="produto" className="gap-1"><ShoppingBag className="h-3 w-3" /> Produto</TabsTrigger>
           <TabsTrigger value="categoria" className="gap-1"><Layers className="h-3 w-3" /> Categoria</TabsTrigger>
+          <TabsTrigger value="navegacao" className="gap-1"><Menu className="h-3 w-3" /> Navegação</TabsTrigger>
           <TabsTrigger value="carrinho" className="gap-1"><ShoppingCart className="h-3 w-3" /> Carrinho</TabsTrigger>
           <TabsTrigger value="checkout" className="gap-1"><CreditCardIcon className="h-3 w-3" /> Checkout</TabsTrigger>
           <TabsTrigger value="cores" className="gap-1"><Palette className="h-3 w-3" /> Cores</TabsTrigger>
@@ -338,7 +342,19 @@ const LojaTemas = () => {
           </Card>
         </TabsContent>
 
-        {/* ===== HOMEPAGE ===== */}
+        {/* ===== NAVEGAÇÃO ===== */}
+        <TabsContent value="navegacao" className="space-y-6">
+          <Card className="p-6">
+            <MenuBuilder
+              value={menuPrincipal}
+              onChange={setMenuPrincipal}
+              categories={categories}
+              pages={(paginas as any[]) || []}
+            />
+          </Card>
+        </TabsContent>
+
+
         <TabsContent value="homepage">
           <Accordion type="single" collapsible className="w-full space-y-4">
 

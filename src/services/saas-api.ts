@@ -150,6 +150,7 @@ export interface Loja {
     endereco?: LojaEndereco;
     integracoes?: LojaIntegracoes;
     categoria_config?: CategoriaConfig;
+    menu_principal?: MenuItemConfig[];
   };
   is_active: boolean;
   criado_em: string;
@@ -504,6 +505,15 @@ export interface CategoriaConfig {
   layout_mobile: '1col' | '2cols' | 'misto';
   layout_desktop: '3cols' | '4cols' | '5cols';
   filtro_rapido: boolean;
+}
+
+export interface MenuItemConfig {
+  id: string;
+  type: 'category' | 'page' | 'custom';
+  reference_id: string;
+  label: string;
+  url: string;
+  children: MenuItemConfig[];
 }
 
 export interface CategoriaPublicaResponse {

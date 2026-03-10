@@ -2,15 +2,18 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { GATEWAYS, getGatewayById } from '@/config/gateways';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag } from 'lucide-react';
+import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag, Menu, ChevronDown } from 'lucide-react';
 import { useLojaByDomain } from '@/hooks/useLojaPublica';
 import { LojaProvider } from '@/contexts/LojaContext';
 import { useCart } from '@/contexts/CartContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { leadsApi, cuponsPopupApi } from '@/services/saas-api';
-import type { FooterConfig, LogoConfig } from '@/services/saas-api';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from '@/components/ui/navigation-menu';
+import { leadsApi, cuponsPopupApi, lojaPublicaApi } from '@/services/saas-api';
+import type { FooterConfig, LogoConfig, MenuItemConfig } from '@/services/saas-api';
 import { toast } from 'sonner';
 
 // ── Hex to HSL converter ──
@@ -680,6 +683,8 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const [gatewayAtivo, setGatewayAtivo] = useState<string | null>(null);
   const [gatewayLoading, setGatewayLoading] = useState(true);
   const [installmentConfig, setInstallmentConfig] = useState<{ max_installments: number; free_installments: number; interest_rate_pp: number } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [fallbackCategories, setFallbackCategories] = useState<any[]>([]);
 
   // 🔗 Capture UTMs on first load (before any navigation loses them)
   useEffect(() => {
@@ -887,9 +892,30 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     metodosSuportados,
     installmentConfig,
     categoriaConfig: config.categoria_config || null,
+    menuPrincipal: config.menu_principal || [],
     isLoading: false,
     notFound: false,
   };
+
+  // Fallback: fetch categories if menu_principal is empty
+  useEffect(() => {
+    if ((config.menu_principal || []).length > 0 || !loja?._id) return;
+    lojaPublicaApi.getCategorias(loja._id)
+      .then((cats: any[]) => setFallbackCategories(cats.filter((c: any) => c.is_active !== false && !c.parent_id)))
+      .catch(() => {});
+  }, [loja?._id, config.menu_principal]);
+
+  const menuItems: MenuItemConfig[] = useMemo(() => {
+    if ((config.menu_principal || []).length > 0) return config.menu_principal;
+    return fallbackCategories.map((cat: any) => ({
+      id: cat._id,
+      type: 'category' as const,
+      reference_id: cat._id,
+      label: cat.nome,
+      url: `/categoria/${cat.slug}`,
+      children: [],
+    }));
+  }, [config.menu_principal, fallbackCategories]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -908,7 +934,15 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
       <div className="flex min-h-screen flex-col">
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-lg">
+          {/* Line 1: Hamburger + Logo + Search + Icons */}
           <div className={`container flex h-14 items-center gap-3 ${logoConfig?.posicao === 'centro' ? 'justify-between' : 'justify-between'}`}>
+            {/* Hamburger - mobile only */}
+            {menuItems.length > 0 && (
+              <button onClick={() => setMobileMenuOpen(true)} className="md:hidden flex h-9 w-9 items-center justify-center rounded-full bg-secondary shrink-0">
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
+
             <Link to="/" className={`flex items-center gap-2 shrink-0 ${logoConfig?.posicao === 'centro' ? 'absolute left-1/2 -translate-x-1/2' : ''}`}>
               <HeaderLogo logo={logoConfig} icone={loja.icone || ''} nome={displayName} />
             </Link>
@@ -944,6 +978,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
             </div>
           </div>
 
+          {/* Mobile search */}
           {searchEnabled && searchOpen && (
             <div className="md:hidden border-t border-border px-4 py-2">
               <form onSubmit={handleSearch}>
@@ -954,7 +989,100 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
               </form>
             </div>
           )}
+
+          {/* Line 2: Desktop Navigation Bar */}
+          {menuItems.length > 0 && (
+            <div className="hidden md:block border-t border-border">
+              <div className="container">
+                <NavigationMenu>
+                  <NavigationMenuList>
+                    {menuItems.map(item => (
+                      item.children && item.children.length > 0 ? (
+                        <NavigationMenuItem key={item.id}>
+                          <NavigationMenuTrigger className="text-sm">{item.label}</NavigationMenuTrigger>
+                          <NavigationMenuContent className="p-3 min-w-[200px]">
+                            <ul className="space-y-1">
+                              {item.children.map(child => (
+                                <li key={child.id}>
+                                  <Link
+                                    to={child.url}
+                                    className="block px-3 py-2 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                  >
+                                    {child.label}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </NavigationMenuContent>
+                        </NavigationMenuItem>
+                      ) : (
+                        <NavigationMenuItem key={item.id}>
+                          <Link to={item.url}>
+                            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                              {item.label}
+                            </NavigationMenuLink>
+                          </Link>
+                        </NavigationMenuItem>
+                      )
+                    ))}
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </div>
+            </div>
+          )}
         </header>
+
+        {/* Mobile Menu Sheet */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetContent side="left" className="w-[280px] p-0">
+            <SheetHeader className="p-4 border-b border-border">
+              <SheetTitle className="text-left">{displayName}</SheetTitle>
+            </SheetHeader>
+            <nav className="p-4 space-y-1">
+              {menuItems.map(item => (
+                item.children && item.children.length > 0 ? (
+                  <Collapsible key={item.id}>
+                    <div className="flex items-center">
+                      <Link
+                        to={item.url}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex-1 py-3 px-2 text-sm font-medium hover:text-primary transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                      <CollapsibleTrigger className="p-2 hover:bg-accent rounded-md transition-colors">
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent>
+                      <div className="pb-2">
+                        {item.children.map(child => (
+                          <Link
+                            key={child.id}
+                            to={child.url}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block py-2 px-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <Link
+                    key={item.id}
+                    to={item.url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-3 px-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                )
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
 
         {/* Content */}
         <main className="flex-1">
