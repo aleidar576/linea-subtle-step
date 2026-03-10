@@ -170,7 +170,7 @@ const LojaTemas = () => {
         lojaId: id,
         data: { footer, whatsapp_numero: whatsapp, cores_globais: cores, homepage_config: homepage, produto_config: produtoConfig },
       });
-      await lojasApi.update(id, { configuracoes: { custom_css: customCss, logo, cart_config: cartConfig } } as any);
+      await lojasApi.update(id, { configuracoes: { custom_css: customCss, logo, cart_config: cartConfig, categoria_config: categoriaConfig } } as any);
       toast.success('Configurações de tema salvas!');
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
