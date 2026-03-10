@@ -1344,7 +1344,7 @@ const LojaProdutos = () => {
 
             {/* ══════════ TAB EXTRAS ══════════ */}
             <TabsContent value="extras" className="space-y-4">
-              <Accordion type="multiple" defaultValue={['escassez', 'social', 'upsell']}>
+              <Accordion type="multiple">
 
                 {/* ── Acordeão 1: Gatilhos de Escassez ── */}
                 <AccordionItem value="escassez">
