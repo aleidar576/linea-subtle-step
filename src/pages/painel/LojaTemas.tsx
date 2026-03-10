@@ -1305,195 +1305,262 @@ const LojaTemas = () => {
         </TabsContent>
 
         {/* ===== FOOTER ===== */}
-        <TabsContent value="footer" className="space-y-6">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-1">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <Label className="text-base font-semibold">WhatsApp Flutuante</Label>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">Se preenchido, um botão flutuante aparecerá na loja.</p>
-            <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="5511999999999" />
-          </div>
+        <TabsContent value="footer" className="space-y-4">
+          <Accordion type="single" collapsible className="w-full space-y-4">
 
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <Label className="text-base font-semibold">Cores do Rodapé</Label>
-            <p className="text-xs text-muted-foreground">Defina cores independentes para o rodapé. Se vazio, herda as cores do tema global.</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs">Cor de Fundo do Rodapé</Label>
-                <div className="flex gap-1">
-                  <Input value={footer.cores?.fundo || ''} onChange={e => updateFooterCores('fundo', e.target.value)} className="flex-1 text-xs" placeholder="Padrão: cor de superfície do tema" />
-                  <input type="color" value={footer.cores?.fundo || '#ffffff'} onChange={e => updateFooterCores('fundo', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+            {/* Seção 1: Estilo e Identidade */}
+            <AccordionItem value="estilo" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-primary" />
+                  <span className="text-base font-semibold">Estilo e Identidade</span>
                 </div>
-              </div>
-              <div>
-                <Label className="text-xs">Cor do Texto do Rodapé</Label>
-                <div className="flex gap-1">
-                  <Input value={footer.cores?.texto || ''} onChange={e => updateFooterCores('texto', e.target.value)} className="flex-1 text-xs" placeholder="Padrão: cor de texto do tema" />
-                  <input type="color" value={footer.cores?.texto || '#111111'} onChange={e => updateFooterCores('texto', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                </div>
-              </div>
-            </div>
-            {footer.cores && (footer.cores.fundo || footer.cores.texto) && (
-              <Button variant="outline" size="sm" onClick={resetFooterCores}>Resetar para padrão</Button>
-            )}
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Colunas do Rodapé</Label>
-              {footer.colunas.length < 5 && (
-                <Button size="sm" variant="outline" className="gap-1" onClick={addColuna}><Plus className="h-3 w-3" /> Adicionar Coluna</Button>
-              )}
-            </div>
-            {footer.colunas.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhuma coluna configurada. Clique em "Adicionar Coluna" para começar.</p>
-            )}
-            <div className="space-y-4">
-              {footer.colunas.map((col, colIdx) => (
-                <div key={colIdx} className="border border-border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Input value={col.titulo} onChange={e => updateColuna(colIdx, 'titulo', e.target.value)} placeholder="Título da coluna" className="font-semibold flex-1" />
-                    <Button variant="ghost" size="icon" onClick={() => removeColuna(colIdx)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
-                  {col.links.map((link, linkIdx) => (
-                    <div key={linkIdx} className="flex gap-2 items-center">
-                      <Input value={link.nome || (link as any).label || ''} onChange={e => updateLink(colIdx, linkIdx, 'nome', e.target.value)} placeholder="Nome do link" className="flex-1 text-xs" maxLength={50} />
-                      <Input value={link.url || ''} onChange={e => updateLink(colIdx, linkIdx, 'url', e.target.value)} placeholder="/contato ou https://..." className="flex-1 text-xs" maxLength={500} />
-                      <Button variant="ghost" size="icon" onClick={() => removeLinkFromColuna(colIdx, linkIdx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                    </div>
-                  ))}
-                  {col.links.length < 8 && (
-                    <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => addLinkToColuna(colIdx)}><Plus className="h-3 w-3" /> Adicionar Link</Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <Label className="text-base font-semibold block">Newsletter e Redes Sociais</Label>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Ativar Newsletter no Rodapé</Label>
-              <Switch checked={footer.newsletter} onCheckedChange={v => setFooter({ ...footer, newsletter: v })} />
-            </div>
-
-            {footer.newsletter && (
-              <div className="border border-border rounded-lg p-4 space-y-3">
-                <Label className="text-sm font-medium">Cores da Newsletter</Label>
-                <p className="text-xs text-muted-foreground">Se vazio, herda as cores do rodapé.</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs">Cor de Fundo</Label>
-                    <div className="flex gap-1">
-                      <Input value={footer.newsletter_cores?.fundo || ''} onChange={e => updateNewsletterCores('fundo', e.target.value)} className="flex-1 text-xs" placeholder="Herda do rodapé" />
-                      <input type="color" value={footer.newsletter_cores?.fundo || footer.cores?.fundo || '#1a1a2e'} onChange={e => updateNewsletterCores('fundo', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Cor do Texto</Label>
-                    <div className="flex gap-1">
-                      <Input value={footer.newsletter_cores?.texto || ''} onChange={e => updateNewsletterCores('texto', e.target.value)} className="flex-1 text-xs" placeholder="Herda do rodapé" />
-                      <input type="color" value={footer.newsletter_cores?.texto || footer.cores?.texto || '#ffffff'} onChange={e => updateNewsletterCores('texto', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
-                    </div>
-                  </div>
-                </div>
-                {footer.newsletter_cores && (footer.newsletter_cores.fundo || footer.newsletter_cores.texto) && (
-                  <Button variant="outline" size="sm" onClick={resetNewsletterCores}>Resetar para padrão</Button>
-                )}
-              </div>
-            )}
-
-            <Label className="text-sm font-medium block pt-2">Redes Sociais</Label>
-            {(['instagram', 'tiktok', 'facebook', 'youtube'] as const).map(rede => {
-              const redeData = (footer.redes_sociais as any)[rede];
-              const isAtivo = redeData?.ativo ?? false;
-              return (
-                <div key={rede} className="flex items-center gap-3">
-                  <Switch checked={isAtivo} onCheckedChange={v => updateRede(rede, 'ativo', v)} />
-                  <span className="text-sm capitalize w-20">{rede}</span>
-                  <Input
-                    value={redeData?.url || ''}
-                    onChange={e => updateRede(rede, 'url', e.target.value)}
-                    placeholder={`https://${rede}.com/...`}
-                    className="flex-1 text-xs"
-                    disabled={!isAtivo}
-                  />
-                </div>
-              );
-            })}
-            <div className="pt-2 space-y-2">
-              <Label className="text-base font-semibold block">Selos de Segurança</Label>
-              <div className="flex items-center gap-3">
-                <Switch checked={footer.selos.ativo} onCheckedChange={v => setFooter({ ...footer, selos: { ...footer.selos, ativo: v } })} />
-                <Input value={footer.selos.url} onChange={e => setFooter({ ...footer, selos: { ...footer.selos, url: e.target.value } })} placeholder="URL (# = sem link)" className="flex-1 text-xs" disabled={!footer.selos.ativo} />
-              </div>
-          </div>
-
-          {/* Personalizar Logo do Footer */}
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-semibold block">Personalizar Logo do Footer</Label>
-                <p className="text-xs text-muted-foreground mt-1">Ao ativar, o rodapé deixa de seguir a logo principal e usa uma logo exclusiva.</p>
-              </div>
-              <Switch
-                checked={footer.footer_logo?.ativo ?? false}
-                onCheckedChange={v => setFooter({
-                  ...footer,
-                  footer_logo: v
-                    ? { ativo: true, tipo: 'upload', imagem_url: '', texto: '', fonte: 'Inter', tamanho: 48 }
-                    : undefined,
-                })}
-              />
-            </div>
-            {footer.footer_logo?.ativo && (() => {
-              const fl = footer.footer_logo;
-              const updateFl = (partial: Partial<typeof fl>) => setFooter({ ...footer, footer_logo: { ...fl, ...partial } });
-              return (
-                <div className="border border-border rounded-lg p-4 space-y-4">
-                  <RadioGroup value={fl.tipo} onValueChange={(v: 'upload' | 'url' | 'texto') => updateFl({ tipo: v })} className="flex gap-4">
-                    <div className="flex items-center gap-2"><RadioGroupItem value="upload" id="fl-upload" /><Label htmlFor="fl-upload" className="text-sm cursor-pointer">Upload</Label></div>
-                    <div className="flex items-center gap-2"><RadioGroupItem value="url" id="fl-url" /><Label htmlFor="fl-url" className="text-sm cursor-pointer">URL</Label></div>
-                    <div className="flex items-center gap-2"><RadioGroupItem value="texto" id="fl-texto" /><Label htmlFor="fl-texto" className="text-sm cursor-pointer">Texto</Label></div>
-                  </RadioGroup>
-                  {fl.tipo === 'upload' && id && <ImageUploader lojaId={id} value={fl.imagem_url} onChange={url => updateFl({ imagem_url: url })} placeholder="Envie a logo do footer" />}
-                  {fl.tipo === 'url' && <Input value={fl.imagem_url} onChange={e => updateFl({ imagem_url: e.target.value })} placeholder="https://minha-loja.com/logo-footer.png" />}
-                  {fl.tipo === 'texto' && (
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 space-y-6 border-0 shadow-none">
+                  {/* Cores do Rodapé */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Cores do Rodapé</Label>
+                    <p className="text-xs text-muted-foreground">Defina cores independentes para o rodapé. Se vazio, herda as cores do tema global.</p>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><Label className="text-xs">Texto</Label><Input value={fl.texto} onChange={e => updateFl({ texto: e.target.value })} placeholder="Minha Loja" /></div>
-                      <div><Label className="text-xs">Fonte</Label><Select value={fl.fonte} onValueChange={v => updateFl({ fonte: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+                      <div>
+                        <Label className="text-xs">Cor de Fundo do Rodapé</Label>
+                        <div className="flex gap-1">
+                          <Input value={footer.cores?.fundo || ''} onChange={e => updateFooterCores('fundo', e.target.value)} className="flex-1 text-xs" placeholder="Padrão: cor de superfície do tema" />
+                          <input type="color" value={footer.cores?.fundo || '#ffffff'} onChange={e => updateFooterCores('fundo', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Cor do Texto do Rodapé</Label>
+                        <div className="flex gap-1">
+                          <Input value={footer.cores?.texto || ''} onChange={e => updateFooterCores('texto', e.target.value)} className="flex-1 text-xs" placeholder="Padrão: cor de texto do tema" />
+                          <input type="color" value={footer.cores?.texto || '#111111'} onChange={e => updateFooterCores('texto', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <Label className="text-xs">Tamanho (px)</Label>
-                    <Input type="number" min={24} max={120} value={fl.tamanho || 48} onChange={e => updateFl({ tamanho: parseInt(e.target.value) || 48 })} className="w-32" />
+                    {footer.cores && (footer.cores.fundo || footer.cores.texto) && (
+                      <Button variant="outline" size="sm" onClick={resetFooterCores}>Resetar para padrão</Button>
+                    )}
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
-                    <div className="border border-border rounded-lg p-4 bg-background flex items-center justify-center min-h-[64px]">
-                      {(fl.tipo === 'upload' || fl.tipo === 'url') && fl.imagem_url ? (
-                        <img src={fl.imagem_url} alt="Logo Footer" style={{ maxHeight: `${fl.tamanho || 48}px` }} className="object-contain" />
-                      ) : fl.tipo === 'texto' && fl.texto ? (
-                        <span className="font-bold" style={{ fontFamily: fl.fonte, fontSize: `${Math.min((fl.tamanho || 48) * 0.5, 32)}px` }}>{fl.texto}</span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Nenhuma logo configurada</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-          </div>
 
-          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <Label className="text-base font-semibold">Textos do Rodapé</Label>
-            <div><Label className="text-xs">Copyright / Desenvolvido por</Label><Input value={footer.texto_copyright} onChange={e => setFooter({ ...footer, texto_copyright: e.target.value })} placeholder="© 2025 Minha Loja" /></div>
-            <div><Label className="text-xs">Endereço da Empresa</Label><Input value={footer.texto_endereco} onChange={e => setFooter({ ...footer, texto_endereco: e.target.value })} placeholder="Rua..." /></div>
-            <div><Label className="text-xs">CNPJ</Label><Input value={footer.texto_cnpj} onChange={e => setFooter({ ...footer, texto_cnpj: e.target.value })} placeholder="00.000.000/0001-00" /></div>
-          </div>
+                  <Separator />
+
+                  {/* Personalizar Logo do Footer */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-semibold block">Personalizar Logo do Footer</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Ao ativar, o rodapé deixa de seguir a logo principal e usa uma logo exclusiva.</p>
+                      </div>
+                      <Switch
+                        checked={footer.footer_logo?.ativo ?? false}
+                        onCheckedChange={v => setFooter({
+                          ...footer,
+                          footer_logo: v
+                            ? { ativo: true, tipo: 'upload', imagem_url: '', texto: '', fonte: 'Inter', tamanho: 48 }
+                            : undefined,
+                        })}
+                      />
+                    </div>
+                    {footer.footer_logo?.ativo && (() => {
+                      const fl = footer.footer_logo;
+                      const updateFl = (partial: Partial<typeof fl>) => setFooter({ ...footer, footer_logo: { ...fl, ...partial } });
+                      return (
+                        <div className="bg-muted/20 rounded-lg p-4 space-y-4">
+                          <RadioGroup value={fl.tipo} onValueChange={(v: 'upload' | 'url' | 'texto') => updateFl({ tipo: v })} className="flex gap-4">
+                            <div className="flex items-center gap-2"><RadioGroupItem value="upload" id="fl-upload" /><Label htmlFor="fl-upload" className="text-sm cursor-pointer">Upload</Label></div>
+                            <div className="flex items-center gap-2"><RadioGroupItem value="url" id="fl-url" /><Label htmlFor="fl-url" className="text-sm cursor-pointer">URL</Label></div>
+                            <div className="flex items-center gap-2"><RadioGroupItem value="texto" id="fl-texto" /><Label htmlFor="fl-texto" className="text-sm cursor-pointer">Texto</Label></div>
+                          </RadioGroup>
+                          {fl.tipo === 'upload' && id && <ImageUploader lojaId={id} value={fl.imagem_url} onChange={url => updateFl({ imagem_url: url })} placeholder="Envie a logo do footer" />}
+                          {fl.tipo === 'url' && <Input value={fl.imagem_url} onChange={e => updateFl({ imagem_url: e.target.value })} placeholder="https://minha-loja.com/logo-footer.png" />}
+                          {fl.tipo === 'texto' && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div><Label className="text-xs">Texto</Label><Input value={fl.texto} onChange={e => updateFl({ texto: e.target.value })} placeholder="Minha Loja" /></div>
+                              <div><Label className="text-xs">Fonte</Label><Select value={fl.fonte} onValueChange={v => updateFl({ fonte: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+                            </div>
+                          )}
+                          <div>
+                            <Label className="text-xs">Tamanho (px)</Label>
+                            <Input type="number" min={24} max={120} value={fl.tamanho || 48} onChange={e => updateFl({ tamanho: parseInt(e.target.value) || 48 })} className="w-32" />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
+                            <div className="border border-border rounded-lg p-4 bg-background flex items-center justify-center min-h-[64px]">
+                              {(fl.tipo === 'upload' || fl.tipo === 'url') && fl.imagem_url ? (
+                                <img src={fl.imagem_url} alt="Logo Footer" style={{ maxHeight: `${fl.tamanho || 48}px` }} className="object-contain" />
+                              ) : fl.tipo === 'texto' && fl.texto ? (
+                                <span className="font-bold" style={{ fontFamily: fl.fonte, fontSize: `${Math.min((fl.tamanho || 48) * 0.5, 32)}px` }}>{fl.texto}</span>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Nenhuma logo configurada</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Seção 2: Colunas e Navegação */}
+            <AccordionItem value="colunas" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-5 w-5 text-primary" />
+                  <span className="text-base font-semibold">Colunas e Navegação</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 space-y-4 border-0 shadow-none">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Colunas do Rodapé</Label>
+                    {footer.colunas.length < 5 && (
+                      <Button size="sm" variant="outline" className="gap-1" onClick={addColuna}><Plus className="h-3 w-3" /> Adicionar Coluna</Button>
+                    )}
+                  </div>
+                  {footer.colunas.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Nenhuma coluna configurada. Clique em "Adicionar Coluna" para começar.</p>
+                  )}
+                  <div className="space-y-4">
+                    {footer.colunas.map((col, colIdx) => (
+                      <div key={colIdx} className="border rounded-md p-4 bg-muted/10 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Input value={col.titulo} onChange={e => updateColuna(colIdx, 'titulo', e.target.value)} placeholder="Título da coluna" className="font-semibold flex-1" />
+                          <Button variant="ghost" size="icon" onClick={() => removeColuna(colIdx)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                        {col.links.map((link, linkIdx) => (
+                          <div key={linkIdx} className="flex gap-2 items-center">
+                            <Input value={link.nome || (link as any).label || ''} onChange={e => updateLink(colIdx, linkIdx, 'nome', e.target.value)} placeholder="Nome do link" className="flex-1 text-xs" maxLength={50} />
+                            <Input value={link.url || ''} onChange={e => updateLink(colIdx, linkIdx, 'url', e.target.value)} placeholder="/contato ou https://..." className="flex-1 text-xs" maxLength={500} />
+                            <Button variant="ghost" size="icon" onClick={() => removeLinkFromColuna(colIdx, linkIdx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                          </div>
+                        ))}
+                        {col.links.length < 8 && (
+                          <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => addLinkToColuna(colIdx)}><Plus className="h-3 w-3" /> Adicionar Link</Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Seção 3: Engajamento e Redes Sociais */}
+            <AccordionItem value="engajamento" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  <span className="text-base font-semibold">Engajamento e Redes Sociais</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 space-y-6 border-0 shadow-none">
+                  {/* WhatsApp Flutuante */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">WhatsApp Flutuante</Label>
+                    <p className="text-xs text-muted-foreground">Se preenchido, um botão flutuante aparecerá na loja.</p>
+                    <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="5511999999999" />
+                  </div>
+
+                  <Separator />
+
+                  {/* Newsletter */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold">Newsletter no Rodapé</Label>
+                      <Switch checked={footer.newsletter} onCheckedChange={v => setFooter({ ...footer, newsletter: v })} />
+                    </div>
+                    {footer.newsletter && (
+                      <div className="bg-muted/20 rounded-lg p-4 space-y-3">
+                        <Label className="text-xs font-medium">Cores da Newsletter</Label>
+                        <p className="text-xs text-muted-foreground">Se vazio, herda as cores do rodapé.</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">Cor de Fundo</Label>
+                            <div className="flex gap-1">
+                              <Input value={footer.newsletter_cores?.fundo || ''} onChange={e => updateNewsletterCores('fundo', e.target.value)} className="flex-1 text-xs" placeholder="Herda do rodapé" />
+                              <input type="color" value={footer.newsletter_cores?.fundo || footer.cores?.fundo || '#1a1a2e'} onChange={e => updateNewsletterCores('fundo', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Cor do Texto</Label>
+                            <div className="flex gap-1">
+                              <Input value={footer.newsletter_cores?.texto || ''} onChange={e => updateNewsletterCores('texto', e.target.value)} className="flex-1 text-xs" placeholder="Herda do rodapé" />
+                              <input type="color" value={footer.newsletter_cores?.texto || footer.cores?.texto || '#ffffff'} onChange={e => updateNewsletterCores('texto', e.target.value)} className="w-8 h-8 rounded border border-input cursor-pointer" />
+                            </div>
+                          </div>
+                        </div>
+                        {footer.newsletter_cores && (footer.newsletter_cores.fundo || footer.newsletter_cores.texto) && (
+                          <Button variant="outline" size="sm" onClick={resetNewsletterCores}>Resetar para padrão</Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Redes Sociais */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Redes Sociais</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(['instagram', 'tiktok', 'facebook', 'youtube'] as const).map(rede => {
+                        const redeData = (footer.redes_sociais as any)[rede];
+                        const isAtivo = redeData?.ativo ?? false;
+                        return (
+                          <div key={rede} className="flex items-center gap-3">
+                            <Switch checked={isAtivo} onCheckedChange={v => updateRede(rede, 'ativo', v)} />
+                            <span className="text-sm capitalize w-20">{rede}</span>
+                            <Input
+                              value={redeData?.url || ''}
+                              onChange={e => updateRede(rede, 'url', e.target.value)}
+                              placeholder={`https://${rede}.com/...`}
+                              className="flex-1 text-xs"
+                              disabled={!isAtivo}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Seção 4: Informações Legais e Confiança */}
+            <AccordionItem value="legal" className="border rounded-xl shadow-sm">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  <span className="text-base font-semibold">Informações Legais e Confiança</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="p-6 space-y-6 border-0 shadow-none">
+                  {/* Textos do Rodapé */}
+                  <div className="space-y-4">
+                    <Label className="text-sm font-semibold">Textos do Rodapé</Label>
+                    <div><Label className="text-xs">Copyright / Desenvolvido por</Label><Input value={footer.texto_copyright} onChange={e => setFooter({ ...footer, texto_copyright: e.target.value })} placeholder="© 2025 Minha Loja" /></div>
+                    <div><Label className="text-xs">Endereço da Empresa</Label><Input value={footer.texto_endereco} onChange={e => setFooter({ ...footer, texto_endereco: e.target.value })} placeholder="Rua..." /></div>
+                    <div><Label className="text-xs">CNPJ</Label><Input value={footer.texto_cnpj} onChange={e => setFooter({ ...footer, texto_cnpj: e.target.value })} placeholder="00.000.000/0001-00" /></div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Selos de Segurança */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Selos de Segurança</Label>
+                    <div className="flex items-center gap-3">
+                      <Switch checked={footer.selos.ativo} onCheckedChange={v => setFooter({ ...footer, selos: { ...footer.selos, ativo: v } })} />
+                      <Input value={footer.selos.url} onChange={e => setFooter({ ...footer, selos: { ...footer.selos, url: e.target.value } })} placeholder="URL (# = sem link)" className="flex-1 text-xs" disabled={!footer.selos.ativo} />
+                    </div>
+                  </div>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+          </Accordion>
         </TabsContent>
       </Tabs>
 
