@@ -788,7 +788,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     );
   }
 
-  const config = loja.configuracoes || {} as any;
+  // config already declared above early returns
   const customCss = config.custom_css || '';
   const produtoConfig = config.produto_config;
   const searchEnabled = produtoConfig?.barra_pesquisa?.ativo ?? false;
