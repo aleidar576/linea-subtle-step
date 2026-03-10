@@ -934,7 +934,15 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
       <div className="flex min-h-screen flex-col">
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-lg">
+          {/* Line 1: Hamburger + Logo + Search + Icons */}
           <div className={`container flex h-14 items-center gap-3 ${logoConfig?.posicao === 'centro' ? 'justify-between' : 'justify-between'}`}>
+            {/* Hamburger - mobile only */}
+            {menuItems.length > 0 && (
+              <button onClick={() => setMobileMenuOpen(true)} className="md:hidden flex h-9 w-9 items-center justify-center rounded-full bg-secondary shrink-0">
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
+
             <Link to="/" className={`flex items-center gap-2 shrink-0 ${logoConfig?.posicao === 'centro' ? 'absolute left-1/2 -translate-x-1/2' : ''}`}>
               <HeaderLogo logo={logoConfig} icone={loja.icone || ''} nome={displayName} />
             </Link>
@@ -970,6 +978,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
             </div>
           </div>
 
+          {/* Mobile search */}
           {searchEnabled && searchOpen && (
             <div className="md:hidden border-t border-border px-4 py-2">
               <form onSubmit={handleSearch}>
@@ -980,7 +989,100 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
               </form>
             </div>
           )}
+
+          {/* Line 2: Desktop Navigation Bar */}
+          {menuItems.length > 0 && (
+            <div className="hidden md:block border-t border-border">
+              <div className="container">
+                <NavigationMenu>
+                  <NavigationMenuList>
+                    {menuItems.map(item => (
+                      item.children && item.children.length > 0 ? (
+                        <NavigationMenuItem key={item.id}>
+                          <NavigationMenuTrigger className="text-sm">{item.label}</NavigationMenuTrigger>
+                          <NavigationMenuContent className="p-3 min-w-[200px]">
+                            <ul className="space-y-1">
+                              {item.children.map(child => (
+                                <li key={child.id}>
+                                  <Link
+                                    to={child.url}
+                                    className="block px-3 py-2 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                  >
+                                    {child.label}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </NavigationMenuContent>
+                        </NavigationMenuItem>
+                      ) : (
+                        <NavigationMenuItem key={item.id}>
+                          <Link to={item.url}>
+                            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                              {item.label}
+                            </NavigationMenuLink>
+                          </Link>
+                        </NavigationMenuItem>
+                      )
+                    ))}
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </div>
+            </div>
+          )}
         </header>
+
+        {/* Mobile Menu Sheet */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetContent side="left" className="w-[280px] p-0">
+            <SheetHeader className="p-4 border-b border-border">
+              <SheetTitle className="text-left">{displayName}</SheetTitle>
+            </SheetHeader>
+            <nav className="p-4 space-y-1">
+              {menuItems.map(item => (
+                item.children && item.children.length > 0 ? (
+                  <Collapsible key={item.id}>
+                    <div className="flex items-center">
+                      <Link
+                        to={item.url}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex-1 py-3 px-2 text-sm font-medium hover:text-primary transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                      <CollapsibleTrigger className="p-2 hover:bg-accent rounded-md transition-colors">
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent>
+                      <div className="pb-2">
+                        {item.children.map(child => (
+                          <Link
+                            key={child.id}
+                            to={child.url}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block py-2 px-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <Link
+                    key={item.id}
+                    to={item.url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-3 px-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                )
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
 
         {/* Content */}
         <main className="flex-1">
