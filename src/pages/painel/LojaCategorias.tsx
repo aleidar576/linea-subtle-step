@@ -99,6 +99,15 @@ const LojaCategorias = () => {
     setSelectedCat(cat);
     setEditorName(cat.nome);
     setEditorSlug(cat.slug);
+    // Load banner
+    const b = cat.banner || {} as any;
+    setBannerImagem(b.imagem || '');
+    setBannerImagemMobile(b.imagem_mobile || '');
+    setBannerLink(b.link || '');
+    setBannerTitulo(b.titulo || '');
+    setBannerTituloCor(b.titulo_cor || '#ffffff');
+    setBannerSubtitulo(b.subtitulo || '');
+    setBannerSubtituloCor(b.subtitulo_cor || '#ffffff');
     setMode('editor');
     loadCategoryProducts(cat._id);
   };
