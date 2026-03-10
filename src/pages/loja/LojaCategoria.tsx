@@ -74,46 +74,36 @@ const LojaCategoria = () => {
     }
   }, [data, page]);
 
-  // Track category slug to avoid filter-change effect re-clearing products on category switch
-  const categorySlugRef = useRef(categorySlug);
+  // Flag to skip filter-reset effect when category changes
+  const categoryChangingRef = useRef(false);
+  const prevCategoryRef = useRef(categorySlug);
 
   // Full reset when category changes
   useEffect(() => {
-    categorySlugRef.current = categorySlug;
-    setAppliedPriceRange([0, 100000]);
-    setDraftPriceRange([0, 100000]);
-    setAppliedSubcats(new Set());
-    setDraftSubcats(new Set());
-    setAppliedVariations(new Set());
-    setDraftVariations(new Set());
-    setQuickFilters(new Set());
-    setSort('relevancia');
-    setPage(1);
-    setAllProducts([]);
-  }, [categorySlug]);
-
-  // Reset page when sort or filters change (but NOT when caused by category switch)
-  const prevFiltersRef = useRef({ sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters });
-  useEffect(() => {
-    const prev = prevFiltersRef.current;
-    const categoryJustChanged = categorySlugRef.current !== categorySlug;
-    prevFiltersRef.current = { sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters };
-
-    // Skip if this is the initial render or if triggered by category change
-    if (categoryJustChanged) return;
-
-    // Only reset if filters actually changed from user interaction
-    if (
-      prev.sort !== sort ||
-      prev.appliedSubcats !== appliedSubcats ||
-      prev.appliedVariations !== appliedVariations ||
-      prev.appliedPriceRange !== appliedPriceRange ||
-      prev.quickFilters !== quickFilters
-    ) {
+    if (prevCategoryRef.current !== categorySlug) {
+      categoryChangingRef.current = true;
+      prevCategoryRef.current = categorySlug;
+      setAppliedPriceRange([0, 100000]);
+      setDraftPriceRange([0, 100000]);
+      setAppliedSubcats(new Set());
+      setDraftSubcats(new Set());
+      setAppliedVariations(new Set());
+      setDraftVariations(new Set());
+      setQuickFilters(new Set());
+      setSort('relevancia');
       setPage(1);
       setAllProducts([]);
     }
-  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters, categorySlug]);
+  }, [categorySlug]);
+
+  // Reset page when sort or filters change (but NOT when caused by category switch)
+  useEffect(() => {
+    // Skip if this was triggered by category change
+    if (categoryChangingRef.current) {
+      categoryChangingRef.current = false;
+      return;
+    }
+  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters]);
 
   // Set page title
   useEffect(() => {
