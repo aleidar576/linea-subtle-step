@@ -467,6 +467,7 @@ export interface LojaProduct {
   fretes_vinculados?: Array<{ frete_id: string; valor_personalizado: number | null; exibir_no_produto?: boolean }>;
   parcelas_fake: string | null;
   vendas_fake: number;
+  vendas_count?: number;
   oferta_relampago: OfertaRelampago;
   vantagens?: { ativo: boolean; itens: string[] };
   vantagens_titulo?: string | null;
