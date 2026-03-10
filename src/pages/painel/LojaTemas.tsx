@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { lojasApi } from '@/services/saas-api';
 import type { FooterConfig, FooterColuna, CoresGlobais, HomepageConfig, LogoConfig, ProdutoConfig, CartConfig } from '@/services/saas-api';
