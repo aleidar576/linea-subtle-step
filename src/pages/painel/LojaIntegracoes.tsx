@@ -43,10 +43,10 @@ const INTEGRATIONS = [
   },
   {
     id: 'mux' as const,
-    name: 'Mux (Video Streaming)',
-    description: 'Ative o Video Commerce (Shoppertainment) para adicionar vídeos de produto com reprodução profissional.',
+    name: 'Video Commerce',
+    description: 'Ative vídeos demonstrativos nos seus produtos para aumentar a conversão.',
     icon: Video,
-    helpUrl: 'https://mux.com',
+    helpUrl: '',
     hasToken: false,
   },
 ] as const;
