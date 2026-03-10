@@ -24,15 +24,14 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
     const v = videos[0];
     return (
       <div className="px-3 md:px-0 py-4">
-        <h3 className="text-base font-semibold text-foreground mb-3">🎥 Vídeo do Produto</h3>
-        <div className="w-full max-h-[600px] rounded-xl overflow-hidden" style={{ aspectRatio: '9/16' }}>
-          <MuxPlayer
-            playbackId={v.playback_id}
-            preload="none"
-            poster={`${MUX_IMG}/${v.playback_id}/thumbnail.jpg`}
-            style={{ width: '100%', height: '100%', borderRadius: '0.75rem' }}
-          />
-        </div>
+        <h2 className="text-xl font-bold text-foreground mb-4">Vídeo do Produto</h2>
+        <MuxPlayer
+          playbackId={v.playback_id}
+          preload="none"
+          poster={`${MUX_IMG}/${v.playback_id}/thumbnail.jpg`}
+          className="w-full aspect-[9/16] rounded-xl overflow-hidden"
+          style={{ '--media-object-fit': 'cover', backgroundColor: 'transparent' } as any}
+        />
       </div>
     );
   }
