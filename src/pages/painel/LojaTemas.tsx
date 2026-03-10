@@ -6,7 +6,7 @@ import { useTemaConfig, useUpdateTema, usePaginas, useCupons } from '@/hooks/use
 import {
   Palette, Check, Code, MessageSquare, Globe, Layout, ShoppingBag, Plus, Trash2, ShoppingCart, CreditCard as CreditCardIcon,
   ShieldCheck, Truck, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Image as ImageIcon, User, Flame, Gift, Tag,
-  Store, Megaphone, Users, Sparkles,
+  Store, Megaphone, Users, Sparkles, Link2, Shield,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
