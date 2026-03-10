@@ -10,7 +10,7 @@ import { lojaProductsApi, lojistaApi, muxApi } from '@/services/saas-api';
 import { calculateAppmaxInstallments, type InstallmentConfig } from '@/utils/installments';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info, Video, AlertTriangle } from 'lucide-react';
+import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Users, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info, Video, AlertTriangle, ShoppingBag } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
@@ -1344,11 +1344,11 @@ const LojaProdutos = () => {
 
             {/* ══════════ TAB EXTRAS ══════════ */}
             <TabsContent value="extras" className="space-y-4">
-              <Accordion type="multiple" defaultValue={['escassez', 'social', 'upsell']}>
+              <Accordion type="multiple">
 
                 {/* ── Acordeão 1: Gatilhos de Escassez ── */}
                 <AccordionItem value="escassez">
-                  <AccordionTrigger className="text-base font-semibold">⚡ Gatilhos de Escassez</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><Zap className="w-4 h-4 mr-2 text-foreground" />Gatilhos de Escassez</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1439,7 +1439,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 2: Prova Social ── */}
                 <AccordionItem value="social">
-                  <AccordionTrigger className="text-base font-semibold">👥 Prova Social</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><Users className="w-4 h-4 mr-2 text-foreground" />Prova Social</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Pessoas Vendo Agora */}
@@ -1485,7 +1485,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 3: Upsell e Exibição ── */}
                 <AccordionItem value="upsell">
-                  <AccordionTrigger className="text-base font-semibold">🛒 Upsell e Exibição</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><ShoppingBag className="w-4 h-4 mr-2 text-foreground" />Upsell e Exibição</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Badge da Imagem */}
@@ -1586,7 +1586,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 4: Vídeos (Shoppertainment) ── */}
                 <AccordionItem value="videos">
-                  <AccordionTrigger className="text-base font-semibold">🎥 Vídeos (Shoppertainment)</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><Video className="w-4 h-4 mr-2 text-foreground" />Vídeos (Shoppertainment)</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Check if Mux is active */}
