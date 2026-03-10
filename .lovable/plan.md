@@ -1,23 +1,78 @@
+## Diagnóstico da Cobrança Dupla
 
+### O que aconteceu (cronologia reconstruída)
 
-## Refatorar Menu Mobile — UX/UI
+1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
+2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
+3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
 
-### Arquivo: `src/components/LojaLayout.tsx`
+### Causa raiz
 
-**1. Import (linha 6):** Substituir `ChevronDown` por `Plus, Minus`
+O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
 
-```tsx
-import { ..., Menu, Plus, Minus } from 'lucide-react';
+Isso acontece em **dois lugares** do código:
+- `processarCronTaxas()` (linha ~370 de `stripe.js`)
+- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+
+### Correção
+
+Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+
+**Arquivo:** `lib/services/assinaturas/stripe.js`
+
+1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
+2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+
+Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+
+### Bug secundário (menor)
+
+O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+
+---
+
+## Páginas de Categoria — Implementação Completa ✅
+
+### Arquivos modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Category.js` | +campo `banner` (Mixed) |
+| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
+| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
+| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
+| API | `api/categorias.js` | PUT aceita campo `banner` |
+| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
+| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
+| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
+| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
+| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
+| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
+| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
+| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+
+## Construtor de Navegação Visual (Menu Builder) ✅
+
+### Arquivos Modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
+| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
+| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
+| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
+| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
+
+### Estrutura do MenuItemConfig
+```ts
+{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
 ```
 
-**2. Menu mobile (linhas 1046-1095):** Reescrever o bloco `<Sheet>` inteiro:
-
-- Largura maior: `w-[300px]`
-- Items com `border-b border-border/50`
-- Link com `flex-1 py-4 pl-4 text-base font-semibold text-foreground`
-- CollapsibleTrigger com `px-6 py-4` (hitbox gigante) e ícones `Plus`/`Minus` com `strokeWidth={2.5}` alternados via `group-data-[state=open]:hidden` / `hidden group-data-[state=open]:block`
-- Subcategorias com `py-3 pl-8 text-base font-medium text-foreground` (sem cinza)
-- Items sem filhos: `py-4 pl-4 text-base font-semibold text-foreground border-b border-border/50`
-
-Estrutura JSX conforme solicitado pelo usuário, usando `<Collapsible className="group">` para controlar ícones via data-attributes do Radix.
-
+### Funcionalidades
+- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
+- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
+- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
+- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
+- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
