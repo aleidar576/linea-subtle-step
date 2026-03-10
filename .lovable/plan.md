@@ -1,5 +1,3 @@
-
-
 ## Diagnóstico da Cobrança Dupla
 
 ### O que aconteceu (cronologia reconstruída)
@@ -53,3 +51,28 @@ O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada co
 | Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
 | Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
 | Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+
+## Construtor de Navegação Visual (Menu Builder) ✅
+
+### Arquivos Modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
+| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
+| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
+| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
+| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
+
+### Estrutura do MenuItemConfig
+```ts
+{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
+```
+
+### Funcionalidades
+- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
+- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
+- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
+- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
+- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
