@@ -1024,7 +1024,10 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
                       ) : (
                         <NavigationMenuItem key={item.id}>
                           <Link to={item.url}>
-                            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                            <NavigationMenuLink className={cn(
+                              navigationMenuTriggerStyle(),
+                              location.pathname === item.url && 'font-semibold border-primary'
+                            )}>
                               {item.label}
                             </NavigationMenuLink>
                           </Link>
