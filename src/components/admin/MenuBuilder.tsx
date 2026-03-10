@@ -232,7 +232,7 @@ export default function MenuBuilder({ value, onChange, categories, pages }: Menu
 // ── Recursive item card ──
 function MenuItemCard({
   item, depth, index, total, onRemove, onUpdateLabel, onMove, onAddChild,
-}: {
+}: React.ComponentProps<'div'> & {
   item: MenuItemConfig;
   depth: number;
   index: number;
