@@ -71,8 +71,9 @@ const LojaSchema = new mongoose.Schema({
     integracoes: {
       type: mongoose.Schema.Types.Mixed,
       default: {
-        melhor_envio: { ativo: false, token: '', sandbox: true },
+      melhor_envio: { ativo: false, token: '', sandbox: true },
         kangu: { ativo: false, token: '' },
+        mux: { ativo: { type: Boolean, default: false } },
       },
     },
   },

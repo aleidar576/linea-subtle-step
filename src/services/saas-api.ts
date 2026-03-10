@@ -116,9 +116,14 @@ export interface LojaIntegracaoKangu {
   token: string;
 }
 
+export interface LojaIntegracaoMux {
+  ativo: boolean;
+}
+
 export interface LojaIntegracoes {
   melhor_envio?: LojaIntegracaoMelhorEnvio;
   kangu?: LojaIntegracaoKangu;
+  mux?: LojaIntegracaoMux;
 }
 
 export interface Loja {
@@ -477,6 +482,8 @@ export interface LojaProduct {
   pessoas_vendo?: { ativo: boolean; min: number; max: number };
   cross_sell?: { modo: string; categoria_manual_id: string | null };
   dimensoes?: { peso: number; altura: number; largura: number; comprimento: number };
+  videos?: { playback_id: string; asset_id: string }[];
+  video_layout?: 'stories' | 'carousel' | 'auto';
 }
 
 export interface CategoryBanner {
@@ -711,7 +718,7 @@ export const lojaCategoriesApi = {
   list: (lojaId: string) => request<CategoriesResponse>(`/categorias?loja_id=${lojaId}`),
   create: (data: { nome: string; loja_id: string; parent_id?: string }) =>
     request<LojaCategory>('/categorias', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { nome?: string; slug?: string; ordem?: number }) =>
+  update: (id: string, data: { nome?: string; slug?: string; ordem?: number; banner?: any }) =>
     request<LojaCategory>(`/categorias?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ success: boolean; produtos_movidos: number }>(`/categorias?id=${id}`, { method: 'DELETE' }),
@@ -965,6 +972,17 @@ export const pixelsApi = {
     request<TrackingPixelData>(`/loja-extras?scope=pixel&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ success: boolean }>(`/loja-extras?scope=pixel&id=${id}`, { method: 'DELETE' }),
+};
+
+// === Mux Video API ===
+
+export const muxApi = {
+  getUploadUrl: (lojaId: string) =>
+    request<{ upload_url: string; upload_id: string }>(`/loja-extras?scope=mux-upload&loja_id=${lojaId}`, { method: 'POST' }),
+  getStatus: (lojaId: string, uploadId: string) =>
+    request<{ status: string; asset_id: string | null; playback_id: string | null }>(`/loja-extras?scope=mux-status&loja_id=${lojaId}&upload_id=${uploadId}`),
+  deleteVideo: (lojaId: string, assetId: string, productId?: string) =>
+    request<{ success: boolean }>(`/loja-extras?scope=mux-delete&loja_id=${lojaId}&asset_id=${assetId}${productId ? `&product_id=${productId}` : ''}`, { method: 'DELETE' }),
 };
 
 // === Páginas API ===

@@ -76,3 +76,28 @@ O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada co
 - Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
 - Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
 - Fallback: Se menu vazio, renderiza categorias ativas automaticamente
+
+## Fase 1: Shoppertainment (Video Commerce) ✅
+
+### Arquivos Modificados/Criados
+
+| Camada | Arquivo | Mudança |
+|---|---|---|
+| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
+| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
+| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
+| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
+| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
+| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
+| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
+| Dep | `package.json` | +`@mux/mux-node` |
+
+### Fluxo de Upload (com correções anti-falha)
+
+1. Lojista clica "Selecionar Vídeo" → valida 50MB
+2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
+3. Frontend faz PUT direto na URL do Mux (Direct Upload)
+4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
+5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
+6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
+7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)

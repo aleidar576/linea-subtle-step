@@ -123,6 +123,13 @@ const ProductSchema = new mongoose.Schema({
     default: { modo: 'aleatorio', categoria_manual_id: null },
   },
 
+  // Vídeos (Shoppertainment / Video Commerce)
+  videos: [{
+    playback_id: { type: String, required: true },
+    asset_id: { type: String, required: true },
+  }],
+  video_layout: { type: String, default: 'auto', enum: ['stories', 'carousel', 'auto'] },
+
   // Dimensões físicas (para cálculo de frete via Correios/Melhor Envio)
   dimensoes: {
     peso: { type: Number, default: 0 },

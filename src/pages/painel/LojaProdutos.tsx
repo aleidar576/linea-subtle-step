@@ -6,11 +6,13 @@ import { useLojaCategories } from '@/hooks/useLojaCategories';
 import { useFretes } from '@/hooks/useLojaExtras';
 import { settingsApi } from '@/services/api';
 import type { LojaProduct, Variacao, AvaliacaoManual, AvaliacoesConfig, FreteConfig, OfertaRelampago, RegraFrete } from '@/services/saas-api';
-import { lojaProductsApi, lojistaApi } from '@/services/saas-api';
+import { lojaProductsApi, lojistaApi, muxApi } from '@/services/saas-api';
 import { calculateAppmaxInstallments, type InstallmentConfig } from '@/utils/installments';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info } from 'lucide-react';
+import { Package, Plus, Search, Upload, Download, Trash2, Edit, ToggleLeft, ToggleRight, Loader2, X, ImageIcon, ArrowLeft, FileJson, FileSpreadsheet, Zap, Flame, ShoppingCart, GripVertical, Check, Link as LinkIcon, User, Columns3, CheckSquare, Copy, MoreHorizontal, Power, ChevronDown, Settings, Star, Weight, Ruler, Info, Video, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -112,6 +114,8 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
     social_proof_gender: 'desativado',
     badge_imagem: null,
     dimensoes: { peso: 0, altura: 0, largura: 0, comprimento: 0 },
+    videos: [],
+    video_layout: 'auto',
   };
 }
 
@@ -271,6 +275,9 @@ const LojaProdutos = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<string[]>([]);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProcessing, setVideoProcessing] = useState<{ upload_id: string; progress: number } | null>(null);
+  const [videoDeleteAssetId, setVideoDeleteAssetId] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
@@ -1336,247 +1343,449 @@ const LojaProdutos = () => {
             </TabsContent>
 
             {/* ══════════ TAB EXTRAS ══════════ */}
-            <TabsContent value="extras" className="space-y-6">
-              {/* Card 1: Gatilhos de Escassez */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Gatilhos de Escassez</CardTitle>
-                  <CardDescription>Parcelas, vendas fake e oferta relâmpago.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Parcelas do produto</Label>
-                      <Select value={editingProduct.parcelas_fake || '0'} onValueChange={v => setField('parcelas_fake', v === '0' ? null : v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Não exibir</SelectItem>
-                          {(() => {
-                            const price = editingProduct.price || 0;
-                            const maxN = installmentCfg?.max_installments || 12;
-                            const options = price > 0 && installmentCfg
-                              ? calculateAppmaxInstallments(price, installmentCfg)
-                              : Array.from({ length: maxN }, (_, i) => ({
-                                  installment: i + 1,
-                                  installmentPrice: price > 0 ? Math.ceil(price / (i + 1)) : 0,
-                                  isFree: true,
-                                }));
-                            return options.map(opt => (
-                              <SelectItem key={opt.installment} value={String(opt.installment)}>
-                                {opt.installment}x {price > 0 ? `de ${(opt.installmentPrice / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}{!opt.isFree ? ' (com juros)' : ''}
-                              </SelectItem>
-                            ));
-                          })()}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Vendas fake (número)</Label>
-                      <Input type="number" value={editingProduct.vendas_fake || 0} onChange={e => setField('vendas_fake', Number(e.target.value))} />
-                    </div>
-                  </div>
+            <TabsContent value="extras" className="space-y-4">
+              <Accordion type="multiple" defaultValue={['escassez', 'social', 'upsell']}>
 
-                  {/* Oferta Relâmpago */}
-                  <div className="rounded-lg border border-border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-semibold">Oferta Relâmpago</Label>
-                      <Switch checked={oferta.ativo} onCheckedChange={v => setOferta('ativo', v)} />
-                    </div>
-                    {oferta.ativo && (
-                      <div className="space-y-3">
+                {/* ── Acordeão 1: Gatilhos de Escassez ── */}
+                <AccordionItem value="escassez">
+                  <AccordionTrigger className="text-base font-semibold">⚡ Gatilhos de Escassez</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div>
-                          <Label className="text-xs">Título da Oferta</Label>
-                          <Input value={oferta.titulo || ''} onChange={e => setOferta('titulo', e.target.value)} placeholder="Oferta Relâmpago" />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Ícone da Oferta</Label>
-                          <Select value={oferta.icone || 'zap'} onValueChange={v => setOferta('icone', v)}>
+                          <Label>Parcelas do produto</Label>
+                          <Select value={editingProduct.parcelas_fake || '0'} onValueChange={v => setField('parcelas_fake', v === '0' ? null : v)}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="zap"><span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Raio</span></SelectItem>
-                              <SelectItem value="flame"><span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Fogo</span></SelectItem>
-                              <SelectItem value="shopping-cart"><span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Carrinho</span></SelectItem>
+                              <SelectItem value="0">Não exibir</SelectItem>
+                              {(() => {
+                                const price = editingProduct.price || 0;
+                                const maxN = installmentCfg?.max_installments || 12;
+                                const options = price > 0 && installmentCfg
+                                  ? calculateAppmaxInstallments(price, installmentCfg)
+                                  : Array.from({ length: maxN }, (_, i) => ({
+                                      installment: i + 1,
+                                      installmentPrice: price > 0 ? Math.ceil(price / (i + 1)) : 0,
+                                      isFree: true,
+                                    }));
+                                return options.map(opt => (
+                                  <SelectItem key={opt.installment} value={String(opt.installment)}>
+                                    {opt.installment}x {price > 0 ? `de ${(opt.installmentPrice / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}{!opt.isFree ? ' (com juros)' : ''}
+                                  </SelectItem>
+                                ));
+                              })()}
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs">Data/Hora de Término</Label>
-                            <Input type="datetime-local" value={oferta.data_termino || ''} onChange={e => setOferta('data_termino', e.target.value || null)} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Estoque da Campanha</Label>
-                            <Input type="number" min="0" value={oferta.estoque_campanha || 0} onChange={e => setOferta('estoque_campanha', Number(e.target.value))} />
-                          </div>
-                        </div>
-                        <div className="border-t border-border pt-3">
-                          <Label className="text-sm font-medium">Tempo Dinâmico (Evergreen)</Label>
-                          <p className="text-xs text-muted-foreground mt-1 mb-2">Se a data de término estiver vazia, o cronômetro evergreen será usado.</p>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs">Minutos</Label>
-                              <Input type="number" min="0" value={oferta.evergreen_minutos || 0} onChange={e => setOferta('evergreen_minutos', Number(e.target.value))} />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Segundos (0-59)</Label>
-                              <Input type="number" min="0" max="59" value={oferta.evergreen_segundos || 0} onChange={e => setOferta('evergreen_segundos', Math.min(59, Math.max(0, Number(e.target.value))))} />
-                            </div>
-                          </div>
+                        <div>
+                          <Label>Vendas fake (número)</Label>
+                          <Input type="number" value={editingProduct.vendas_fake || 0} onChange={e => setField('vendas_fake', Number(e.target.value))} />
                         </div>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Card 2: Prova Social */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Prova Social</CardTitle>
-                  <CardDescription>Pessoas vendo agora e toasts de compras.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Pessoas Vendo Agora */}
-                  <div className="rounded-lg border border-border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-semibold">Pessoas Vendo Agora</Label>
-                        <p className="text-xs text-muted-foreground">Exibe "🔥 X pessoas vendo agora" na página.</p>
+                      {/* Oferta Relâmpago */}
+                      <div className="rounded-lg border border-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">Oferta Relâmpago</Label>
+                          <Switch checked={oferta.ativo} onCheckedChange={v => setOferta('ativo', v)} />
+                        </div>
+                        {oferta.ativo && (
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-xs">Título da Oferta</Label>
+                              <Input value={oferta.titulo || ''} onChange={e => setOferta('titulo', e.target.value)} placeholder="Oferta Relâmpago" />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Ícone da Oferta</Label>
+                              <Select value={oferta.icone || 'zap'} onValueChange={v => setOferta('icone', v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="zap"><span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Raio</span></SelectItem>
+                                  <SelectItem value="flame"><span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Fogo</span></SelectItem>
+                                  <SelectItem value="shopping-cart"><span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Carrinho</span></SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Data/Hora de Término</Label>
+                                <Input type="datetime-local" value={oferta.data_termino || ''} onChange={e => setOferta('data_termino', e.target.value || null)} />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Estoque da Campanha</Label>
+                                <Input type="number" min="0" value={oferta.estoque_campanha || 0} onChange={e => setOferta('estoque_campanha', Number(e.target.value))} />
+                              </div>
+                            </div>
+                            <div className="border-t border-border pt-3">
+                              <Label className="text-sm font-medium">Tempo Dinâmico (Evergreen)</Label>
+                              <p className="text-xs text-muted-foreground mt-1 mb-2">Se a data de término estiver vazia, o cronômetro evergreen será usado.</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <Label className="text-xs">Minutos</Label>
+                                  <Input type="number" min="0" value={oferta.evergreen_minutos || 0} onChange={e => setOferta('evergreen_minutos', Number(e.target.value))} />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Segundos (0-59)</Label>
+                                  <Input type="number" min="0" max="59" value={oferta.evergreen_segundos || 0} onChange={e => setOferta('evergreen_segundos', Math.min(59, Math.max(0, Number(e.target.value))))} />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <Switch checked={editingProduct.pessoas_vendo?.ativo ?? false} onCheckedChange={v => setField('pessoas_vendo', { ...(editingProduct.pessoas_vendo || { ativo: false, min: 10, max: 50 }), ativo: v })} />
                     </div>
-                    {editingProduct.pessoas_vendo?.ativo && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-xs">Mínimo</Label>
-                          <Input type="number" min="1" value={editingProduct.pessoas_vendo.min} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, min: Number(e.target.value) })} />
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* ── Acordeão 2: Prova Social ── */}
+                <AccordionItem value="social">
+                  <AccordionTrigger className="text-base font-semibold">👥 Prova Social</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 pt-2">
+                      {/* Pessoas Vendo Agora */}
+                      <div className="rounded-lg border border-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="font-semibold">Pessoas Vendo Agora</Label>
+                            <p className="text-xs text-muted-foreground">Exibe "🔥 X pessoas vendo agora" na página.</p>
+                          </div>
+                          <Switch checked={editingProduct.pessoas_vendo?.ativo ?? false} onCheckedChange={v => setField('pessoas_vendo', { ...(editingProduct.pessoas_vendo || { ativo: false, min: 10, max: 50 }), ativo: v })} />
                         </div>
-                        <div>
-                          <Label className="text-xs">Máximo</Label>
-                          <Input type="number" min="1" value={editingProduct.pessoas_vendo.max} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, max: Number(e.target.value) })} />
-                        </div>
+                        {editingProduct.pessoas_vendo?.ativo && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-xs">Mínimo</Label>
+                              <Input type="number" min="1" value={editingProduct.pessoas_vendo.min} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, min: Number(e.target.value) })} />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Máximo</Label>
+                              <Input type="number" min="1" value={editingProduct.pessoas_vendo.max} onChange={e => setField('pessoas_vendo', { ...editingProduct.pessoas_vendo!, max: Number(e.target.value) })} />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Social Proof Gender */}
-                  <div className="rounded-lg border border-border p-4 space-y-3">
-                    <Label className="font-semibold">Social Proof (Toast de Compras)</Label>
-                    <p className="text-xs text-muted-foreground">Exibe notificações "🔥 Fulano acabou de comprar" a cada 15-45s.</p>
-                    <Select value={editingProduct.social_proof_gender || 'desativado'} onValueChange={v => setField('social_proof_gender', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="desativado">Desativado</SelectItem>
-                        <SelectItem value="feminino">Feminino</SelectItem>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="misto">Misto</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Card 3: Upsell e Exibição */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Upsell e Exibição</CardTitle>
-                  <CardDescription>Badge, cross-sell, vantagens e proteção do cliente.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Badge da Imagem */}
-                  <div className="rounded-lg border border-border p-4 space-y-2">
-                    <Label className="font-semibold">Badge da Imagem (Card do Produto)</Label>
-                    <p className="text-xs text-muted-foreground">Texto curto sobre a foto nos cards. Ex: "-55%", "🔥 Em alta"</p>
-                    <Input placeholder='Ex: -55%, 🔥 Em alta' value={editingProduct.badge_imagem || ''} onChange={e => setField('badge_imagem', e.target.value || null)} />
-                  </div>
-
-                  {/* Cross-Sell */}
-                  <div className="rounded-lg border border-border p-4 space-y-3">
-                    <Label className="font-semibold">Cross-Sell (Você Também Pode Gostar)</Label>
-                    <Select value={editingProduct.cross_sell?.modo || 'aleatorio'} onValueChange={v => setField('cross_sell', { ...(editingProduct.cross_sell || { modo: 'aleatorio', categoria_manual_id: null }), modo: v, ...(v !== 'categoria_manual' ? { categoria_manual_id: null } : {}) })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="aleatorio">Aleatórios da loja</SelectItem>
-                        <SelectItem value="mesma_categoria">Mesma categoria</SelectItem>
-                        <SelectItem value="categoria_manual">Selecionar categoria manual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {editingProduct.cross_sell?.modo === 'categoria_manual' && (
-                      <div>
-                        <Label className="text-xs">Categoria</Label>
-                        <Select value={editingProduct.cross_sell.categoria_manual_id || ''} onValueChange={v => setField('cross_sell', { ...editingProduct.cross_sell!, categoria_manual_id: v || null })}>
-                          <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                      {/* Social Proof Gender */}
+                      <div className="rounded-lg border border-border p-4 space-y-3">
+                        <Label className="font-semibold">Social Proof (Toast de Compras)</Label>
+                        <p className="text-xs text-muted-foreground">Exibe notificações "🔥 Fulano acabou de comprar" a cada 15-45s.</p>
+                        <Select value={editingProduct.social_proof_gender || 'desativado'} onValueChange={v => setField('social_proof_gender', v)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {categories.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
+                            <SelectItem value="desativado">Desativado</SelectItem>
+                            <SelectItem value="feminino">Feminino</SelectItem>
+                            <SelectItem value="masculino">Masculino</SelectItem>
+                            <SelectItem value="misto">Misto</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Vantagens do Produto */}
-                  <div className="rounded-lg border border-border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-semibold">Vantagens do Produto</Label>
-                        <p className="text-xs text-muted-foreground">Até 6 características curtas</p>
-                      </div>
-                      <Switch checked={editingProduct.vantagens?.ativo ?? false} onCheckedChange={v => setField('vantagens', { ...(editingProduct.vantagens || { ativo: false, itens: [] }), ativo: v })} />
                     </div>
-                    {editingProduct.vantagens?.ativo && (
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-xs">Título da seção</Label>
-                          <Input value={(editingProduct as any).vantagens_titulo || ''} onChange={e => setField('vantagens_titulo', e.target.value || null)} placeholder="Vantagens do Produto" />
-                        </div>
-                        {(editingProduct.vantagens.itens || []).map((item, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                            <Input value={item} onChange={e => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens[i] = e.target.value; setField('vantagens', { ...editingProduct.vantagens!, itens }); }} placeholder={`Vantagem ${i + 1}`} />
-                            <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens.splice(i, 1); setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><X className="h-3 w-3" /></Button>
-                          </div>
-                        ))}
-                        {(editingProduct.vantagens.itens?.length || 0) < 6 && (
-                          <Button variant="outline" size="sm" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || []), '']; setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-                  {/* Proteção do Cliente */}
-                  <div className="rounded-lg border border-border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-semibold">Proteção do Cliente</Label>
-                        <p className="text-xs text-muted-foreground">Trust badges (Ex: "Devolução Gratuita")</p>
+                {/* ── Acordeão 3: Upsell e Exibição ── */}
+                <AccordionItem value="upsell">
+                  <AccordionTrigger className="text-base font-semibold">🛒 Upsell e Exibição</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 pt-2">
+                      {/* Badge da Imagem */}
+                      <div className="rounded-lg border border-border p-4 space-y-2">
+                        <Label className="font-semibold">Badge da Imagem (Card do Produto)</Label>
+                        <p className="text-xs text-muted-foreground">Texto curto sobre a foto nos cards. Ex: "-55%", "🔥 Em alta"</p>
+                        <Input placeholder='Ex: -55%, 🔥 Em alta' value={editingProduct.badge_imagem || ''} onChange={e => setField('badge_imagem', e.target.value || null)} />
                       </div>
-                      <Switch checked={editingProduct.protecao_cliente?.ativo ?? false} onCheckedChange={v => setField('protecao_cliente', { ...(editingProduct.protecao_cliente || { ativo: false, itens: [] }), ativo: v })} />
-                    </div>
-                    {editingProduct.protecao_cliente?.ativo && (
-                      <div className="space-y-2">
-                        {(editingProduct.protecao_cliente.itens || []).map((item, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <Select value={item.icone || 'shield'} onValueChange={v => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens[i] = { ...itens[i], icone: v }; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}>
-                              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+
+                      {/* Cross-Sell */}
+                      <div className="rounded-lg border border-border p-4 space-y-3">
+                        <Label className="font-semibold">Cross-Sell (Você Também Pode Gostar)</Label>
+                        <Select value={editingProduct.cross_sell?.modo || 'aleatorio'} onValueChange={v => setField('cross_sell', { ...(editingProduct.cross_sell || { modo: 'aleatorio', categoria_manual_id: null }), modo: v, ...(v !== 'categoria_manual' ? { categoria_manual_id: null } : {}) })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="aleatorio">Aleatórios da loja</SelectItem>
+                            <SelectItem value="mesma_categoria">Mesma categoria</SelectItem>
+                            <SelectItem value="categoria_manual">Selecionar categoria manual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {editingProduct.cross_sell?.modo === 'categoria_manual' && (
+                          <div>
+                            <Label className="text-xs">Categoria</Label>
+                            <Select value={editingProduct.cross_sell.categoria_manual_id || ''} onValueChange={v => setField('cross_sell', { ...editingProduct.cross_sell!, categoria_manual_id: v || null })}>
+                              <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="shield">🛡️ Escudo</SelectItem>
-                                <SelectItem value="truck">🚚 Entrega</SelectItem>
-                                <SelectItem value="lock">🔒 Seguro</SelectItem>
-                                <SelectItem value="refresh">🔄 Troca</SelectItem>
+                                {categories.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
                               </SelectContent>
                             </Select>
-                            <Input className="flex-1" value={item.texto} onChange={e => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens[i] = { ...itens[i], texto: e.target.value }; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }} placeholder="Devolução Gratuita" />
-                            <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens.splice(i, 1); setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}><X className="h-3 w-3" /></Button>
                           </div>
-                        ))}
-                        {(editingProduct.protecao_cliente.itens?.length || 0) < 4 && (
-                          <Button variant="outline" size="sm" onClick={() => { const itens = [...(editingProduct.protecao_cliente?.itens || []), { icone: 'shield', texto: '' }]; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
                         )}
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+
+                      {/* Vantagens do Produto */}
+                      <div className="rounded-lg border border-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="font-semibold">Vantagens do Produto</Label>
+                            <p className="text-xs text-muted-foreground">Até 6 características curtas</p>
+                          </div>
+                          <Switch checked={editingProduct.vantagens?.ativo ?? false} onCheckedChange={v => setField('vantagens', { ...(editingProduct.vantagens || { ativo: false, itens: [] }), ativo: v })} />
+                        </div>
+                        {editingProduct.vantagens?.ativo && (
+                          <div className="space-y-2">
+                            <div>
+                              <Label className="text-xs">Título da seção</Label>
+                              <Input value={(editingProduct as any).vantagens_titulo || ''} onChange={e => setField('vantagens_titulo', e.target.value || null)} placeholder="Vantagens do Produto" />
+                            </div>
+                            {(editingProduct.vantagens.itens || []).map((item, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                                <Input value={item} onChange={e => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens[i] = e.target.value; setField('vantagens', { ...editingProduct.vantagens!, itens }); }} placeholder={`Vantagem ${i + 1}`} />
+                                <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens.splice(i, 1); setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><X className="h-3 w-3" /></Button>
+                              </div>
+                            ))}
+                            {(editingProduct.vantagens.itens?.length || 0) < 6 && (
+                              <Button variant="outline" size="sm" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || []), '']; setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Proteção do Cliente */}
+                      <div className="rounded-lg border border-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="font-semibold">Proteção do Cliente</Label>
+                            <p className="text-xs text-muted-foreground">Trust badges (Ex: "Devolução Gratuita")</p>
+                          </div>
+                          <Switch checked={editingProduct.protecao_cliente?.ativo ?? false} onCheckedChange={v => setField('protecao_cliente', { ...(editingProduct.protecao_cliente || { ativo: false, itens: [] }), ativo: v })} />
+                        </div>
+                        {editingProduct.protecao_cliente?.ativo && (
+                          <div className="space-y-2">
+                            {(editingProduct.protecao_cliente.itens || []).map((item, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <Select value={item.icone || 'shield'} onValueChange={v => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens[i] = { ...itens[i], icone: v }; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}>
+                                  <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="shield">🛡️ Escudo</SelectItem>
+                                    <SelectItem value="truck">🚚 Entrega</SelectItem>
+                                    <SelectItem value="lock">🔒 Seguro</SelectItem>
+                                    <SelectItem value="refresh">🔄 Troca</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input className="flex-1" value={item.texto} onChange={e => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens[i] = { ...itens[i], texto: e.target.value }; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }} placeholder="Devolução Gratuita" />
+                                <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.protecao_cliente?.itens || [])]; itens.splice(i, 1); setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}><X className="h-3 w-3" /></Button>
+                              </div>
+                            ))}
+                            {(editingProduct.protecao_cliente.itens?.length || 0) < 4 && (
+                              <Button variant="outline" size="sm" onClick={() => { const itens = [...(editingProduct.protecao_cliente?.itens || []), { icone: 'shield', texto: '' }]; setField('protecao_cliente', { ...editingProduct.protecao_cliente!, itens }); }}><Plus className="h-3 w-3 mr-1" /> Adicionar</Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* ── Acordeão 4: Vídeos (Shoppertainment) ── */}
+                <AccordionItem value="videos">
+                  <AccordionTrigger className="text-base font-semibold">🎥 Vídeos (Shoppertainment)</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 pt-2">
+                      {/* Check if Mux is active */}
+                      {!loja?.configuracoes?.integracoes?.mux?.ativo ? (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            O Video Commerce está desativado. Ative o recurso em{' '}
+                            <strong>Integrações → Mux (Video Streaming)</strong> para adicionar vídeos aos seus produtos.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <>
+                          {/* Video Layout Select */}
+                          <div>
+                            <Label>Layout dos vídeos na página do produto</Label>
+                            <Select value={editingProduct.video_layout || 'auto'} onValueChange={v => setField('video_layout', v)}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="auto">Automático (Padrão)</SelectItem>
+                                <SelectItem value="stories">Stories (Bolinhas)</SelectItem>
+                                <SelectItem value="carousel">Carrossel de Cards</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Upload Button */}
+                          <div className="rounded-lg border-2 border-dashed border-border p-6 text-center space-y-3">
+                            <Video className="h-8 w-8 mx-auto text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Upload de Vídeo</p>
+                              <p className="text-xs text-muted-foreground">Recomendado: Vídeos na vertical (Retrato 9:16), formato MP4. Máximo de 50MB.</p>
+                            </div>
+                            <input
+                              type="file"
+                              accept="video/mp4,video/quicktime,video/webm"
+                              className="hidden"
+                              id="video-upload-input"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                if (file.size > 50 * 1024 * 1024) {
+                                  toast({ title: 'Arquivo muito grande', description: 'O vídeo deve ter no máximo 50MB.', variant: 'destructive' });
+                                  return;
+                                }
+                                setVideoUploading(true);
+                                try {
+                                  // 1. Get upload URL from Mux
+                                  const { upload_url, upload_id } = await muxApi.getUploadUrl(id!);
+
+                                  // 2. PUT file directly to Mux
+                                  await fetch(upload_url, {
+                                    method: 'PUT',
+                                    body: file,
+                                    headers: { 'Content-Type': file.type },
+                                  });
+
+                                  // 3. Start polling for status
+                                  setVideoUploading(false);
+                                  setVideoProcessing({ upload_id, progress: 0 });
+
+                                  const poll = async () => {
+                                    let attempts = 0;
+                                    const maxAttempts = 120; // 4 min max
+                                    while (attempts < maxAttempts) {
+                                      await new Promise(r => setTimeout(r, 3000));
+                                      attempts++;
+                                      try {
+                                        const status = await muxApi.getStatus(id!, upload_id);
+                                        setVideoProcessing(prev => prev ? { ...prev, progress: Math.min(95, attempts * 3) } : null);
+
+                                        if (status.status === 'ready' && status.playback_id && status.asset_id) {
+                                          // Add to local form state (NOT saved to DB yet)
+                                          const currentVideos = editingProduct.videos || [];
+                                          setField('videos', [...currentVideos, { playback_id: status.playback_id, asset_id: status.asset_id }]);
+                                          setVideoProcessing(null);
+                                          toast({ title: 'Vídeo processado!', description: 'Clique em "Salvar Produto" para persistir.' });
+                                          return;
+                                        }
+                                        if (status.status === 'errored') {
+                                          setVideoProcessing(null);
+                                          toast({ title: 'Erro no processamento', description: 'O vídeo não pôde ser processado pelo Mux.', variant: 'destructive' });
+                                          return;
+                                        }
+                                      } catch {
+                                        // Retry silently
+                                      }
+                                    }
+                                    setVideoProcessing(null);
+                                    toast({ title: 'Tempo esgotado', description: 'O processamento demorou demais. Tente novamente.', variant: 'destructive' });
+                                  };
+                                  poll();
+                                } catch (err: any) {
+                                  setVideoUploading(false);
+                                  toast({ title: 'Erro no upload', description: err.message, variant: 'destructive' });
+                                }
+                                e.target.value = '';
+                              }}
+                            />
+                            <Button
+                              variant="outline"
+                              disabled={videoUploading || !!videoProcessing}
+                              onClick={() => document.getElementById('video-upload-input')?.click()}
+                            >
+                              {videoUploading ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
+                              ) : (
+                                <><Upload className="h-4 w-4 mr-2" /> Selecionar Vídeo</>
+                              )}
+                            </Button>
+                          </div>
+
+                          {/* Processing Indicator */}
+                          {videoProcessing && (
+                            <div className="rounded-lg border border-border p-4 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                <span className="text-sm font-medium">Processando vídeo...</span>
+                              </div>
+                              <Progress value={videoProcessing.progress} className="h-2" />
+                              <p className="text-xs text-muted-foreground">Aguarde enquanto o vídeo é processado na nuvem. Isso pode levar alguns segundos.</p>
+                            </div>
+                          )}
+
+                          {/* Video Grid */}
+                          {(editingProduct.videos || []).length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Vídeos ({(editingProduct.videos || []).length})</Label>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {(editingProduct.videos || []).map((video, idx) => (
+                                  <div key={video.asset_id} className="relative group rounded-lg overflow-hidden border border-border">
+                                    <img
+                                      src={`https://image.mux.com/${video.playback_id}/thumbnail.jpg?width=320&height=180&fit_mode=smartcrop`}
+                                      alt={`Vídeo ${idx + 1}`}
+                                      className="w-full aspect-video object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                      <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                                        onClick={() => setVideoDeleteAssetId(video.asset_id)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                    <div className="absolute bottom-1 left-1">
+                                      <Badge variant="secondary" className="text-[10px]">
+                                        <Video className="h-3 w-3 mr-1" /> {idx + 1}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Delete Video AlertDialog */}
+                          <AlertDialog open={!!videoDeleteAssetId} onOpenChange={open => { if (!open) setVideoDeleteAssetId(null); }}>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir vídeo permanentemente?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza? Esta ação removerá o vídeo permanentemente da nuvem. Não será possível recuperá-lo.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={async () => {
+                                    const assetId = videoDeleteAssetId;
+                                    if (!assetId) return;
+                                    setVideoDeleteAssetId(null);
+                                    try {
+                                      // Delete from Mux cloud (pass product _id only if product is already saved in DB)
+                                      const productDbId = editingProduct._id;
+                                      await muxApi.deleteVideo(id!, assetId, productDbId);
+                                      // Remove from local state
+                                      const currentVideos = editingProduct.videos || [];
+                                      setField('videos', currentVideos.filter(v => v.asset_id !== assetId));
+                                      toast({ title: 'Vídeo excluído com sucesso!' });
+                                    } catch (err: any) {
+                                      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+                                    }
+                                  }}
+                                >
+                                  Excluir permanentemente
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+              </Accordion>
             </TabsContent>
           </Tabs>
         </div>
