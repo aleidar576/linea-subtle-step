@@ -718,7 +718,7 @@ export const lojaCategoriesApi = {
   list: (lojaId: string) => request<CategoriesResponse>(`/categorias?loja_id=${lojaId}`),
   create: (data: { nome: string; loja_id: string; parent_id?: string }) =>
     request<LojaCategory>('/categorias', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { nome?: string; slug?: string; ordem?: number }) =>
+  update: (id: string, data: { nome?: string; slug?: string; ordem?: number; banner?: any }) =>
     request<LojaCategory>(`/categorias?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
     request<{ success: boolean; produtos_movidos: number }>(`/categorias?id=${id}`, { method: 'DELETE' }),
