@@ -1348,7 +1348,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 1: Gatilhos de Escassez ── */}
                 <AccordionItem value="escassez">
-                  <AccordionTrigger className="text-base font-semibold justify-start gap-2"><Zap className="w-4 h-4 shrink-0 text-foreground" />Gatilhos de Escassez</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><span className="flex items-center gap-2"><Zap className="w-4 h-4 shrink-0 text-foreground" />Gatilhos de Escassez</span></AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
