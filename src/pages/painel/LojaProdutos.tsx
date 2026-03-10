@@ -1439,7 +1439,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 2: Prova Social ── */}
                 <AccordionItem value="social">
-                  <AccordionTrigger className="text-base font-semibold"><Users className="w-4 h-4 mr-2 text-foreground" />Prova Social</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold justify-start gap-2"><Users className="w-4 h-4 shrink-0 text-foreground" />Prova Social</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Pessoas Vendo Agora */}
