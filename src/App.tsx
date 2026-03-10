@@ -171,7 +171,7 @@ const SaaSApp = () => (
                     <Route path="tickets" element={<AdminTickets />} />
                     <Route path="configuracoes" element={<AdminConfigEmpresa />} />
                     <Route path="pacotes-comentarios" element={<AdminPacotesComentarios />} />
-                    <Route path="integracoes" element={<AdminGateways />} />
+                    <Route path="integracoes" element={<AdminIntegracoes />} />
                     <Route path="gateways" element={<AdminGateways />} />
                     <Route path="estatisticas" element={<AdminEstatisticas />} />
                   </Route>
