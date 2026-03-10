@@ -40,7 +40,7 @@ export default function ProductVideos({ videos, layout }: ProductVideosProps) {
   if (layout === 'stories' || layout === 'auto') {
     return (
       <div className="px-3 md:px-0 py-4">
-        <h3 className="text-base font-semibold text-foreground mb-3">🎥 Vídeos</h3>
+        <h2 className="text-xl font-bold text-foreground mb-4">Vídeos</h2>
         <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
           {videos.map((v, i) => (
             <button
