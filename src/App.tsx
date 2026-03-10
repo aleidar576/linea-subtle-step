@@ -70,6 +70,7 @@ import SegurancaConfirmacao from "./pages/SegurancaConfirmacao";
 // Loja Pública (Host-Based)
 import LojaLayoutComponent from "./components/LojaLayout";
 import LojaHome from "./pages/loja/LojaHome";
+import LojaCategoria from "./pages/loja/LojaCategoria";
 import LojaProduto from "./pages/loja/LojaProduto";
 import LojaCart from "./pages/loja/LojaCart";
 import LojaCheckout from "./pages/loja/LojaCheckout";
