@@ -116,9 +116,14 @@ export interface LojaIntegracaoKangu {
   token: string;
 }
 
+export interface LojaIntegracaoMux {
+  ativo: boolean;
+}
+
 export interface LojaIntegracoes {
   melhor_envio?: LojaIntegracaoMelhorEnvio;
   kangu?: LojaIntegracaoKangu;
+  mux?: LojaIntegracaoMux;
 }
 
 export interface Loja {
