@@ -683,6 +683,8 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   const [gatewayAtivo, setGatewayAtivo] = useState<string | null>(null);
   const [gatewayLoading, setGatewayLoading] = useState(true);
   const [installmentConfig, setInstallmentConfig] = useState<{ max_installments: number; free_installments: number; interest_rate_pp: number } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [fallbackCategories, setFallbackCategories] = useState<any[]>([]);
 
   // 🔗 Capture UTMs on first load (before any navigation loses them)
   useEffect(() => {
