@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Filter, ChevronDown, Loader2, Star, X } from 'lucide-react';
@@ -74,8 +74,12 @@ const LojaCategoria = () => {
     }
   }, [data, page]);
 
+  // Track category slug to avoid filter-change effect re-clearing products on category switch
+  const categorySlugRef = useRef(categorySlug);
+
   // Full reset when category changes
   useEffect(() => {
+    categorySlugRef.current = categorySlug;
     setAppliedPriceRange([0, 100000]);
     setDraftPriceRange([0, 100000]);
     setAppliedSubcats(new Set());
@@ -88,11 +92,28 @@ const LojaCategoria = () => {
     setAllProducts([]);
   }, [categorySlug]);
 
-  // Reset page when sort or filters change
+  // Reset page when sort or filters change (but NOT when caused by category switch)
+  const prevFiltersRef = useRef({ sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters });
   useEffect(() => {
-    setPage(1);
-    setAllProducts([]);
-  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters]);
+    const prev = prevFiltersRef.current;
+    const categoryJustChanged = categorySlugRef.current !== categorySlug;
+    prevFiltersRef.current = { sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters };
+
+    // Skip if this is the initial render or if triggered by category change
+    if (categoryJustChanged) return;
+
+    // Only reset if filters actually changed from user interaction
+    if (
+      prev.sort !== sort ||
+      prev.appliedSubcats !== appliedSubcats ||
+      prev.appliedVariations !== appliedVariations ||
+      prev.appliedPriceRange !== appliedPriceRange ||
+      prev.quickFilters !== quickFilters
+    ) {
+      setPage(1);
+      setAllProducts([]);
+    }
+  }, [sort, appliedSubcats, appliedVariations, appliedPriceRange, quickFilters, categorySlug]);
 
   // Set page title
   useEffect(() => {
