@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, Send, Eye, EyeOff, CheckCircle2, XCircle, HardDrive, Mail, Webhook, Copy } from 'lucide-react';
+import { Loader2, Save, Send, Eye, EyeOff, CheckCircle2, XCircle, HardDrive, Mail, Webhook, Copy, Video } from 'lucide-react';
 
 const AdminIntegracoes = () => {
   const { toast } = useToast();
