@@ -46,3 +46,17 @@ export function useLojaPublicaCategorias(lojaId: string | undefined) {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+export function useLojaPublicaCategoria(
+  lojaId: string | undefined,
+  slug: string | undefined,
+  sort?: string,
+  filters?: { price_min?: number; price_max?: number; variations?: string }
+) {
+  return useQuery({
+    queryKey: ['loja-publica-categoria', lojaId, slug, sort, filters],
+    queryFn: () => lojaPublicaApi.getCategoriaBySlug(lojaId!, slug!, sort, filters),
+    enabled: !!lojaId && !!slug,
+    staleTime: 2 * 60 * 1000,
+  });
+}
