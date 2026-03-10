@@ -159,6 +159,7 @@ export const settingsApi = {
       method: 'POST', body: JSON.stringify({ image_base64: imageBase64 }),
     }),
   testBunny: () => request<{ success: boolean; message: string }>('/settings?action=test_bunny', { method: 'POST' }),
+  testMux: () => request<{ success: boolean; message: string }>('/settings?action=test_mux', { method: 'POST' }),
 };
 
 export const trackingPixelsApi = {

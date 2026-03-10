@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, Send, Eye, EyeOff, CheckCircle2, XCircle, HardDrive, Mail, Webhook, Copy } from 'lucide-react';
+import { Loader2, Save, Send, Eye, EyeOff, CheckCircle2, XCircle, HardDrive, Mail, Webhook, Copy, Video } from 'lucide-react';
 
 const AdminIntegracoes = () => {
   const { toast } = useToast();
@@ -21,6 +21,10 @@ const AdminIntegracoes = () => {
   // Bunny test
   const [bunnyLoading, setBunnyLoading] = useState(false);
   const [bunnyStatus, setBunnyStatus] = useState<'idle' | 'ok' | 'error'>('idle');
+
+  // Mux test
+  const [muxLoading, setMuxLoading] = useState(false);
+  const [muxStatus, setMuxStatus] = useState<'idle' | 'ok' | 'error'>('idle');
 
   useEffect(() => {
     settingsApi.getByKeys(['messaging_token']).then(settings => {
@@ -164,6 +168,42 @@ const AdminIntegracoes = () => {
             </Button>
             {bunnyStatus === 'ok' && <span className="text-sm text-primary flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> Conectado</span>}
             {bunnyStatus === 'error' && <span className="text-sm text-destructive flex items-center gap-1"><XCircle className="h-4 w-4" /> Falha na conexão</span>}
+          </div>
+        </div>
+
+        {/* Streaming de Vídeo (Mux) */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Video className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-lg">Streaming de Vídeo (Mux)</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Serviço de streaming e processamento de vídeo para o Shoppertainment. Configurado via variáveis de ambiente.</p>
+
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">Configurado via Variáveis de Ambiente</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={async () => {
+              setMuxLoading(true);
+              setMuxStatus('idle');
+              try {
+                await settingsApi.testMux();
+                setMuxStatus('ok');
+                toast({ title: '✅ Conexão Mux OK!' });
+              } catch (err: any) {
+                setMuxStatus('error');
+                toast({ title: 'Erro na conexão', description: err.message, variant: 'destructive' });
+              } finally {
+                setMuxLoading(false);
+              }
+            }} disabled={muxLoading} variant="outline" size="sm" className="gap-2">
+              {muxLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+              Testar Conexão Mux
+            </Button>
+            {muxStatus === 'ok' && <span className="text-sm text-primary flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> Conectado</span>}
+            {muxStatus === 'error' && <span className="text-sm text-destructive flex items-center gap-1"><XCircle className="h-4 w-4" /> Falha na conexão</span>}
           </div>
         </div>
 
