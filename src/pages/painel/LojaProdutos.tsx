@@ -1769,7 +1769,6 @@ const LojaProdutos = () => {
                             </AlertDialogContent>
                           </AlertDialog>
                     </div>
-                    </div>
                   </AccordionContent>
                 </AccordionItem>
 
