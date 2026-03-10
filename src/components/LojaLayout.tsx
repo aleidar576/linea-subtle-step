@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { GATEWAYS, getGatewayById } from '@/config/gateways';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag, Menu, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Loader2, Store, Search, X, MessageCircle, User, Instagram, Facebook, Youtube, Music2, Gift, Tag, Menu, Plus, Minus } from 'lucide-react';
 import { useLojaByDomain } from '@/hooks/useLojaPublica';
 import { LojaProvider } from '@/contexts/LojaContext';
 import { useCart } from '@/contexts/CartContext';
