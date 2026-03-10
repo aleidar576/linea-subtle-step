@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { X } from 'lucide-react';
+import { X, ArrowLeft, ChevronsUp } from 'lucide-react';
 
 interface VideoItem {
   playback_id: string;
