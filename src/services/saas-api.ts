@@ -477,6 +477,16 @@ export interface LojaProduct {
   dimensoes?: { peso: number; altura: number; largura: number; comprimento: number };
 }
 
+export interface CategoryBanner {
+  imagem: string;
+  imagem_mobile: string;
+  link: string;
+  titulo: string;
+  titulo_cor: string;
+  subtitulo: string;
+  subtitulo_cor: string;
+}
+
 export interface LojaCategory {
   _id: string;
   loja_id: string;
@@ -486,6 +496,19 @@ export interface LojaCategory {
   ordem: number;
   is_active: boolean;
   qtd_produtos?: number;
+  banner?: CategoryBanner | null;
+}
+
+export interface CategoriaConfig {
+  layout_mobile: '1col' | '2cols' | 'misto';
+  layout_desktop: '3cols' | '4cols' | '5cols';
+  filtro_rapido: boolean;
+}
+
+export interface CategoriaPublicaResponse {
+  category: LojaCategory;
+  products: LojaProduct[];
+  subcategories: LojaCategory[];
 }
 
 export interface CategoriesResponse {
