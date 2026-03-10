@@ -1,73 +1,103 @@
+## Diagnóstico da Cobrança Dupla
 
+### O que aconteceu (cronologia reconstruída)
 
-## Reels View Imersivo — ProductVideos.tsx
+1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
+2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
+3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
 
-### Resumo
-Refatorar o Dialog do layout Stories para uma experiência fullscreen TikTok/Reels com scroll magnético vertical, controle inteligente de reprodução via IntersectionObserver, e navegação automática ao vídeo clicado.
+### Causa raiz
 
-### Alterações no arquivo `src/components/loja/ProductVideos.tsx`
+O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
 
-**1. Imports adicionais**
-- `useEffect, useRef, useCallback` do React
-- `X` do `lucide-react`
+Isso acontece em **dois lugares** do código:
+- `processarCronTaxas()` (linha ~370 de `stripe.js`)
+- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
 
-**2. Novos estados e refs**
-- `currentPlayingIndex: number | null` — controla qual vídeo está tocando
-- `reelsRef: useRef<HTMLDivElement>` — referência ao container de scroll
-- `slideRefs: useRef<(HTMLDivElement | null)[]>` — array de refs para cada slide (para IntersectionObserver)
+### Correção
 
-**3. IntersectionObserver (play/pause inteligente)**
-- `useEffect` que cria um observer com `threshold: 0.8` no `reelsRef.current`
-- Observa cada slide via `slideRefs`
-- Quando um slide entra em 80%+ de visibilidade → `setCurrentPlayingIndex(index)`
-- Cleanup: disconnect no unmount e quando modal fecha
+Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
 
-**4. Controle do MuxPlayer via ref**
-- Criar array de refs para os players: `playerRefs: useRef<(any | null)[]>`
-- `useEffect` reativo a `currentPlayingIndex`: itera os players, chama `.play()` no ativo e `.pause()` nos demais
-- Remove `autoPlay="any"` de todos — o play é controlado programaticamente
+**Arquivo:** `lib/services/assinaturas/stripe.js`
 
-**5. Scroll inicial com scrollIntoView**
-- `useEffect` que roda quando `activeIndex` muda para non-null:
-  ```
-  reelsRef.current?.children[activeIndex]?.scrollIntoView({ behavior: 'instant' })
-  ```
-- Também seta `currentPlayingIndex = activeIndex` para iniciar reprodução
+1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
+2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
 
-**6. Dialog fullscreen**
-Substituir o `DialogContent` atual (linhas 61-69) por:
+Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
 
-```tsx
-<DialogContent className="max-w-none w-screen h-screen max-h-screen p-0 m-0 border-none bg-black rounded-none gap-0 [&>button]:hidden">
-  <button onClick={() => setActiveIndex(null)}
-    className="absolute top-6 right-6 z-[60] p-2 bg-black/40 rounded-full text-white backdrop-blur-md">
-    <X className="w-5 h-5" />
-  </button>
+### Bug secundário (menor)
 
-  <div ref={reelsRef}
-    className="h-[100dvh] w-full overflow-y-scroll snap-y snap-mandatory"
-    style={{ scrollbarWidth: 'none' }}>
-    {videos.map((v, i) => (
-      <div key={v.playback_id}
-        ref={el => { slideRefs.current[i] = el }}
-        className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center bg-black">
-        <MuxPlayer
-          ref={el => { playerRefs.current[i] = el }}
-          playbackId={v.playback_id}
-          loop
-          muted={false}
-          className="w-full h-full object-cover"
-          style={{ '--media-object-fit': 'cover', '--controls': 'none' } as any}
-        />
-      </div>
-    ))}
-  </div>
-</DialogContent>
+O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+
+---
+
+## Páginas de Categoria — Implementação Completa ✅
+
+### Arquivos modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Category.js` | +campo `banner` (Mixed) |
+| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
+| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
+| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
+| API | `api/categorias.js` | PUT aceita campo `banner` |
+| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
+| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
+| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
+| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
+| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
+| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
+| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
+| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+
+## Construtor de Navegação Visual (Menu Builder) ✅
+
+### Arquivos Modificados
+
+| Camada | Arquivo | Mudança |
+|--------|---------|---------|
+| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
+| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
+| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
+| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
+| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
+| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
+
+### Estrutura do MenuItemConfig
+```ts
+{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
 ```
 
-**7. Cleanup ao fechar**
-- No `onOpenChange` do Dialog, além de `setActiveIndex(null)`, setar `setCurrentPlayingIndex(null)` e pausar todos os players
+### Funcionalidades
+- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
+- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
+- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
+- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
+- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
 
-### Arquivos afetados
-- `src/components/loja/ProductVideos.tsx` (único)
+## Fase 1: Shoppertainment (Video Commerce) ✅
 
+### Arquivos Modificados/Criados
+
+| Camada | Arquivo | Mudança |
+|---|---|---|
+| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
+| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
+| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
+| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
+| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
+| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
+| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
+| Dep | `package.json` | +`@mux/mux-node` |
+
+### Fluxo de Upload (com correções anti-falha)
+
+1. Lojista clica "Selecionar Vídeo" → valida 50MB
+2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
+3. Frontend faz PUT direto na URL do Mux (Direct Upload)
+4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
+5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
+6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
+7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)
