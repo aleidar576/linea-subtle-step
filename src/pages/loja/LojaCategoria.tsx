@@ -84,6 +84,7 @@ const LojaCategoria = () => {
     if (prevCategoryRef.current !== categorySlug) {
       categoryChangingRef.current = true;
       prevCategoryRef.current = categorySlug;
+      setCategoryKey(k => k + 1); // force product sync effect to re-run
       setAppliedPriceRange([0, 100000]);
       setDraftPriceRange([0, 100000]);
       setAppliedSubcats(new Set());
