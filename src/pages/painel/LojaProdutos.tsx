@@ -1485,7 +1485,7 @@ const LojaProdutos = () => {
 
                 {/* ── Acordeão 3: Upsell e Exibição ── */}
                 <AccordionItem value="upsell">
-                  <AccordionTrigger className="text-base font-semibold">🛒 Upsell e Exibição</AccordionTrigger>
+                  <AccordionTrigger className="text-base font-semibold"><ShoppingBag className="w-4 h-4 mr-2 text-foreground" />Upsell e Exibição</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-2">
                       {/* Badge da Imagem */}
