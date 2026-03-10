@@ -14,6 +14,7 @@ import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from '@/components/
 import { ImageLightbox } from '@/components/ImageLightbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import LojaChatBot from '@/components/LojaChatBot';
+import ProductVideos from '@/components/loja/ProductVideos';
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
