@@ -641,9 +641,9 @@ Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga est
 
 1. Criar um **Aplicativo** no [painel de desenvolvedor da Appmax](https://admin.appmax.com.br)
 2. Preencher as URLs de integração (disponíveis em Admin > Gateways > Editar Appmax):
-   - **Host (Webhook):** `https://seudominio.com/api/loja-extras?scope=appmax-webhook`
+   - **Host (Webhook):** `https://seudominio.com/api/gateways?scope=appmax-webhook`
    - **URL do Sistema:** `https://seudominio.com`
-   - **URL de Validação:** `https://seudominio.com/api/loja-extras?scope=appmax-install`
+   - **URL de Validação:** `https://seudominio.com/api/gateways?scope=appmax-install`
 3. Configurar as variáveis de ambiente na Vercel (ver seção abaixo)
 
 ### Fluxo OAuth Completo
