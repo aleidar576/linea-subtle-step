@@ -59,6 +59,12 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST' && scope === 'pedido') {
     try {
       const body = req.body;
+      paymentDebugLog('incoming_checkout_payload', {
+        loja_id: body?.loja_id || null,
+        status: body?.status || null,
+        payment_method: body?.pagamento?.metodo || null,
+        payment_details: safePaymentDetails(body?.payment_details),
+      });
       if (!body.loja_id) return res.status(400).json({ error: 'loja_id obrigatório' });
 
       // Auto-increment numero
