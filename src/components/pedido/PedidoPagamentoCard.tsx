@@ -52,7 +52,10 @@ export default function PedidoPagamentoCard({ pedido }: Props) {
               </p>
               {(pd?.installments || 1) > 1 && pedido.total > 0 && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {pd!.installments}x de {formatPrice(Math.round(pedido.total / pd!.installments))}
+                  {pd!.installments}x de {formatPrice(Math.round((pd?.total_with_interest || pedido.total) / pd!.installments))}
+                  {pd?.total_with_interest && pd.total_with_interest > pedido.total && (
+                    <span className="ml-1">(total {formatPrice(pd.total_with_interest)})</span>
+                  )}
                 </p>
               )}
               {(pd?.installments || 1) === 1 && (
