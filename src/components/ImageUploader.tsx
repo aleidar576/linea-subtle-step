@@ -65,7 +65,7 @@ const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', c
     if (!files || files.length === 0) return;
 
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    const validFiles = Array.from(files).filter(f => validTypes.includes(f.type) && f.size <= 4.5 * 1024 * 1024);
+    const validFiles: File[] = Array.from(files).filter((f: File) => validTypes.includes(f.type) && f.size <= 4.5 * 1024 * 1024);
 
     if (validFiles.length === 0) {
       toast({ title: 'Nenhum arquivo válido', description: 'Apenas JPG, PNG, WebP e GIF até 4.5MB.', variant: 'destructive' });
