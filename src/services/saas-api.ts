@@ -851,15 +851,15 @@ export const clientesApi = {
   list: (lojaId: string, search?: string) => {
     const params = new URLSearchParams({ loja_id: lojaId, scope: 'clientes' });
     if (search) params.set('search', search);
-    return request<ClienteData[]>(`/pedidos?${params.toString()}`);
+    return request<ClienteData[]>(`/crm?${params.toString()}`);
   },
-  getById: (id: string) => request<ClienteData>(`/pedidos?scope=cliente&id=${id}`),
+  getById: (id: string) => request<ClienteData>(`/crm?scope=cliente&id=${id}`),
   update: (id: string, data: { nome?: string; telefone?: string }) =>
-    request<ClienteData>(`/pedidos?scope=cliente&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<ClienteData>(`/crm?scope=cliente&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   enviarRedefinicaoSenha: (id: string) =>
-    request<{ success: boolean }>(`/pedidos?scope=redefinir-senha-cliente&id=${id}`, { method: 'POST' }),
+    request<{ success: boolean }>(`/crm?scope=redefinir-senha-cliente&id=${id}`, { method: 'POST' }),
   create: (data: { loja_id: string; nome: string; email: string; telefone?: string; cpf?: string }) =>
-    request<ClienteData>(`/pedidos?scope=criar-cliente&loja_id=${data.loja_id}`, {
+    request<ClienteData>(`/crm?scope=criar-cliente&loja_id=${data.loja_id}`, {
       method: 'POST', body: JSON.stringify(data),
     }),
 };
