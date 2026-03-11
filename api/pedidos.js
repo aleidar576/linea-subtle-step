@@ -12,6 +12,23 @@ const { sendEmail, getBranding, emailRastreioHtml } = require('../lib/email.js')
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
+const PAYMENT_DEBUG_LOGS = process.env.PAYMENT_DEBUG_LOGS === '1';
+
+function safePaymentDetails(details) {
+  if (!details) return null;
+  return {
+    method: details.method || null,
+    installments: Number(details.installments || 1),
+    card_brand: details.card_brand || null,
+    last4: details.last4 ? String(details.last4).slice(-4) : null,
+  };
+}
+
+function paymentDebugLog(tag, payload) {
+  if (!PAYMENT_DEBUG_LOGS) return;
+  console.log(`[PAYMENT-DEBUG][PEDIDOS] ${tag}`, payload);
+}
+
 function requireLojista(req) {
   const token = getTokenFromHeader(req);
   if (!token) return null;
@@ -42,6 +59,12 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST' && scope === 'pedido') {
     try {
       const body = req.body;
+      paymentDebugLog('incoming_checkout_payload', {
+        loja_id: body?.loja_id || null,
+        status: body?.status || null,
+        payment_method: body?.pagamento?.metodo || null,
+        payment_details: safePaymentDetails(body?.payment_details),
+      });
       if (!body.loja_id) return res.status(400).json({ error: 'loja_id obrigatório' });
 
       // Auto-increment numero
@@ -90,6 +113,14 @@ module.exports = async function handler(req, res) {
         frete_id: body.frete_id || null,
         frete_nome: body.frete_nome || null,
         payment_details: body.payment_details || null,
+      });
+
+      paymentDebugLog('pedido_saved', {
+        pedido_id: pedido?._id ? String(pedido._id) : null,
+        numero: pedido?.numero || null,
+        status: pedido?.status || null,
+        payment_method: pedido?.pagamento?.metodo || null,
+        payment_details: safePaymentDetails(pedido?.payment_details),
       });
 
       // === ACUMULAR TAXAS DA PLATAFORMA quando pedido é criado já como pago ===
