@@ -783,48 +783,6 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // UPLOAD BUNNY.NET
-    // ==========================================
-    if (scope === 'upload' && method === 'POST') {
-      const { image_base64 } = req.body;
-      if (!image_base64) return res.status(400).json({ error: 'image_base64 é obrigatório' });
-
-      const apiKey = process.env.BUNNY_API_KEY;
-      const storageZone = process.env.BUNNY_STORAGE_ZONE;
-      const pullZone = process.env.BUNNY_PULL_ZONE;
-      if (!apiKey || !storageZone || !pullZone) {
-        return res.status(400).json({ error: 'Variáveis Bunny.net não configuradas.' });
-      }
-
-      try {
-        const base64Data = image_base64.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-
-        const uploadRes = await fetch(`https://br.storage.bunnycdn.com/${storageZone}/${fileName}`, {
-          method: 'PUT',
-          headers: {
-            'AccessKey': apiKey,
-            'Content-Type': 'application/octet-stream',
-          },
-          body: buffer,
-        });
-
-        if (!uploadRes.ok) {
-          const errText = await uploadRes.text().catch(() => '');
-          console.error('[BUNNY]', errText);
-          return res.status(500).json({ error: 'Falha no upload para Bunny.net', details: errText });
-        }
-
-        const url = `https://${pullZone}/${fileName}`;
-        return res.json({ url });
-      } catch (err) {
-        console.error('[BUNNY]', err);
-        return res.status(500).json({ error: 'Erro no upload', details: err.message });
-      }
-    }
-
-    // ==========================================
     // LEADS (Newsletter)
     // ==========================================
     if (scope === 'leads' && method === 'GET') {
