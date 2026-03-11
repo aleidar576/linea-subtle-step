@@ -1103,7 +1103,7 @@ export const lojaPublicaApi = {
   getFretes: (lojaId: string) =>
     publicRequest<RegraFrete[]>(`/fretes?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
-    publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
+    publicRequest<LojaCategory[]>(`/storefront?scope=categorias-publico&loja_id=${lojaId}`),
   getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string; subcategory_ids?: string; page?: number }) => {
     const params = new URLSearchParams({ scope: 'categoria-publica', loja_id: lojaId, category_slug: slug });
     if (sort) params.set('sort', sort);
