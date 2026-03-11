@@ -927,17 +927,17 @@ export const fretesApi = {
 // === Cupons API ===
 
 export const cuponsApi = {
-  list: (lojaId: string) => request<Cupom[]>(`/loja-extras?scope=cupons&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<Cupom[]>(`/marketing?scope=cupons&loja_id=${lojaId}`),
   validar: (lojaId: string, codigo: string) =>
-    request<{ tipo: string; valor: number; valor_minimo_pedido: number | null; codigo: string }>(`/loja-extras?scope=cupom-publico&loja_id=${lojaId}&codigo=${codigo}`),
+    request<{ tipo: string; valor: number; valor_minimo_pedido: number | null; codigo: string }>(`/marketing?scope=cupom-publico&loja_id=${lojaId}&codigo=${codigo}`),
   create: (data: Partial<Cupom> & { loja_id: string }) =>
-    request<Cupom>('/loja-extras?scope=cupom', { method: 'POST', body: JSON.stringify(data) }),
+    request<Cupom>('/marketing?scope=cupom', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Cupom>) =>
-    request<Cupom>(`/loja-extras?scope=cupom&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<Cupom>(`/marketing?scope=cupom&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=cupom&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/marketing?scope=cupom&id=${id}`, { method: 'DELETE' }),
   toggle: (id: string) =>
-    request<Cupom>(`/loja-extras?scope=cupom&id=${id}`, { method: 'PATCH' }),
+    request<Cupom>(`/marketing?scope=cupom&id=${id}`, { method: 'PATCH' }),
 };
 
 // === Mídias API ===
