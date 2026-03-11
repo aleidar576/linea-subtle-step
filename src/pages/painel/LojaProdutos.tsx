@@ -888,7 +888,7 @@ ${jsonExampleStr}`;
                     <DropdownMenuItem onClick={handleExportJson}>
                       <FileJson className="h-4 w-4 mr-2" /> Exportar JSON
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleDownloadJsonExample}>
+                    <DropdownMenuItem onClick={() => setJsonExampleOpen(true)}>
                       <Download className="h-4 w-4 mr-2" /> JSON Exemplo
                     </DropdownMenuItem>
                   </DropdownMenuContent>
