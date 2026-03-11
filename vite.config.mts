@@ -15,8 +15,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     dedupe: ["react", "react-dom"],
     alias: {
-      "@/lib": path.resolve(__dirname, "./lib"),
-      "@/models": path.resolve(__dirname, "./models"),
       "@": path.resolve(__dirname, "./src"),
     },
   },
