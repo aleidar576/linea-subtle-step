@@ -510,7 +510,7 @@ const LojaGateways = () => {
     try {
       const [prof, configs] = await Promise.all([
         lojistaApi.perfil(),
-        authRequest<Record<string, any>>('/loja-extras?scope=gateways-disponiveis'),
+        authRequest<Record<string, any>>('/gateways?scope=gateways-disponiveis'),
       ]);
       setProfile(prof);
       setPlatformConfigs(configs);
