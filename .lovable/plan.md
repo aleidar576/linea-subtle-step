@@ -1,103 +1,70 @@
-## Diagnóstico da Cobrança Dupla
+# Plano de Evolução — PANDORA SaaS
 
-### O que aconteceu (cronologia reconstruída)
+## Strangler Fig — Decomposição do Monólito ✅ COMPLETA
 
-1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
-2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
-3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
+O monólito `api/loja-extras.js` (408+ linhas) foi completamente decomposto em 6 microsserviços especializados usando o padrão **Strangler Fig**. O arquivo original foi deletado.
 
-### Causa raiz
+### Fases Concluídas
 
-O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
+| Fase | Microsserviço | Escopos Migrados | Status |
+|---|---|---|---|
+| SF-1 | `api/midia.js` | midias, midia, upload, mux-upload, mux-status, mux-delete | ✅ |
+| SF-2 | `api/fretes.js` | fretes, frete, fretes-publico, calcular-frete | ✅ |
+| SF-3 | `api/assinaturas.js` | stripe-checkout, stripe-portal, stripe-webhook, cron-taxas, pagar-taxas-manual | ✅ |
+| SF-4 | `api/gateways.js` | gateways-disponiveis, gateway-loja, salvar-gateway, desconectar-gateway, appmax-connect, appmax-install, appmax-webhook | ✅ |
+| SF-5 | `api/marketing.js` | cupons, cupom, cupom-publico, cupons-popup, leads, lead, lead-newsletter, leads-import, leads-export, pixels, pixel | ✅ |
+| SF-5 | `api/storefront.js` | tema, paginas, pagina, pagina-publica, categorias-publico, global-domain, category-products | ✅ |
+| **Final** | **`api/loja-extras.js` DELETADO** | — | ✅ |
 
-Isso acontece em **dois lugares** do código:
-- `processarCronTaxas()` (linha ~370 de `stripe.js`)
-- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+### Correções Aplicadas na Revisão
 
-### Correção
+- URL do webhook Stripe em `AdminIntegracoes.tsx`: `/api/loja-extras?scope=stripe-webhook` → `/api/assinaturas?scope=stripe-webhook` ✅
+- Frontend `saas-api.ts`: Todas as 26+ referências redirecionadas para os novos microsserviços ✅
+- `vercel.json`: Rewrite do loja-extras removido, marketing + storefront adicionados ✅
+- `README.md`: Documentação completamente atualizada com arquitetura de 17 microsserviços ✅
 
-Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+### Arquitetura Final (17 Serverless Functions)
 
-**Arquivo:** `lib/services/assinaturas/stripe.js`
-
-1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
-2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
-
-Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
-
-### Bug secundário (menor)
-
-O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+```
+api/
+├── admins.js           # Admin
+├── assinaturas.js      # Stripe (SF-3)
+├── auth-action.ts      # Autenticação
+├── categorias.js       # Categorias
+├── cliente-auth.js     # Auth clientes
+├── fretes.js           # Logística (SF-2)
+├── gateways.js         # Pagamentos (SF-4)
+├── lojas.js            # Lojas
+├── lojista.js          # Perfil lojista
+├── marketing.js        # Cupons+Leads+Pixels (SF-5)
+├── midia.js            # Bunny.net+Mux (SF-1)
+├── pedidos.js          # Pedidos
+├── process-payment.js  # Processamento
+├── products.ts         # Produtos
+├── settings.js         # Config globais
+├── storefront.js       # Temas+Páginas+Vitrine (SF-5)
+└── tracking-webhook.js # Rastreamento
+```
 
 ---
 
-## Páginas de Categoria — Implementação Completa ✅
+## Diagnóstico da Cobrança Dupla ✅ RESOLVIDO
 
-### Arquivos modificados
+### Causa raiz
+`auto_advance: true` na criação de invoices manuais causava tentativa duplicada de cobrança pelo Stripe.
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Category.js` | +campo `banner` (Mixed) |
-| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
-| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
-| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
-| API | `api/categorias.js` | PUT aceita campo `banner` |
-| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
-| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
-| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
-| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
-| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
-| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
-| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
-| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+### Correção aplicada
+`auto_advance: false` em `processarCronTaxas()` e `pagarTaxasManual()` em `lib/services/assinaturas/stripe.js`.
 
-## Construtor de Navegação Visual (Menu Builder) ✅
+---
 
-### Arquivos Modificados
+## Features Implementadas
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
-| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
-| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
-| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
-| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
+### Páginas de Categoria ✅
+- Banner, filtros, ordenação, paginação, layout responsivo configurável
 
-### Estrutura do MenuItemConfig
-```ts
-{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
-```
+### Construtor de Navegação Visual (Menu Builder) ✅
+- Drag & drop, até 2 níveis de nesting, fallback para categorias ativas
 
-### Funcionalidades
-- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
-- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
-- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
-- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
-- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
-
-## Fase 1: Shoppertainment (Video Commerce) ✅
-
-### Arquivos Modificados/Criados
-
-| Camada | Arquivo | Mudança |
-|---|---|---|
-| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
-| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
-| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
-| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
-| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
-| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
-| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
-| Dep | `package.json` | +`@mux/mux-node` |
-
-### Fluxo de Upload (com correções anti-falha)
-
-1. Lojista clica "Selecionar Vídeo" → valida 50MB
-2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
-3. Frontend faz PUT direto na URL do Mux (Direct Upload)
-4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
-5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
-6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
-7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)
+### Shoppertainment — Video Commerce (Mux) ✅
+- Upload direto, polling de status, exclusão com confirmação, layouts stories/carousel/auto
