@@ -829,10 +829,10 @@ export const pedidosApi = {
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   gerarEtiqueta: (pedidoId: string, overrideServiceId?: string | number) =>
     request<{ melhor_envio_order_id?: string; etiqueta_url?: string; codigo_rastreio?: string; already_existed?: boolean; error?: string }>(
-      '/pedidos?scope=gerar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId, overrideServiceId }) }
+      '/etiquetas?scope=gerar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId, overrideServiceId }) }
     ),
   cancelarEtiqueta: (pedidoId: string) =>
-    request<{ success: boolean }>('/pedidos?scope=cancelar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId }) }),
+    request<{ success: boolean }>('/etiquetas?scope=cancelar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId }) }),
   updateDados: (id: string, data: { cliente?: Record<string, string>; endereco?: Record<string, string>; atualizar_cadastro?: boolean }) =>
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=dados`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
@@ -840,9 +840,9 @@ export const pedidosApi = {
 // === Carrinhos API ===
 
 export const carrinhosApi = {
-  list: (lojaId: string) => request<CarrinhoAbandonado[]>(`/pedidos?loja_id=${lojaId}&scope=carrinhos`),
-  save: (data: any) => publicPostRequest<CarrinhoAbandonado>('/pedidos?scope=carrinho', data),
-  marcarConvertido: (id: string) => request<CarrinhoAbandonado>(`/pedidos?scope=carrinho&id=${id}`, { method: 'PATCH' }),
+  list: (lojaId: string) => request<CarrinhoAbandonado[]>(`/carrinhos?loja_id=${lojaId}&scope=carrinhos`),
+  save: (data: any) => publicPostRequest<CarrinhoAbandonado>('/carrinhos?scope=carrinho', data),
+  marcarConvertido: (id: string) => request<CarrinhoAbandonado>(`/carrinhos?scope=carrinho&id=${id}`, { method: 'PATCH' }),
 };
 
 // === Clientes API ===
@@ -851,15 +851,15 @@ export const clientesApi = {
   list: (lojaId: string, search?: string) => {
     const params = new URLSearchParams({ loja_id: lojaId, scope: 'clientes' });
     if (search) params.set('search', search);
-    return request<ClienteData[]>(`/pedidos?${params.toString()}`);
+    return request<ClienteData[]>(`/crm?${params.toString()}`);
   },
-  getById: (id: string) => request<ClienteData>(`/pedidos?scope=cliente&id=${id}`),
+  getById: (id: string) => request<ClienteData>(`/crm?scope=cliente&id=${id}`),
   update: (id: string, data: { nome?: string; telefone?: string }) =>
-    request<ClienteData>(`/pedidos?scope=cliente&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<ClienteData>(`/crm?scope=cliente&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   enviarRedefinicaoSenha: (id: string) =>
-    request<{ success: boolean }>(`/pedidos?scope=redefinir-senha-cliente&id=${id}`, { method: 'POST' }),
+    request<{ success: boolean }>(`/crm?scope=redefinir-senha-cliente&id=${id}`, { method: 'POST' }),
   create: (data: { loja_id: string; nome: string; email: string; telefone?: string; cpf?: string }) =>
-    request<ClienteData>(`/pedidos?scope=criar-cliente&loja_id=${data.loja_id}`, {
+    request<ClienteData>(`/crm?scope=criar-cliente&loja_id=${data.loja_id}`, {
       method: 'POST', body: JSON.stringify(data),
     }),
 };
@@ -1174,7 +1174,7 @@ export const relatoriosApi = {
     const params = new URLSearchParams({ scope: 'relatorios', loja_id: lojaId });
     if (dateFrom) params.set('date_from', dateFrom);
     if (dateTo) params.set('date_to', dateTo);
-    return request<RelatorioData>(`/pedidos?${params.toString()}`);
+    return request<RelatorioData>(`/relatorios?${params.toString()}`);
   },
 };
 

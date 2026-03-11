@@ -23,24 +23,40 @@ O monólito `api/loja-extras.js` (408+ linhas) foi completamente decomposto em 6
 - `vercel.json`: Rewrite do loja-extras removido, marketing + storefront adicionados ✅
 - `README.md`: Documentação completamente atualizada com arquitetura de 17 microsserviços ✅
 
-### Arquitetura Final (17 Serverless Functions)
+### Strangler Fig 2 — Decomposição de `api/pedidos.js` ✅ COMPLETA
+
+O monólito `api/pedidos.js` (567 linhas) foi decomposto em 4 microsserviços + core reduzido (~270 linhas).
+
+| Microsserviço | Escopos Migrados | Permissão |
+|---|---|---|
+| `api/crm.js` | clientes, cliente, criar-cliente, redefinir-senha-cliente | Autenticado |
+| `api/carrinhos.js` | carrinho (POST/PATCH), carrinhos (GET) | Público + Autenticado |
+| `api/etiquetas.js` | gerar-etiqueta, cancelar-etiqueta | Autenticado |
+| `api/relatorios.js` | relatorios | Autenticado |
+| `api/pedidos.js` (core) | pedido (POST público, GET/PATCH auth), pedidos (GET auth) | Misto |
+
+### Arquitetura Final (21 Serverless Functions)
 
 ```
 api/
 ├── admins.js           # Admin
 ├── assinaturas.js      # Stripe (SF-3)
 ├── auth-action.ts      # Autenticação
+├── carrinhos.js        # Carrinhos Abandonados (SF2-2)
 ├── categorias.js       # Categorias
 ├── cliente-auth.js     # Auth clientes
+├── crm.js              # CRM/Clientes (SF2-1)
+├── etiquetas.js        # Fulfillment/Etiquetas (SF2-3)
 ├── fretes.js           # Logística (SF-2)
 ├── gateways.js         # Pagamentos (SF-4)
 ├── lojas.js            # Lojas
 ├── lojista.js          # Perfil lojista
 ├── marketing.js        # Cupons+Leads+Pixels (SF-5)
 ├── midia.js            # Bunny.net+Mux (SF-1)
-├── pedidos.js          # Pedidos
+├── pedidos.js          # Core Checkout+Pedidos
 ├── process-payment.js  # Processamento
 ├── products.ts         # Produtos
+├── relatorios.js       # Relatórios (SF2-4)
 ├── settings.js         # Config globais
 ├── storefront.js       # Temas+Páginas+Vitrine (SF-5)
 └── tracking-webhook.js # Rastreamento
