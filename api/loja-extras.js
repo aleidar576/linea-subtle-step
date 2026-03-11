@@ -16,10 +16,6 @@ const Pagina = require('../models/Pagina.js');
 const Setting = require('../models/Setting.js');
 const Lead = require('../models/Lead.js');
 const Lojista = require('../models/Lojista.js');
-const Plano = require('../models/Plano.js');
-
-// Services (Strategy Pattern)
-const { getSubscriptionService } = require('../lib/services/assinaturas');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) console.error('[LOJA-EXTRAS] FATAL: JWT_SECRET não configurado nas variáveis de ambiente.');
