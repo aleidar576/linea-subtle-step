@@ -994,7 +994,7 @@ const LojaProdutos = () => {
                           </div>
                         </SortableContext>
                       </DndContext>
-                      <ImageUploader lojaId={id || ''} onChange={(url) => addImage(url)} placeholder="Cole a URL ou faça upload" />
+                      <ImageUploader lojaId={id || ''} onChange={(url) => addImage(url)} placeholder="Cole a URL ou faça upload" multiple />
                     </CardContent>
                   </Card>
                 </div>
