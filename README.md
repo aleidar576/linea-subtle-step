@@ -911,7 +911,7 @@ A partir da Fase 17, o projeto adota o **Design Pattern Strategy** para desacopl
 ### Como funciona
 
 ```
-api/create-pix.js (Controller)
+api/process-payment.js (Controller)
     └── getPaymentService('sealpay')  →  lib/services/pagamentos/sealpay.js
                                           ├── getStatus(txid)
                                           ├── handleWebhook({ txid, status, req })
@@ -923,7 +923,7 @@ api/pedidos.js (Controller)
                                               ├── cancelarEtiqueta({ pedido, loja })
                                               └── calcularFrete({ meConfig, cepOrigem, to_postal_code, items })
 
-api/loja-extras.js (Controller)
+api/assinaturas.js (Controller)
     └── getSubscriptionService('stripe')  →  lib/services/assinaturas/stripe.js
                                                 ├── createCheckoutSession({ user, plano_id })
                                                 ├── handleWebhookEvent({ event, rawBody })
@@ -946,7 +946,7 @@ api/loja-extras.js (Controller)
 
 ### Regra de ouro
 
-> Arquivos em `lib/services/` **NÃO contam como Serverless Functions**. A Vercel só transforma em function os arquivos dentro de `/api`. Tudo em `lib/` é bundled como módulo Node.js auxiliar. Os 12 slots ficam intactos.
+> Arquivos em `lib/services/` **NÃO contam como Serverless Functions**. A Vercel só transforma em function os arquivos dentro de `/api`. Tudo em `lib/` é bundled como módulo Node.js auxiliar.
 
 ---
 
