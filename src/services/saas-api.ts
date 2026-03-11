@@ -965,13 +965,13 @@ export const temasApi = {
 // === Pixels API ===
 
 export const pixelsApi = {
-  list: (lojaId: string) => request<TrackingPixelData[]>(`/loja-extras?scope=pixels&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<TrackingPixelData[]>(`/marketing?scope=pixels&loja_id=${lojaId}`),
   create: (data: Partial<TrackingPixelData> & { loja_id: string }) =>
-    request<TrackingPixelData>('/loja-extras?scope=pixel', { method: 'POST', body: JSON.stringify(data) }),
+    request<TrackingPixelData>('/marketing?scope=pixel', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<TrackingPixelData>) =>
-    request<TrackingPixelData>(`/loja-extras?scope=pixel&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<TrackingPixelData>(`/marketing?scope=pixel&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=pixel&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/marketing?scope=pixel&id=${id}`, { method: 'DELETE' }),
 };
 
 // === Mux Video API ===
