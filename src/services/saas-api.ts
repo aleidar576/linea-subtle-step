@@ -988,15 +988,15 @@ export const muxApi = {
 // === Páginas API ===
 
 export const paginasApi = {
-  list: (lojaId: string) => request<PaginaData[]>(`/loja-extras?scope=paginas&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<PaginaData[]>(`/storefront?scope=paginas&loja_id=${lojaId}`),
   create: (data: { loja_id: string; titulo: string; conteudo?: string }) =>
-    request<PaginaData>('/loja-extras?scope=pagina', { method: 'POST', body: JSON.stringify(data) }),
+    request<PaginaData>('/storefront?scope=pagina', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: { titulo?: string; conteudo?: string; is_active?: boolean }) =>
-    request<PaginaData>(`/loja-extras?scope=pagina&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<PaginaData>(`/storefront?scope=pagina&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=pagina&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/storefront?scope=pagina&id=${id}`, { method: 'DELETE' }),
   getPublic: (lojaId: string, slug: string) =>
-    request<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+    request<PaginaData>(`/storefront?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
 };
 
 // === Leads API (Newsletter) ===
