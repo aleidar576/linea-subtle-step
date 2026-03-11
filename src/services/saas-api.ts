@@ -1037,7 +1037,7 @@ export const leadsApi = {
 export const cuponsPopupApi = {
   getBulk: (lojaId: string, ids: string[]) =>
     publicRequest<Array<{ _id: string; codigo: string; tipo: string; valor: number }>>(
-      `/loja-extras?scope=cupons-popup&loja_id=${lojaId}&ids=${ids.join(',')}`
+      `/marketing?scope=cupons-popup&loja_id=${lojaId}&ids=${ids.join(',')}`
     ),
 };
 
