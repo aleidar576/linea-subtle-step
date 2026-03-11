@@ -1,5 +1,5 @@
 // ============================================
-// 📦 /api/pedidos - Pedidos, Carrinhos, Clientes
+// 📦 /api/pedidos - Core: Checkout + Gestão de Pedidos
 // ============================================
 
 const connectDB = require('../lib/mongodb.js');
@@ -8,10 +8,7 @@ const CarrinhoAbandonado = require('../models/CarrinhoAbandonado.js');
 const Cliente = require('../models/Cliente.js');
 const Loja = require('../models/Loja.js');
 const authPkg = require('../lib/auth.js');
-const { sendEmail, getBranding, emailRastreioHtml, sendReportEmail, emailRelatorioHtml, generateReportFiles } = require('../lib/email.js');
-const Lojista = require('../models/Lojista.js');
-const Product = require('../models/Product.js');
-const { getShippingService } = require('../lib/services/fretes');
+const { sendEmail, getBranding, emailRastreioHtml } = require('../lib/email.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
@@ -40,7 +37,7 @@ module.exports = async function handler(req, res) {
 
   const { scope, id, loja_id, action, status: filterStatus, page = '1', per_page = '20', search } = req.query;
 
-  // ========== PÚBLICO: criar pedido e carrinho (checkout) ==========
+  // ========== PÚBLICO: criar pedido (checkout) ==========
 
   if (req.method === 'POST' && scope === 'pedido') {
     try {
@@ -111,57 +108,12 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  if (req.method === 'POST' && scope === 'carrinho') {
-    const body = req.body;
-    if (!body.loja_id) return res.status(400).json({ error: 'loja_id obrigatório' });
-
-    let carrinho = null;
-    if (body.cliente?.email) {
-      carrinho = await CarrinhoAbandonado.findOne({
-        loja_id: body.loja_id,
-        'cliente.email': body.cliente.email,
-        convertido: false,
-      }).sort({ criado_em: -1 });
-    }
-
-    if (carrinho) {
-      carrinho.etapa = body.etapa || carrinho.etapa;
-      carrinho.itens = body.itens || carrinho.itens;
-      carrinho.total = body.total || carrinho.total;
-      carrinho.cliente = body.cliente || carrinho.cliente;
-      carrinho.endereco = body.endereco || carrinho.endereco;
-      carrinho.pix_code = body.pix_code || carrinho.pix_code;
-      carrinho.txid = body.txid || carrinho.txid;
-      carrinho.utms = body.utms || carrinho.utms;
-      await carrinho.save();
-      return res.status(200).json(carrinho);
-    }
-
-    carrinho = await CarrinhoAbandonado.create({
-      loja_id: body.loja_id,
-      etapa: body.etapa || 'customer',
-      itens: body.itens || [],
-      total: body.total || 0,
-      cliente: body.cliente || {},
-      endereco: body.endereco || null,
-      utms: body.utms || {},
-    });
-
-    return res.status(201).json(carrinho);
-  }
-
-  if (req.method === 'PATCH' && scope === 'carrinho' && id) {
-    const carrinho = await CarrinhoAbandonado.findByIdAndUpdate(id, { convertido: true }, { new: true });
-    if (!carrinho) return res.status(404).json({ error: 'Carrinho não encontrado' });
-    return res.status(200).json(carrinho);
-  }
-
   // ========== AUTENTICADO: lojista ==========
 
   const lojista = requireLojista(req);
   if (!lojista) return res.status(401).json({ error: 'Não autorizado' });
 
-  // --- PEDIDOS ---
+  // --- LISTAGEM DE PEDIDOS ---
 
   if (req.method === 'GET' && scope === 'pedidos' && loja_id) {
     const loja = await validateLojaOwnership(loja_id, lojista.lojista_id);
@@ -189,6 +141,8 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ pedidos, total, page: pageNum, per_page: limit });
   }
 
+  // --- DETALHE DO PEDIDO ---
+
   if (req.method === 'GET' && scope === 'pedido' && id) {
     const pedido = await Pedido.findById(id).lean();
     if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
@@ -196,6 +150,8 @@ module.exports = async function handler(req, res) {
     if (!loja) return res.status(403).json({ error: 'Acesso negado' });
     return res.status(200).json(pedido);
   }
+
+  // --- ATUALIZAÇÃO DO PEDIDO ---
 
   if (req.method === 'PATCH' && scope === 'pedido' && id) {
     const pedido = await Pedido.findById(id);
@@ -331,237 +287,5 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'action inválida' });
   }
 
-  // --- CARRINHOS ABANDONADOS ---
-
-  if (req.method === 'GET' && scope === 'carrinhos' && loja_id) {
-    const loja = await validateLojaOwnership(loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-
-    const carrinhos = await CarrinhoAbandonado.find({ loja_id, convertido: false })
-      .sort({ criado_em: -1 }).limit(200).lean();
-    return res.status(200).json(carrinhos);
-  }
-
-  // --- CLIENTES ---
-
-  if (req.method === 'GET' && scope === 'clientes' && loja_id) {
-    const loja = await validateLojaOwnership(loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-
-    const query = { loja_id };
-    if (search) {
-      query.$or = [
-        { nome: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const clientes = await Cliente.find(query).sort({ criado_em: -1 }).lean();
-    return res.status(200).json(clientes);
-  }
-
-  if (req.method === 'GET' && scope === 'cliente' && id) {
-    const cliente = await Cliente.findById(id).lean();
-    if (!cliente) return res.status(404).json({ error: 'Cliente não encontrado' });
-    const loja = await validateLojaOwnership(cliente.loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-    return res.status(200).json(cliente);
-  }
-
-  if (req.method === 'PUT' && scope === 'cliente' && id) {
-    const cliente = await Cliente.findById(id);
-    if (!cliente) return res.status(404).json({ error: 'Cliente não encontrado' });
-    const loja = await validateLojaOwnership(cliente.loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-
-    const { nome, telefone } = req.body;
-    if (nome !== undefined) cliente.nome = nome;
-    if (telefone !== undefined) cliente.telefone = telefone;
-    await cliente.save();
-    return res.status(200).json(cliente);
-  }
-
-  if (req.method === 'POST' && scope === 'redefinir-senha-cliente' && id) {
-    const cliente = await Cliente.findById(id).lean();
-    if (!cliente) return res.status(404).json({ error: 'Cliente não encontrado' });
-    const loja = await validateLojaOwnership(cliente.loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-    return res.status(200).json({ success: true, message: 'Funcionalidade em desenvolvimento' });
-  }
-
-  // --- CRIAR CLIENTE MANUALMENTE ---
-  if (req.method === 'POST' && scope === 'criar-cliente' && loja_id) {
-    const loja = await validateLojaOwnership(loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-    const { nome, email, telefone, cpf } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
-    const existing = await Cliente.findOne({ loja_id, email });
-    if (existing) return res.status(409).json({ error: 'Cliente com este email já existe' });
-    const cliente = await Cliente.create({
-      loja_id,
-      nome: nome || '',
-      email,
-      telefone: telefone || '',
-      cpf: cpf || '',
-      censurado: false,
-      total_pedidos: 0,
-      total_gasto: 0,
-    });
-    return res.status(201).json(cliente);
-  }
-
-  // --- RELATÓRIOS ---
-
-  if (req.method === 'GET' && scope === 'relatorios' && loja_id) {
-    const loja = await validateLojaOwnership(loja_id, lojista.lojista_id);
-    if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-
-    const { date_from, date_to } = req.query;
-    const matchFilter = { loja_id, status: 'pago' };
-    if (date_from || date_to) {
-      matchFilter.criado_em = {};
-      if (date_from) matchFilter.criado_em.$gte = new Date(date_from);
-      if (date_to) matchFilter.criado_em.$lte = new Date(date_to);
-    }
-
-    const docCount = await Pedido.countDocuments(matchFilter);
-    let intervalDays = 0;
-    if (date_from && date_to) {
-      intervalDays = Math.ceil((new Date(date_to) - new Date(date_from)) / (1000 * 60 * 60 * 24));
-    } else if (!date_from && !date_to) {
-      intervalDays = 999;
-    }
-
-    const isHeavy = docCount > 2000 || intervalDays > 90;
-
-    if (isHeavy) {
-      try {
-        const [vendas_por_dia, vendas_por_produto, totaisAgg] = await Promise.all([
-          Pedido.aggregate([
-            { $match: matchFilter },
-            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$criado_em' } }, count: { $sum: 1 }, total: { $sum: '$total' } } },
-            { $sort: { _id: 1 } },
-          ]),
-          Pedido.aggregate([
-            { $match: matchFilter },
-            { $unwind: '$itens' },
-            { $group: { _id: '$itens.name', nome: { $first: '$itens.name' }, quantidade: { $sum: '$itens.quantity' }, receita: { $sum: { $multiply: ['$itens.price', '$itens.quantity'] } } } },
-            { $sort: { receita: -1 } },
-            { $limit: 50 },
-          ]),
-          Pedido.aggregate([
-            { $match: matchFilter },
-            { $group: { _id: null, pedidos: { $sum: 1 }, receita: { $sum: '$total' } } },
-          ]),
-        ]);
-
-        const vendasData = vendas_por_dia.map(v => ({ Data: v._id, Pedidos: v.count, Receita: v.total }));
-        const vendasHeaders = [
-          { key: 'Data', label: 'Data' },
-          { key: 'Pedidos', label: 'Pedidos' },
-          { key: 'Receita', label: 'Receita (R$)', format: 'currency' },
-        ];
-        const { csvBuffer, xlsxBuffer } = generateReportFiles(vendasData, vendasHeaders);
-
-        const lojistaDoc = await Lojista.findById(lojista.lojista_id).select('email nome').lean();
-        const periodo = date_from && date_to
-          ? `${new Date(date_from).toLocaleDateString('pt-BR')} a ${new Date(date_to).toLocaleDateString('pt-BR')}`
-          : 'Todo o período';
-
-        if (lojistaDoc?.email) {
-          const branding = await getBranding();
-          await sendReportEmail({
-            to: lojistaDoc.email,
-            nomeRelatorio: `vendas-${loja.nome || 'loja'}`,
-            html: emailRelatorioHtml({ nome: lojistaDoc.nome, nomeRelatorio: 'Vendas por Dia', periodo, branding }),
-            csvBuffer,
-            xlsxBuffer,
-          });
-        }
-      } catch (err) {
-        console.error('[RELATORIOS] Erro ao gerar relatório assíncrono:', err.message);
-      }
-
-      return res.status(200).json({ status: 'async_report', docCount, intervalDays });
-    }
-
-    // Normal flow (within limits)
-    const [vendas_por_dia, vendas_por_produto, totaisAgg] = await Promise.all([
-      Pedido.aggregate([
-        { $match: matchFilter },
-        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$criado_em' } }, count: { $sum: 1 }, total: { $sum: '$total' } } },
-        { $sort: { _id: 1 } },
-      ]),
-      Pedido.aggregate([
-        { $match: matchFilter },
-        { $unwind: '$itens' },
-        { $group: { _id: '$itens.name', nome: { $first: '$itens.name' }, quantidade: { $sum: '$itens.quantity' }, receita: { $sum: { $multiply: ['$itens.price', '$itens.quantity'] } } } },
-        { $sort: { receita: -1 } },
-        { $limit: 50 },
-      ]),
-      Pedido.aggregate([
-        { $match: matchFilter },
-        { $group: { _id: null, pedidos: { $sum: 1 }, receita: { $sum: '$total' } } },
-      ]),
-    ]);
-
-    return res.status(200).json({
-      vendas_por_dia,
-      vendas_por_produto,
-      totais: { pedidos: totaisAgg[0]?.pedidos || 0, receita: totaisAgg[0]?.receita || 0 },
-    });
-  }
-
-  // ========== GERAR ETIQUETA (via Shipping Service) ==========
-
-  if (req.method === 'POST' && scope === 'gerar-etiqueta') {
-    try {
-      const { pedidoId, overrideServiceId } = req.body;
-      if (!pedidoId) return res.status(400).json({ error: 'pedidoId obrigatório' });
-
-      const pedido = await Pedido.findById(pedidoId);
-      if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
-      const loja = await validateLojaOwnership(pedido.loja_id, lojista.lojista_id);
-      if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-
-      const shippingService = getShippingService(loja.configuracoes?.integracoes);
-      const result = await shippingService.gerarEtiqueta({ pedido, loja, overrideServiceId });
-
-      if (result.error) {
-        return res.status(result.httpStatus || 500).json({ error: result.error, details: result.details });
-      }
-      return res.status(result.httpStatus || 200).json(result.data);
-    } catch (err) {
-      console.error('[ME] Erro gerar etiqueta:', err.message);
-      const status = err.statusCode || 500;
-      return res.status(status).json({ error: err.message || 'Erro interno ao gerar etiqueta', details: err.details || err.message });
-    }
-  }
-
-  // ========== CANCELAR ETIQUETA (via Shipping Service) ==========
-
-  if (req.method === 'POST' && scope === 'cancelar-etiqueta') {
-    try {
-      const { pedidoId } = req.body;
-      if (!pedidoId) return res.status(400).json({ error: 'pedidoId obrigatório' });
-
-      const pedido = await Pedido.findById(pedidoId);
-      if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
-      const loja = await validateLojaOwnership(pedido.loja_id, lojista.lojista_id);
-      if (!loja) return res.status(403).json({ error: 'Acesso negado' });
-
-      const shippingService = getShippingService(loja.configuracoes?.integracoes);
-      const result = await shippingService.cancelarEtiqueta({ pedido, loja });
-
-      if (result.error) {
-        return res.status(result.httpStatus || 500).json({ error: result.error });
-      }
-      return res.status(result.httpStatus || 200).json(result.data);
-    } catch (err) {
-      console.error('[ME] Erro cancelar etiqueta:', err.message);
-      return res.status(500).json({ error: 'Erro interno ao cancelar etiqueta', details: err.message });
-    }
-  }
-
-  return res.status(400).json({ error: 'Rota não encontrada. Use scope=pedidos|pedido|carrinhos|carrinho|clientes|cliente|criar-cliente|relatorios|gerar-etiqueta|cancelar-etiqueta' });
+  return res.status(400).json({ error: 'Rota não encontrada. Use scope=pedido|pedidos' });
 };
