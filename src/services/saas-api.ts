@@ -1155,7 +1155,7 @@ export const gatewaysApi = {
 
 // === Platform API (público) ===
 export const platformApi = {
-  getDomain: () => publicRequest<{ domain: string }>('/loja-extras?scope=global-domain'),
+  getDomain: () => publicRequest<{ domain: string }>('/storefront?scope=global-domain'),
 };
 
 // === Relatórios API ===
