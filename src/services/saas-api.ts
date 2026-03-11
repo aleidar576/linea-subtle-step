@@ -957,9 +957,9 @@ export const midiasApi = {
 // === Temas API ===
 
 export const temasApi = {
-  get: (lojaId: string) => request<TemaConfig>(`/loja-extras?scope=tema&loja_id=${lojaId}`),
+  get: (lojaId: string) => request<TemaConfig>(`/storefront?scope=tema&loja_id=${lojaId}`),
   update: (lojaId: string, data: Partial<TemaConfig>) =>
-    request<TemaConfig>(`/loja-extras?scope=tema&loja_id=${lojaId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<TemaConfig>(`/storefront?scope=tema&loja_id=${lojaId}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // === Pixels API ===
