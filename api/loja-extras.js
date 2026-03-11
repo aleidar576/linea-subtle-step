@@ -490,42 +490,6 @@ module.exports = async function handler(req, res) {
       return res.json({ success: true, gateway_ativo: lojista.gateway_ativo });
     }
 
-    // ==========================================
-    // FRETES
-    // ==========================================
-    if (scope === 'fretes' && method === 'GET') {
-      const fretes = await Frete.find({ loja_id: resolvedLojaId }).sort({ ordem_exibicao: 1 }).lean();
-      return res.json(fretes);
-    }
-
-    if (scope === 'frete') {
-      if (method === 'POST') {
-        const data = req.body;
-        if (!data.nome || !data.loja_id) return res.status(400).json({ error: 'nome e loja_id obrigatórios' });
-        const count = await Frete.countDocuments({ loja_id: data.loja_id });
-        const frete = await Frete.create({ ...data, ordem_exibicao: data.ordem_exibicao ?? count });
-        return res.status(201).json(frete);
-      }
-
-      if (method === 'PUT' && id) {
-        const frete = await Frete.findById(id);
-        if (!frete) return res.status(404).json({ error: 'Frete não encontrado' });
-        const owns = await verifyOwnership(user, frete.loja_id);
-        if (!owns) return res.status(403).json({ error: 'Sem permissão' });
-        const updated = await Frete.findByIdAndUpdate(id, req.body, { new: true });
-        return res.json(updated);
-      }
-
-      if (method === 'DELETE' && id) {
-        const frete = await Frete.findById(id);
-        if (!frete) return res.status(404).json({ error: 'Frete não encontrado' });
-        const owns = await verifyOwnership(user, frete.loja_id);
-        if (!owns) return res.status(403).json({ error: 'Sem permissão' });
-        await Product.updateMany({ frete_regra_id: frete._id }, { $set: { frete_regra_id: null } });
-        await Frete.findByIdAndDelete(id);
-        return res.json({ success: true });
-      }
-    }
 
     // ==========================================
     // CUPONS
