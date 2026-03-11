@@ -5,7 +5,7 @@ import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBran
 import { ContentTransition } from '@/components/PageTransition';
 import { useEffect } from 'react';
 import {
-  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard
+  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
