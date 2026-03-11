@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { usePedidos, useCarrinhosAbandonados } from '@/hooks/usePedidos';
+import { platformApi } from '@/services/saas-api';
 import { ShoppingCart, Search, Eye, Truck, Copy, Check, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
