@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { Package, Tag, Send, Loader2 } from 'lucide-react';
+import { Package, Tag, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import PedidoClienteCard from './PedidoClienteCard';
 import PedidoEnderecoCard from './PedidoEnderecoCard';
 import PedidoItensCard from './PedidoItensCard';
 import PedidoResumoCard from './PedidoResumoCard';
+import PedidoPagamentoCard from './PedidoPagamentoCard';
+import PedidoLogisticaCard from './PedidoLogisticaCard';
 
 import { usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta } from '@/hooks/usePedidos';
 import { lojaPublicaApi } from '@/services/saas-api';
@@ -30,7 +29,7 @@ const STATUS_MAP: Record<string, { label: string; classes: string }> = {
 };
 
 function getStatusBadge(status: string) {
-  return STATUS_MAP[status] || { label: status, classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+  return STATUS_MAP[status] || { label: status, classes: 'bg-muted text-muted-foreground' };
 }
 
 function formatDate(d: string) {
@@ -161,12 +160,12 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   return (
     <>
       <Dialog open={!!pedidoId} onOpenChange={open => !open && onClose()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-6xl max-h-[92vh] flex flex-col p-0 gap-0">
           {/* Fixed Header */}
-          <div className="px-6 pt-6 pb-4 border-b border-border/50 flex flex-wrap items-center gap-3">
+          <div className="px-6 pt-6 pb-4 border-b border-border flex flex-wrap items-center gap-3">
             <DialogHeader className="flex-1 min-w-0">
-              <DialogTitle className="flex items-center gap-2 text-lg">
-                <Package className="h-5 w-5" />
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                <Package className="h-5 w-5 text-muted-foreground" />
                 Pedido #{pedido.numero}
               </DialogTitle>
             </DialogHeader>
@@ -187,14 +186,22 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
             <span className="text-xs text-muted-foreground">{formatDate(pedido.criado_em)}</span>
           </div>
 
-          {/* Scrollable Body */}
+          {/* Scrollable Body — 2-column Shopify-style layout */}
           <ScrollArea className="flex-1 overflow-y-auto">
             <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Main Column */}
-                <div className="lg:col-span-3 space-y-6">
-                  <PedidoItensCard
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* LEFT COLUMN — Main (2/3) */}
+                <div className="lg:col-span-2 space-y-6">
+                  <PedidoItensCard pedido={pedido} />
+
+                  <PedidoPagamentoCard pedido={pedido} />
+
+                  <PedidoLogisticaCard
                     pedido={pedido}
+                    rastreioInput={rastreioInput}
+                    onRastreioChange={setRastreioInput}
+                    onSaveRastreio={handleSaveRastreio}
+                    rastreioLoading={addRastreio.isPending}
                     isMEActive={isMEActive}
                     onGerarEtiqueta={handleGerarEtiqueta}
                     onCancelarEtiqueta={handleCancelarEtiqueta}
@@ -202,9 +209,9 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                     cancelarLoading={cancelarEtiqueta.isPending}
                   />
 
-                  {/* Observações */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Observações Internas</label>
+                  {/* Observações Internas */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground block">Observações Internas</label>
                     <Textarea
                       value={obsInput}
                       onChange={e => handleObsChange(e.target.value)}
@@ -212,13 +219,15 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                       rows={3}
                       className="text-sm"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Salvo automaticamente</p>
+                    <p className="text-[11px] text-muted-foreground">Salvo automaticamente</p>
                   </div>
 
                   {/* UTMs */}
                   {pedido.utms && Object.keys(pedido.utms).length > 0 && (
-                    <div className="bg-secondary/50 border border-border/50 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-2"><Tag className="h-4 w-4" /> UTMs</h4>
+                    <div className="bg-muted/50 border border-border rounded-xl p-4">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
+                        <Tag className="h-3.5 w-3.5" /> UTMs
+                      </h4>
                       <div className="text-xs space-y-1 font-mono">
                         {Object.entries(pedido.utms).map(([k, v]) => (
                           <p key={k}><span className="text-muted-foreground">{k}:</span> {String(v)}</p>
@@ -228,8 +237,9 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                   )}
                 </div>
 
-                {/* Side Column */}
-                <div className="lg:col-span-2 space-y-4">
+                {/* RIGHT COLUMN — Sidebar (1/3) */}
+                <div className="space-y-4">
+                  <PedidoResumoCard pedido={pedido} />
                   <PedidoClienteCard
                     pedidoId={pedido._id}
                     cliente={pedido.cliente}
@@ -240,34 +250,10 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                     endereco={pedido.endereco}
                     hasClienteId={!!pedido.cliente_id}
                   />
-                  <PedidoResumoCard pedido={pedido} />
                 </div>
               </div>
             </div>
           </ScrollArea>
-
-          {/* Fixed Footer */}
-          <div className="px-6 py-4 border-t border-border/50 flex flex-wrap items-center gap-3">
-            <div className="flex-1 flex items-center gap-2">
-              <Input
-                value={rastreioInput}
-                onChange={e => setRastreioInput(e.target.value)}
-                placeholder="Código de rastreio (BR123456789XX)"
-                className="h-9 text-sm max-w-xs"
-              />
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button size="sm" onClick={handleSaveRastreio} disabled={addRastreio.isPending || !rastreioInput.trim()} className="gap-1">
-                      {addRastreio.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      Salvar e Notificar
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Salvar rastreio e enviar email ao cliente</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
