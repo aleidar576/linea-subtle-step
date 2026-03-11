@@ -1881,9 +1881,37 @@ ${jsonExampleStr}`;
               <DialogDescription>Cole o código JSON do produto abaixo para preencher os campos automaticamente.</DialogDescription>
             </DialogHeader>
             <Textarea className="min-h-[300px] font-mono text-sm" placeholder='{"name": "Meu Produto", "price": 9990, ...}' value={jsonText} onChange={e => setJsonText(e.target.value)} />
+            {cdnMigrating && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Migrando imagens para CDN...
+              </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setJsonDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleJsonPaste}>Preencher Dados</Button>
+              <Button onClick={handleJsonPaste} disabled={cdnMigrating}>Preencher Dados</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* JSON Example Modal */}
+        <Dialog open={jsonExampleOpen} onOpenChange={setJsonExampleOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Modelo JSON do Produto</DialogTitle>
+              <DialogDescription>Use este modelo para importar produtos. Copie o JSON puro ou o prompt otimizado para IAs (ChatGPT, Claude, etc).</DialogDescription>
+            </DialogHeader>
+            <div className="relative">
+              <pre className="bg-zinc-950 text-green-400 rounded-lg p-4 text-xs font-mono overflow-auto max-h-[50vh] border border-border">
+                {jsonExampleStr}
+              </pre>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handleCopyJson} className="gap-2">
+                <Copy className="h-4 w-4" /> Copiar apenas o JSON
+              </Button>
+              <Button onClick={handleCopyAiPrompt} className="gap-2">
+                <Zap className="h-4 w-4" /> Copiar Prompt para IA + JSON
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

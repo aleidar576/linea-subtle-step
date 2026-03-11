@@ -261,6 +261,79 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ==========================================
+    // UPLOAD EXTERNO → BUNNY.NET (Anti-Hotlink)
+    // ==========================================
+    if (scope === 'upload-external' && method === 'POST') {
+      const { urls } = req.body;
+      if (!Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({ error: 'urls (array) é obrigatório' });
+      }
+      if (urls.length > 30) {
+        return res.status(400).json({ error: 'Máximo 30 URLs por requisição' });
+      }
+
+      const apiKey = process.env.BUNNY_API_KEY;
+      const storageZone = process.env.BUNNY_STORAGE_ZONE;
+      const pullZone = process.env.BUNNY_PULL_ZONE;
+      if (!apiKey || !storageZone || !pullZone) {
+        return res.status(400).json({ error: 'Variáveis Bunny.net não configuradas.' });
+      }
+
+      const MIME_TO_EXT = {
+        'image/jpeg': '.jpg',
+        'image/jpg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp',
+        'image/gif': '.gif',
+        'image/svg+xml': '.svg',
+        'image/avif': '.avif',
+      };
+
+      async function uploadExternalImageToBunny(url) {
+        // Skip if already on our CDN
+        if (url.includes(pullZone)) {
+          return { original: url, new_url: url };
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        try {
+          const resp = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!resp.ok) return { original: url, new_url: null };
+
+          const contentType = (resp.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+          const ext = MIME_TO_EXT[contentType] || '.webp';
+
+          const buffer = Buffer.from(await resp.arrayBuffer());
+          if (buffer.length < 100) return { original: url, new_url: null }; // too small / broken
+
+          const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+
+          const uploadRes = await fetch(`https://br.storage.bunnycdn.com/${storageZone}/${fileName}`, {
+            method: 'PUT',
+            headers: { 'AccessKey': apiKey, 'Content-Type': 'application/octet-stream' },
+            body: buffer,
+          });
+
+          if (!uploadRes.ok) return { original: url, new_url: null };
+
+          return { original: url, new_url: `https://${pullZone}/${fileName}` };
+        } catch (err) {
+          clearTimeout(timeout);
+          console.warn(`[UPLOAD-EXTERNAL] Falha: ${url} →`, err.message);
+          return { original: url, new_url: null };
+        }
+      }
+
+      const results = await Promise.allSettled(urls.map(u => uploadExternalImageToBunny(u)));
+      const mapped = results.map(r => r.status === 'fulfilled' ? r.value : { original: '', new_url: null });
+
+      return res.json({ results: mapped });
+    }
+
     return res.status(400).json({ error: `Scope "${scope}" inválido ou método não suportado` });
   } catch (err) {
     console.error('[MIDIA]', err);
