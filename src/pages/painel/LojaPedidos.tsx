@@ -119,7 +119,7 @@ const LojaPedidos = () => {
   }, []);
 
   const getStoreBaseUrl = () => {
-    if (loja?.dominio_customizado && loja?.dominio_verificado) {
+    if (loja?.dominio_customizado) {
       return `https://${loja.dominio_customizado}`;
     }
     if (loja?.slug && globalDomain) {
