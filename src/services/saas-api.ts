@@ -728,7 +728,7 @@ export const lojaCategoriesApi = {
     request<{ success: boolean }>('/categorias?action=bulk-update-products', { method: 'PATCH', body: JSON.stringify({ products }) }),
   getCategoryProducts: (lojaId: string, categoryId: string | null) =>
     request<Array<{ _id: string; name: string; image: string; price: number; sort_order: number; category_id: string | null; is_active: boolean }>>(
-      `/loja-extras?scope=category-products&loja_id=${lojaId}&category_id=${categoryId || 'null'}`
+      `/storefront?scope=category-products&loja_id=${lojaId}&category_id=${categoryId || 'null'}`
     ),
 };
 
