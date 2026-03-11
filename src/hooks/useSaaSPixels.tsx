@@ -30,7 +30,7 @@ const SaaSPixelContext = createContext<SaaSPixelContextType | undefined>(undefin
 export function SaaSPixelProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const lastPageView = useRef('');
-  const isActive = isInstitutionalRoute(location.pathname);
+  const isActive = isInstitutionalRoute(location.pathname, location.search);
 
   const { data: pixels = [] } = useQuery({
     queryKey: ['saas-pixels'],
