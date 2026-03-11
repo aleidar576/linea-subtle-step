@@ -663,44 +663,6 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // MÍDIAS (Agregação de produtos)
-    // ==========================================
-    if (scope === 'midias' && method === 'GET') {
-      const products = await Product.find({ loja_id: resolvedLojaId }).select('product_id name image images variacoes').lean();
-      const urlMap = {};
-      for (const p of products) {
-        const allUrls = [p.image, ...(p.images || [])];
-        for (const v of (p.variacoes || [])) {
-          if (v.imagem) allUrls.push(v.imagem);
-        }
-        for (const url of allUrls) {
-          if (!url) continue;
-          if (!urlMap[url]) urlMap[url] = { url, usado_em: [] };
-          urlMap[url].usado_em.push({ product_id: p.product_id, name: p.name });
-        }
-      }
-      const midias = Object.values(urlMap).sort((a, b) => b.usado_em.length - a.usado_em.length);
-      return res.json(midias);
-    }
-
-    if (scope === 'midia' && method === 'DELETE') {
-      const { url } = req.body;
-      if (!url || !resolvedLojaId) return res.status(400).json({ error: 'url e loja_id obrigatórios' });
-      const products = await Product.find({ loja_id: resolvedLojaId, $or: [{ image: url }, { images: url }, { 'variacoes.imagem': url }] });
-      let count = 0;
-      for (const p of products) {
-        if (p.image === url) p.image = (p.images || []).find(i => i !== url) || '';
-        p.images = (p.images || []).filter(i => i !== url);
-        for (const v of (p.variacoes || [])) {
-          if (v.imagem === url) v.imagem = null;
-        }
-        await p.save();
-        count++;
-      }
-      return res.json({ success: true, removido_de: count });
-    }
-
-    // ==========================================
     // TEMAS
     // ==========================================
     if (scope === 'tema') {
@@ -821,48 +783,6 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // UPLOAD BUNNY.NET
-    // ==========================================
-    if (scope === 'upload' && method === 'POST') {
-      const { image_base64 } = req.body;
-      if (!image_base64) return res.status(400).json({ error: 'image_base64 é obrigatório' });
-
-      const apiKey = process.env.BUNNY_API_KEY;
-      const storageZone = process.env.BUNNY_STORAGE_ZONE;
-      const pullZone = process.env.BUNNY_PULL_ZONE;
-      if (!apiKey || !storageZone || !pullZone) {
-        return res.status(400).json({ error: 'Variáveis Bunny.net não configuradas.' });
-      }
-
-      try {
-        const base64Data = image_base64.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-
-        const uploadRes = await fetch(`https://br.storage.bunnycdn.com/${storageZone}/${fileName}`, {
-          method: 'PUT',
-          headers: {
-            'AccessKey': apiKey,
-            'Content-Type': 'application/octet-stream',
-          },
-          body: buffer,
-        });
-
-        if (!uploadRes.ok) {
-          const errText = await uploadRes.text().catch(() => '');
-          console.error('[BUNNY]', errText);
-          return res.status(500).json({ error: 'Falha no upload para Bunny.net', details: errText });
-        }
-
-        const url = `https://${pullZone}/${fileName}`;
-        return res.json({ url });
-      } catch (err) {
-        console.error('[BUNNY]', err);
-        return res.status(500).json({ error: 'Erro no upload', details: err.message });
-      }
-    }
-
-    // ==========================================
     // LEADS (Newsletter)
     // ==========================================
     if (scope === 'leads' && method === 'GET') {
@@ -932,112 +852,6 @@ module.exports = async function handler(req, res) {
       } catch (err) {
         const inserted = err.insertedDocs?.length || 0;
         return res.json({ success: true, inseridos: inserted });
-      }
-    }
-
-    // ==========================================
-    // MUX VIDEO COMMERCE
-    // ==========================================
-
-    // === MUX: Gerar URL de Direct Upload ===
-    if (scope === 'mux-upload' && method === 'POST') {
-      const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
-      const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
-      if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
-        return res.status(500).json({ error: 'Mux não configurado no servidor (MUX_TOKEN_ID / MUX_TOKEN_SECRET)' });
-      }
-
-      const Mux = require('@mux/mux-node');
-      const mux = new Mux.default({ tokenId: MUX_TOKEN_ID, tokenSecret: MUX_TOKEN_SECRET });
-
-      try {
-        const upload = await mux.video.uploads.create({
-          new_asset_settings: {
-            playback_policy: ['public'],
-            encoding_tier: 'baseline',
-          },
-          cors_origin: '*',
-        });
-
-        return res.json({
-          upload_url: upload.url,
-          upload_id: upload.id,
-        });
-      } catch (err) {
-        console.error('[MUX-UPLOAD] ❌ Erro ao criar upload:', err.message);
-        return res.status(500).json({ error: 'Erro ao gerar URL de upload do Mux' });
-      }
-    }
-
-    // === MUX: Verificar status do upload/asset ===
-    if (scope === 'mux-status' && method === 'GET') {
-      const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
-      const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
-      if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
-        return res.status(500).json({ error: 'Mux não configurado' });
-      }
-
-      const uploadId = req.query.upload_id;
-      if (!uploadId) return res.status(400).json({ error: 'upload_id é obrigatório' });
-
-      const Mux = require('@mux/mux-node');
-      const mux = new Mux.default({ tokenId: MUX_TOKEN_ID, tokenSecret: MUX_TOKEN_SECRET });
-
-      try {
-        const upload = await mux.video.uploads.retrieve(uploadId);
-        if (!upload.asset_id) {
-          return res.json({ status: 'waiting', asset_id: null, playback_id: null });
-        }
-
-        const asset = await mux.video.assets.retrieve(upload.asset_id);
-        const playbackId = asset.playback_ids?.[0]?.id || null;
-
-        return res.json({
-          status: asset.status, // 'preparing' | 'ready' | 'errored'
-          asset_id: upload.asset_id,
-          playback_id: playbackId,
-        });
-      } catch (err) {
-        console.error('[MUX-STATUS] ❌ Erro:', err.message);
-        return res.status(500).json({ error: 'Erro ao verificar status do vídeo' });
-      }
-    }
-
-    // === MUX: Deletar vídeo (asset) ===
-    if (scope === 'mux-delete' && method === 'DELETE') {
-      const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
-      const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
-      if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
-        return res.status(500).json({ error: 'Mux não configurado' });
-      }
-
-      const { asset_id: assetId, product_id: productId } = req.query;
-      if (!assetId) return res.status(400).json({ error: 'asset_id é obrigatório' });
-
-      const Mux = require('@mux/mux-node');
-      const mux = new Mux.default({ tokenId: MUX_TOKEN_ID, tokenSecret: MUX_TOKEN_SECRET });
-
-      try {
-        // Deletar asset no Mux
-        try {
-          await mux.video.assets.delete(assetId);
-          console.log(`[MUX-DELETE] ✅ Asset ${assetId} deletado do Mux`);
-        } catch (muxErr) {
-          console.warn(`[MUX-DELETE] ⚠️ Falha ao deletar asset no Mux (pode já estar deletado):`, muxErr.message);
-        }
-
-        // Remover do array de vídeos do produto no MongoDB (se product_id fornecido)
-        if (productId) {
-          await Product.findByIdAndUpdate(productId, {
-            $pull: { videos: { asset_id: assetId } },
-          });
-          console.log(`[MUX-DELETE] ✅ Vídeo removido do produto ${productId}`);
-        }
-
-        return res.json({ success: true });
-      } catch (err) {
-        console.error('[MUX-DELETE] ❌ Erro:', err.message);
-        return res.status(500).json({ error: 'Erro ao deletar vídeo' });
       }
     }
 
