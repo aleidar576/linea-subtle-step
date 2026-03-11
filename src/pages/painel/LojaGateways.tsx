@@ -355,7 +355,7 @@ function AppmaxConfig({
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const data = await authRequest<{ redirect_url: string }>('/loja-extras?scope=appmax-connect', { method: 'GET' });
+      const data = await authRequest<{ redirect_url: string }>('/gateways?scope=appmax-connect', { method: 'GET' });
       window.location.href = data.redirect_url;
     } catch (err: any) {
       toast({ title: 'Erro ao conectar', description: err.message, variant: 'destructive' });
