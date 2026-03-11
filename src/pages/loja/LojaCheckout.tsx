@@ -651,6 +651,14 @@ const LojaCheckout = () => {
           installments: activeMethod === 'credit_card' ? (installments || 1) : 1,
           card_brand: activeMethod === 'credit_card' ? detectCardBrand(cardData.number) : null,
           last4: activeMethod === 'credit_card' ? cardData.number.replace(/\D/g, '').slice(-4) : null,
+          total_with_interest: (() => {
+            if (activeMethod !== 'credit_card' || (installments || 1) <= 1) return finalTotal;
+            if (gatewayAtivo === 'appmax' && installmentConfig && installmentConfig.interest_rate_pp > 0) {
+              const opt = calculateAppmaxInstallments(finalTotal, installmentConfig).find(o => o.installment === installments);
+              return opt ? opt.totalPrice : finalTotal;
+            }
+            return finalTotal;
+          })(),
         },
         cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
         endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
