@@ -90,6 +90,12 @@ const ProductSchema = new mongoose.Schema({
     exibir_no_produto: { type: Boolean, default: true },
   }],
 
+  // Config botão comprar (loja pública)
+  config_botao_comprar: {
+    ativo: { type: Boolean, default: true },
+    tipo_texto: { type: String, enum: ['preco', 'parcelas', 'frete_gratis'], default: 'preco' },
+  },
+
   // Extras
   badge_imagem: { type: String, default: null },
   vendas_count: { type: Number, default: 0, index: true },
