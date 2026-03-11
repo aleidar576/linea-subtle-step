@@ -943,13 +943,13 @@ export const cuponsApi = {
 // === Mídias API ===
 
 export const midiasApi = {
-  list: (lojaId: string) => request<MidiaItem[]>(`/loja-extras?scope=midias&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<MidiaItem[]>(`/midia?scope=midias&loja_id=${lojaId}`),
   remove: (lojaId: string, url: string) =>
-    request<{ success: boolean; removido_de: number }>(`/loja-extras?scope=midia&loja_id=${lojaId}`, {
+    request<{ success: boolean; removido_de: number }>(`/midia?scope=midia&loja_id=${lojaId}`, {
       method: 'DELETE', body: JSON.stringify({ url }),
     }),
   upload: (lojaId: string, imageBase64: string) =>
-    request<{ url: string }>(`/loja-extras?scope=upload&loja_id=${lojaId}`, {
+    request<{ url: string }>(`/midia?scope=upload&loja_id=${lojaId}`, {
       method: 'POST', body: JSON.stringify({ image_base64: imageBase64 }),
     }),
 };
