@@ -958,6 +958,10 @@ export const midiasApi = {
     request<{ url: string }>(`/midia?scope=upload&loja_id=${lojaId}`, {
       method: 'POST', body: JSON.stringify({ image_base64: imageBase64 }),
     }),
+  uploadExternal: (lojaId: string, urls: string[]) =>
+    request<{ results: { original: string; new_url: string | null }[] }>(`/midia?scope=upload-external&loja_id=${lojaId}`, {
+      method: 'POST', body: JSON.stringify({ urls }),
+    }),
 };
 
 // === Temas API ===

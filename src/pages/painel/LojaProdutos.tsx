@@ -293,6 +293,8 @@ const LojaProdutos = () => {
   const [videoUploading, setVideoUploading] = useState(false);
   const [videoProcessing, setVideoProcessing] = useState<{ upload_id: string; progress: number } | null>(null);
   const [videoDeleteAssetId, setVideoDeleteAssetId] = useState<string | null>(null);
+  const [jsonExampleOpen, setJsonExampleOpen] = useState(false);
+  const [cdnMigrating, setCdnMigrating] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
@@ -719,11 +721,7 @@ const LojaProdutos = () => {
     downloadFile(JSON.stringify(editingProduct, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
   };
 
-  const handleDownloadJsonExample = () => {
-    downloadFile(JSON.stringify(jsonExample(), null, 2), 'produto-exemplo.json', 'application/json');
-  };
-
-  const handleJsonPaste = () => {
+  const handleJsonPaste = async () => {
     try {
       const data = JSON.parse(jsonText);
       // Fix: if variacoes have imagem URLs not in images array, add them
@@ -741,9 +739,92 @@ const LojaProdutos = () => {
       setJsonDialogOpen(false);
       setJsonText('');
       toast({ title: 'Dados preenchidos com sucesso. Revise e salve o produto.' });
+
+      // === CDN Migration (background) ===
+      if (!id) return;
+      const allUrls: string[] = [];
+      if (data.image) allUrls.push(data.image);
+      if (Array.isArray(data.images)) allUrls.push(...data.images);
+      if (Array.isArray(data.variacoes)) {
+        data.variacoes.forEach((v: any) => { if (v.imagem) allUrls.push(v.imagem); });
+      }
+      if (data.avaliacoes_config?.avaliacoes_manuais) {
+        data.avaliacoes_config.avaliacoes_manuais.forEach((r: any) => {
+          if (Array.isArray(r.imagens)) allUrls.push(...r.imagens);
+        });
+      }
+      const uniqueUrls = [...new Set(allUrls.filter(Boolean))];
+      if (uniqueUrls.length === 0) return;
+
+      setCdnMigrating(true);
+      toast({ title: `Enviando ${uniqueUrls.length} imagens para CDN...` });
+      try {
+        const result = await midiasApi.uploadExternal(id, uniqueUrls);
+        const urlMap: Record<string, string> = {};
+        let ok = 0, fail = 0;
+        for (const r of result.results) {
+          if (r.new_url && r.new_url !== r.original) {
+            urlMap[r.original] = r.new_url;
+            ok++;
+          } else if (!r.new_url) {
+            fail++;
+          }
+        }
+        if (Object.keys(urlMap).length > 0) {
+          setEditingProduct(prev => {
+            if (!prev) return prev;
+            const replace = (u: string) => urlMap[u] || u;
+            const newData = { ...prev };
+            if (newData.image) newData.image = replace(newData.image);
+            if (newData.images) newData.images = newData.images.map(replace);
+            if (newData.variacoes) {
+              newData.variacoes = newData.variacoes.map((v: any) => ({
+                ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem,
+              }));
+            }
+            if (newData.avaliacoes_config?.avaliacoes_manuais) {
+              newData.avaliacoes_config = {
+                ...newData.avaliacoes_config,
+                avaliacoes_manuais: newData.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
+                  ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
+                })),
+              };
+            }
+            return newData;
+          });
+        }
+        toast({ title: `CDN: ${ok} enviadas${fail > 0 ? `, ${fail} falharam` : ''}` });
+      } catch (err) {
+        console.error('[CDN Migration]', err);
+        toast({ title: 'Algumas imagens não puderam ser migradas para a CDN.', variant: 'destructive' });
+      } finally {
+        setCdnMigrating(false);
+      }
     } catch {
       toast({ title: 'Código JSON inválido. Verifique a formatação.', variant: 'destructive' });
     }
+  };
+
+  const jsonExampleStr = JSON.stringify(jsonExample(), null, 2);
+
+  const aiPromptText = `Atue como um especialista em extração de dados de e-commerce. Vou te enviar o código HTML (ou texto) de uma página de produto. Sua missão é extrair todos os dados possíveis e formatá-los estritamente no modelo JSON abaixo.
+
+REGRAS CRÍTICAS DE IMAGEM: Analise as URLs das imagens no HTML. Você deve extrair APENAS as imagens de MAIOR resolução. Ignore thumbnails ou ícones (ex: remova parâmetros como '-150x150' ou 'width=100' das URLs se necessário para pegar a imagem original).
+
+Retorne APENAS o código JSON válido, sem formatações markdown em volta, pronto para ser parseado.
+
+MODELO JSON:
+
+${jsonExampleStr}`;
+
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(jsonExampleStr);
+    toast({ title: 'JSON copiado!' });
+  };
+
+  const handleCopyAiPrompt = () => {
+    navigator.clipboard.writeText(aiPromptText);
+    toast({ title: 'Prompt + JSON copiado!' });
   };
 
   // Discount calculation
@@ -807,7 +888,7 @@ const LojaProdutos = () => {
                     <DropdownMenuItem onClick={handleExportJson}>
                       <FileJson className="h-4 w-4 mr-2" /> Exportar JSON
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleDownloadJsonExample}>
+                    <DropdownMenuItem onClick={() => setJsonExampleOpen(true)}>
                       <Download className="h-4 w-4 mr-2" /> JSON Exemplo
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1800,9 +1881,37 @@ const LojaProdutos = () => {
               <DialogDescription>Cole o código JSON do produto abaixo para preencher os campos automaticamente.</DialogDescription>
             </DialogHeader>
             <Textarea className="min-h-[300px] font-mono text-sm" placeholder='{"name": "Meu Produto", "price": 9990, ...}' value={jsonText} onChange={e => setJsonText(e.target.value)} />
+            {cdnMigrating && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Migrando imagens para CDN...
+              </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setJsonDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleJsonPaste}>Preencher Dados</Button>
+              <Button onClick={handleJsonPaste} disabled={cdnMigrating}>Preencher Dados</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* JSON Example Modal */}
+        <Dialog open={jsonExampleOpen} onOpenChange={setJsonExampleOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Modelo JSON do Produto</DialogTitle>
+              <DialogDescription>Use este modelo para importar produtos. Copie o JSON puro ou o prompt otimizado para IAs (ChatGPT, Claude, etc).</DialogDescription>
+            </DialogHeader>
+            <div className="relative">
+              <pre className="bg-zinc-950 text-green-400 rounded-lg p-4 text-xs font-mono overflow-auto max-h-[50vh] border border-border">
+                {jsonExampleStr}
+              </pre>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handleCopyJson} className="gap-2">
+                <Copy className="h-4 w-4" /> Copiar apenas o JSON
+              </Button>
+              <Button onClick={handleCopyAiPrompt} className="gap-2">
+                <Zap className="h-4 w-4" /> Copiar Prompt para IA + JSON
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
