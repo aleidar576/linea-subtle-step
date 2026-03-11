@@ -8,7 +8,6 @@ const connectDB = require('../lib/mongodb.js');
 const jwt = require('jsonwebtoken');
 
 // Models
-const Frete = require('../models/Frete.js');
 const Cupom = require('../models/Cupom.js');
 const Loja = require('../models/Loja.js');
 const Product = require('../models/Product.js');
