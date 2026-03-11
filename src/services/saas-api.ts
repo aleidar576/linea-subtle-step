@@ -1012,7 +1012,7 @@ export interface LeadData {
 
 export const leadsApi = {
   subscribe: async (lojaId: string, email: string, origem: 'POPUP' | 'FOOTER') => {
-    const res = await fetch(`${API_BASE_PUB}/loja-extras?scope=lead-newsletter`, {
+    const res = await fetch(`${API_BASE_PUB}/marketing?scope=lead-newsletter`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loja_id: lojaId, email, origem }),
@@ -1021,13 +1021,13 @@ export const leadsApi = {
     return res.json() as Promise<{ success: boolean }>;
   },
   list: (lojaId: string) =>
-    request<LeadData[]>(`/loja-extras?scope=leads&loja_id=${lojaId}`),
+    request<LeadData[]>(`/marketing?scope=leads&loja_id=${lojaId}`),
   update: (id: string, data: { email: string }) =>
-    request<LeadData>(`/loja-extras?scope=lead&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<LeadData>(`/marketing?scope=lead&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=lead&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/marketing?scope=lead&id=${id}`, { method: 'DELETE' }),
   import: (lojaId: string, emails: string[], origem: 'POPUP' | 'FOOTER') =>
-    request<{ success: boolean; inseridos: number }>('/loja-extras?scope=leads-import', {
+    request<{ success: boolean; inseridos: number }>('/marketing?scope=leads-import', {
       method: 'POST', body: JSON.stringify({ loja_id: lojaId, emails, origem }),
     }),
 };
