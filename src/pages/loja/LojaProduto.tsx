@@ -846,20 +846,20 @@ const LojaProduto = () => {
         {chatbotEnabled && <LojaChatBot open={chatOpen} onOpenChange={setChatOpen} />}
 
         <Drawer open={drawerOpen} onOpenChange={(open) => { if (lightboxOpen) return; setDrawerOpen(open); }} shouldScaleBackground={false}>
-          <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between w-full p-2 gap-2 bg-background border-t border-border">
-            <Link to="/" className="flex flex-col items-center text-[10px] text-muted-foreground px-2">
+          <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between w-full h-14 px-2 gap-2 bg-background border-t border-border">
+            <Link to="/" className="flex flex-col items-center text-[10px] text-muted-foreground px-2 shrink-0">
               <Home className="h-5 w-5" /><span>Loja</span>
             </Link>
             {chatbotEnabled && (
-              <button onClick={() => setChatOpen(!chatOpen)} className="relative flex flex-col items-center text-[10px] text-muted-foreground px-2">
+              <button onClick={() => setChatOpen(!chatOpen)} className="relative flex flex-col items-center text-[10px] text-muted-foreground px-2 shrink-0">
                 <MessageCircle className="h-5 w-5" /><span>Chat</span>
                 {!chatOpen && <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary" />}
               </button>
             )}
-            <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full py-3 text-sm text-center">
+            <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center">
               Adicionar ao carrinho
             </button>
-            <button onClick={() => hasVariations ? openDrawer('buy') : handleBuyNow()} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex flex-col items-center leading-tight">
+            <button onClick={() => hasVariations ? openDrawer('buy') : handleBuyNow()} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex flex-col items-center justify-center leading-tight">
               <span className="text-sm">Comprar agora</span>
               <span className="text-xs opacity-80">{formatPrice(product.price)}</span>
             </button>

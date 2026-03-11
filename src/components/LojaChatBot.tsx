@@ -58,7 +58,7 @@ export default function LojaChatBot({ open, onOpenChange }: LojaChatBotProps) {
   if (!open) return null;
 
   return (
-    <div className="md:hidden fixed bottom-[68px] left-2 right-2 z-[90] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: '55vh' }}>
+    <div className="md:hidden fixed bottom-[60px] left-2 right-2 z-[90] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: '55vh' }}>
       {/* Header */}
       <div className="flex items-center gap-3 bg-primary px-4 py-2.5 shrink-0">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/20 text-sm font-bold text-primary-foreground">
