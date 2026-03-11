@@ -57,6 +57,8 @@ const LojaAssinatura = () => {
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
       toast({ title: '🎉 Assinatura ativada!', description: 'Seu trial de 7 dias começou.' });
+      // Fire Subscribe event for SaaS pixels (Stripe checkout success)
+      trackSaaSEvent('Subscribe', { content_name: 'Assinatura Lojista', currency: 'BRL' });
     }
   }, [searchParams]);
 
