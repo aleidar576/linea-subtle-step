@@ -20,6 +20,7 @@ const LojistaRegistro = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authSubtitle, brandName } = useSaaSBrand();
+  const { trackSaaSEvent } = useSaaSPixels();
   useFaviconUpdater();
 
   useEffect(() => {
