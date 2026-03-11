@@ -147,7 +147,7 @@ const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', c
 
       {activeTab === 'upload' && (
         <div>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleFileSelect} />
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleFileSelect} multiple={multiple} />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
