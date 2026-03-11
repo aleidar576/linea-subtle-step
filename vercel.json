@@ -12,6 +12,7 @@
     { "source": "/api/categorias", "destination": "/api/categorias.js" },
     { "source": "/api/pedidos", "destination": "/api/pedidos.js" },
     { "source": "/api/loja-extras", "destination": "/api/loja-extras.js" },
+    { "source": "/api/gateways", "destination": "/api/gateways.js" },
     { "source": "/api/midia", "destination": "/api/midia.js" },
     { "source": "/api/fretes", "destination": "/api/fretes.js" },
     { "source": "/api/assinaturas", "destination": "/api/assinaturas.js" },

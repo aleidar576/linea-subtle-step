@@ -74,7 +74,7 @@ function SealPayConfig({
     if (!apiKey.trim()) return;
     setSaving(true);
     try {
-      await authRequest('/loja-extras?scope=salvar-gateway', {
+      await authRequest('/gateways?scope=salvar-gateway', {
         method: 'POST',
         body: JSON.stringify({
           id_gateway: 'sealpay',
@@ -331,7 +331,7 @@ function AppmaxConfig({
   const handleSaveInstallmentConfig = async () => {
     setSavingConfig(true);
     try {
-      await authRequest('/loja-extras?scope=salvar-gateway', {
+      await authRequest('/gateways?scope=salvar-gateway', {
         method: 'POST',
         body: JSON.stringify({
           id_gateway: 'appmax',
@@ -355,7 +355,7 @@ function AppmaxConfig({
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const data = await authRequest<{ redirect_url: string }>('/loja-extras?scope=appmax-connect', { method: 'GET' });
+      const data = await authRequest<{ redirect_url: string }>('/gateways?scope=appmax-connect', { method: 'GET' });
       window.location.href = data.redirect_url;
     } catch (err: any) {
       toast({ title: 'Erro ao conectar', description: err.message, variant: 'destructive' });
@@ -366,7 +366,7 @@ function AppmaxConfig({
   const handleActivate = async () => {
     setActivating(true);
     try {
-      await authRequest('/loja-extras?scope=salvar-gateway', {
+      await authRequest('/gateways?scope=salvar-gateway', {
         method: 'POST',
         body: JSON.stringify({
           id_gateway: 'appmax',
@@ -510,7 +510,7 @@ const LojaGateways = () => {
     try {
       const [prof, configs] = await Promise.all([
         lojistaApi.perfil(),
-        authRequest<Record<string, any>>('/loja-extras?scope=gateways-disponiveis'),
+        authRequest<Record<string, any>>('/gateways?scope=gateways-disponiveis'),
       ]);
       setProfile(prof);
       setPlatformConfigs(configs);
@@ -559,7 +559,7 @@ const LojaGateways = () => {
 
   const handleDisconnect = async (gwId: string) => {
     try {
-      await authRequest('/loja-extras?scope=desconectar-gateway', {
+      await authRequest('/gateways?scope=desconectar-gateway', {
         method: 'POST',
         body: JSON.stringify({ id_gateway: gwId, loja_id: id }),
       });

@@ -1141,14 +1141,14 @@ export interface GatewayPlatformConfig {
 export type GatewayPlatformRecord = Record<string, GatewayPlatformConfig>;
 
 export const gatewaysApi = {
-  listDisponiveis: () => publicRequest<GatewayPlatformRecord>('/loja-extras?scope=gateways-disponiveis'),
-  getGatewayLoja: (lojaId: string) => publicRequest<{ gateway_ativo: string | null }>(`/loja-extras?scope=gateway-loja&loja_id=${lojaId}`),
+  listDisponiveis: () => publicRequest<GatewayPlatformRecord>('/gateways?scope=gateways-disponiveis'),
+  getGatewayLoja: (lojaId: string) => publicRequest<{ gateway_ativo: string | null }>(`/gateways?scope=gateway-loja&loja_id=${lojaId}`),
   salvar: (data: { id_gateway: string; config: any; ativar: boolean; loja_id: string }) =>
-    request<{ success: boolean; gateway_ativo: string | null }>('/loja-extras?scope=salvar-gateway', {
+    request<{ success: boolean; gateway_ativo: string | null }>('/gateways?scope=salvar-gateway', {
       method: 'POST', body: JSON.stringify(data),
     }),
   desconectar: (data: { id_gateway: string; loja_id: string }) =>
-    request<{ success: boolean; gateway_ativo: string | null }>('/loja-extras?scope=desconectar-gateway', {
+    request<{ success: boolean; gateway_ativo: string | null }>('/gateways?scope=desconectar-gateway', {
       method: 'POST', body: JSON.stringify(data),
     }),
 };
