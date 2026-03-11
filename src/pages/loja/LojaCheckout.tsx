@@ -173,7 +173,43 @@ const LojaCheckout = () => {
   const { cliente, isLoggedIn, isLoading: authLoading, enderecoPadrao } = useClienteAuth();
   const { data: allCheckoutProducts = [] } = useLojaPublicaProducts(lojaId);
 
-  const [currentStep, setCurrentStep] = useState<Step>(() => {
+  // ── Recovery: auto-add products from ?recovery= param ──
+  const recoveryProcessed = useRef(false);
+  useEffect(() => {
+    if (recoveryProcessed.current || !allCheckoutProducts.length) return;
+    const recoveryParam = searchParams.get('recovery');
+    if (!recoveryParam) return;
+    recoveryProcessed.current = true;
+
+    const entries = decodeURIComponent(recoveryParam).split(',').map(e => {
+      const [pid, qty] = e.split(':');
+      return { productId: pid, quantity: parseInt(qty) || 1 };
+    }).filter(e => e.productId);
+
+    // Clear existing cart and add recovery items
+    clearCart();
+    entries.forEach(({ productId, quantity }) => {
+      const p = allCheckoutProducts.find((prod: any) => prod._id === productId || prod.product_id === productId);
+      if (p) {
+        const cartProduct: import('@/data/products').Product = {
+          id: p._id || p.product_id,
+          name: p.nome || p.name,
+          slug: p.slug || '',
+          description: p.descricao || p.description || '',
+          shortDescription: p.descricao_curta || p.shortDescription || '',
+          price: p.preco || p.price || 0,
+          originalPrice: p.preco_original || p.originalPrice,
+          image: p.imagens?.[0] || p.image || '',
+          images: p.imagens || p.images || [],
+          features: [],
+        };
+        for (let i = 0; i < quantity; i++) {
+          addToCart(cartProduct);
+        }
+      }
+    });
+  }, [allCheckoutProducts, searchParams, addToCart, clearCart]);
+
     if (exigirCadastro) return 'identification';
     return 'customer';
   });
