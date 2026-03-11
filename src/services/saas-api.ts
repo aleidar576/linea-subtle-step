@@ -915,13 +915,13 @@ export interface TemaConfig {
 // === Fretes API ===
 
 export const fretesApi = {
-  list: (lojaId: string) => request<RegraFrete[]>(`/loja-extras?scope=fretes&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<RegraFrete[]>(`/fretes?scope=fretes&loja_id=${lojaId}`),
   create: (data: Partial<RegraFrete> & { loja_id: string }) =>
-    request<RegraFrete>('/loja-extras?scope=frete', { method: 'POST', body: JSON.stringify(data) }),
+    request<RegraFrete>('/fretes?scope=frete', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<RegraFrete>) =>
-    request<RegraFrete>(`/loja-extras?scope=frete&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<RegraFrete>(`/fretes?scope=frete&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=frete&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/fretes?scope=frete&id=${id}`, { method: 'DELETE' }),
 };
 
 // === Cupons API ===
