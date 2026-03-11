@@ -209,7 +209,7 @@ const LojaCheckout = () => {
       }
     });
   }, [allCheckoutProducts, searchParams, addToCart, clearCart]);
-
+  const [currentStep, setCurrentStep] = useState<Step>(() => {
     if (exigirCadastro) return 'identification';
     return 'customer';
   });
