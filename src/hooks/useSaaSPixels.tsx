@@ -11,9 +11,14 @@ import { initPixel, fireEvent, type PixelInfo, type PixelEventData } from '@/lib
 
 // Whitelist of institutional routes where SaaS pixels are active
 const INSTITUTIONAL_ROUTES = ['/', '/registro', '/login', '/verificar-email', '/redefinir-senha', '/seguranca-confirmacao'];
+// Also activate on subscription success callback (Stripe redirect)
+const PARAM_ACTIVATION = { path: '/painel/assinatura', param: 'success' };
 
-function isInstitutionalRoute(pathname: string): boolean {
-  return INSTITUTIONAL_ROUTES.includes(pathname);
+function isInstitutionalRoute(pathname: string, search: string): boolean {
+  if (INSTITUTIONAL_ROUTES.includes(pathname)) return true;
+  // Activate on Stripe checkout return
+  if (pathname === PARAM_ACTIVATION.path && new URLSearchParams(search).has(PARAM_ACTIVATION.param)) return true;
+  return false;
 }
 
 interface SaaSPixelContextType {
