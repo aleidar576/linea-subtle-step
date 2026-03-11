@@ -1101,7 +1101,7 @@ export const lojaPublicaApi = {
   getProduct: (lojaId: string, productSlug: string) =>
     publicRequest<LojaProduct>(`/products?scope=produto-publico&loja_id=${lojaId}&slug=${productSlug}`),
   getFretes: (lojaId: string) =>
-    publicRequest<RegraFrete[]>(`/loja-extras?scope=fretes-publico&loja_id=${lojaId}`),
+    publicRequest<RegraFrete[]>(`/fretes?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
   getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string; subcategory_ids?: string; page?: number }) => {
