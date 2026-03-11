@@ -840,9 +840,9 @@ export const pedidosApi = {
 // === Carrinhos API ===
 
 export const carrinhosApi = {
-  list: (lojaId: string) => request<CarrinhoAbandonado[]>(`/pedidos?loja_id=${lojaId}&scope=carrinhos`),
-  save: (data: any) => publicPostRequest<CarrinhoAbandonado>('/pedidos?scope=carrinho', data),
-  marcarConvertido: (id: string) => request<CarrinhoAbandonado>(`/pedidos?scope=carrinho&id=${id}`, { method: 'PATCH' }),
+  list: (lojaId: string) => request<CarrinhoAbandonado[]>(`/carrinhos?loja_id=${lojaId}&scope=carrinhos`),
+  save: (data: any) => publicPostRequest<CarrinhoAbandonado>('/carrinhos?scope=carrinho', data),
+  marcarConvertido: (id: string) => request<CarrinhoAbandonado>(`/carrinhos?scope=carrinho&id=${id}`, { method: 'PATCH' }),
 };
 
 // === Clientes API ===
