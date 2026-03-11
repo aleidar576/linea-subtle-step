@@ -69,6 +69,19 @@ module.exports = async function handler(req, res) {
 
   // === Stripe/Assinaturas: migrado para api/assinaturas.js ===
 
+  // Ler raw body uma única vez (bodyParser desabilitado)
+  const rawBody = method !== 'GET' && method !== 'DELETE' && method !== 'OPTIONS'
+    ? await getRawBody(req)
+    : null;
+
+  if (rawBody) {
+    try {
+      req.body = JSON.parse(rawBody);
+    } catch {
+      req.body = {};
+    }
+  }
+
   // === PUBLIC: Validar cupom (checkout) ===
   if (scope === 'cupom-publico' && method === 'GET') {
     if (!loja_id || !codigo) return res.status(400).json({ error: 'loja_id e codigo são obrigatórios' });
