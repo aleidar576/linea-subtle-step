@@ -137,7 +137,7 @@ Configurado em `vercel.json`:
 ```json
 {
   "crons": [{
-    "path": "/api/loja-extras?scope=cron-taxas",
+    "path": "/api/assinaturas?scope=cron-taxas",
     "schedule": "0 12 * * *"
   }]
 }
