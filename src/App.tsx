@@ -9,6 +9,7 @@ import { LojistaAuthProvider } from "@/hooks/useLojistaAuth";
 import { TrackingProvider } from "@/hooks/useTracking";
 import { PageTransition } from "@/components/PageTransition";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { SaaSPixelProvider } from "@/hooks/useSaaSPixels";
 
 // SaaS pages
 import LandingPage from "./pages/LandingPage";
