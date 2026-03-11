@@ -115,6 +115,14 @@ module.exports = async function handler(req, res) {
         payment_details: body.payment_details || null,
       });
 
+      paymentDebugLog('pedido_saved', {
+        pedido_id: pedido?._id ? String(pedido._id) : null,
+        numero: pedido?.numero || null,
+        status: pedido?.status || null,
+        payment_method: pedido?.pagamento?.metodo || null,
+        payment_details: safePaymentDetails(pedido?.payment_details),
+      });
+
       // === ACUMULAR TAXAS DA PLATAFORMA quando pedido é criado já como pago ===
       if (pedido.status === 'pago' && pedido.total > 0) {
         try {
