@@ -905,7 +905,7 @@ ${jsonExampleStr}`;
         </div>
 
         {/* ── CONTENT ── */}
-        <div className="p-6">
+        <div className="px-6 pt-4 pb-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full grid grid-cols-5 mb-6">
               <TabsTrigger value="basico">Básico</TabsTrigger>
