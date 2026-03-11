@@ -771,6 +771,12 @@ export interface Pedido {
   melhor_envio_status: string | null;
   etiqueta_url: string | null;
   codigo_rastreio: string | null;
+  payment_details?: {
+    method: string | null;
+    installments: number;
+    card_brand: string | null;
+    last4: string | null;
+  } | null;
 }
 
 export interface PedidosListResponse {

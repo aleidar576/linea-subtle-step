@@ -59,6 +59,15 @@ const PedidoSchema = new mongoose.Schema({
   melhor_envio_status: { type: String, default: null },
   etiqueta_url: { type: String, default: null },
   codigo_rastreio: { type: String, default: null },
+  payment_details: {
+    type: {
+      method: { type: String, default: null },
+      installments: { type: Number, default: 1 },
+      card_brand: { type: String, default: null },
+      last4: { type: String, default: null },
+    },
+    default: null,
+  },
   utms: { type: mongoose.Schema.Types.Mixed, default: {} },
   criado_em: { type: Date, default: () => new Date() },
   atualizado_em: { type: Date, default: () => new Date() },

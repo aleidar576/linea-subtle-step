@@ -612,6 +612,17 @@ const LojaCheckout = () => {
         throw new Error(data.error);
       }
 
+      // Detect card brand from BIN (public data, PCI-safe)
+      const detectCardBrand = (num: string): string | null => {
+        const d = (num || '').replace(/\D/g, '');
+        if (/^4/.test(d)) return 'visa';
+        if (/^(5[1-5]|2[2-7])/.test(d)) return 'mastercard';
+        if (/^3[47]/.test(d)) return 'amex';
+        if (/^(636368|438935|504175|451416|636297|5067|4576|4011|506699)/.test(d)) return 'elo';
+        if (/^(606282|3841)/.test(d)) return 'hipercard';
+        return null;
+      };
+
       // Build pedido payload (common)
       const pedidoPayload = {
         loja_id: lojaId,
@@ -634,6 +645,12 @@ const LojaCheckout = () => {
           pdf_url: data.pdf_url || data.url || data.boleto_url || null,
           digitable_line: data.digitable_line || data.linha_digitavel || null,
           pago_em: null,
+        },
+        payment_details: {
+          method: activeMethod,
+          installments: activeMethod === 'credit_card' ? (installments || 1) : 1,
+          card_brand: activeMethod === 'credit_card' ? detectCardBrand(cardData.number) : null,
+          last4: activeMethod === 'credit_card' ? cardData.number.replace(/\D/g, '').slice(-4) : null,
         },
         cliente: { nome: customerData.name, email: customerData.email, telefone: customerData.cellphone, cpf: customerData.taxId },
         endereco: { cep: shippingData.zipCode, rua: shippingData.street, numero: shippingData.number, complemento: shippingData.complement, bairro: shippingData.neighborhood, cidade: shippingData.city, estado: shippingData.state },
