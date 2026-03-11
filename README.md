@@ -801,18 +801,36 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 
 ```
 /
-├── api/                    # 12 Serverless Functions (Vercel) — LIMITE ATINGIDO
+├── api/                    # 17 Serverless Functions (Vercel) — Microsserviços especializados
+│   ├── admins.js           # Admin: CRUD, lojistas, impersonation, métricas
+│   ├── assinaturas.js      # Stripe: Checkout, Portal, Webhooks, Cron taxas
+│   ├── auth-action.ts      # Autenticação: login, registro, reset, 2FA
+│   ├── categorias.js       # CRUD categorias de produtos
+│   ├── cliente-auth.js     # Autenticação clientes da loja
+│   ├── fretes.js           # CRUD fretes + cálculo dinâmico
+│   ├── gateways.js         # Gateways de pagamento (config + OAuth Appmax)
+│   ├── lojas.js            # CRUD lojas + domínios customizados
+│   ├── lojista.js          # Perfil lojista + notificações
+│   ├── marketing.js        # Cupons + Leads + Pixels
+│   ├── midia.js            # Upload Bunny.net + Mux Video
+│   ├── pedidos.js          # Pedidos, carrinhos, clientes, relatórios
+│   ├── process-payment.js  # Processamento pagamentos (PIX + Appmax)
+│   ├── products.ts         # CRUD produtos + listagem pública
+│   ├── settings.js         # Config globais + testes integração
+│   ├── storefront.js       # Temas + Páginas CMS + Vitrine pública
+│   └── tracking-webhook.js # Webhook rastreamento + CAPI
 ├── lib/                    # Utilitários backend (auth, mongodb, email, date-utils)
 │   └── services/           # 🏭 Strategy Pattern — Serviços modulares por domínio
 │       ├── pagamentos/
 │       │   ├── index.js    # Factory: getPaymentService(gatewayId)
-│       │   └── sealpay.js  # Implementação SealPay (getStatus, handleWebhook, createPayment)
+│       │   ├── sealpay.js  # Implementação SealPay
+│       │   └── appmax.js   # Implementação Appmax
 │       ├── fretes/
 │       │   ├── index.js    # Factory: getShippingService(integracoes)
-│       │   └── melhorEnvio.js # Implementação Melhor Envio (gerarEtiqueta, cancelarEtiqueta, calcularFrete)
+│       │   └── melhorEnvio.js # Implementação Melhor Envio
 │       └── assinaturas/
 │           ├── index.js    # Factory: getSubscriptionService(provider)
-│           └── stripe.js   # Implementação Stripe (checkout, webhook, portal, cron taxas, pagamento manual)
+│           └── stripe.js   # Implementação Stripe
 ├── models/                 # Schemas Mongoose (Product, Loja, Pedido, Lojista, TrackingPixel, etc.)
 ├── public/                 # Assets estáticos (favicon, imagens de produtos)
 ├── src/
@@ -829,7 +847,7 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 │   │   ├── useClienteAuth.tsx # Autenticação cliente da loja
 │   │   ├── useTracking.tsx # Contexto de pixels (SaaS-side)
 │   │   ├── useUtmParams.tsx # Captura e persistência de UTMs
-│   │   ├── useLojaExtras.tsx # CRUD de fretes, cupons, mídias, temas, pixels, páginas, leads
+│   │   ├── useLojaExtras.tsx # Hooks React Query para fretes, cupons, mídias, temas, pixels, páginas, leads
 │   │   └── useTheme.tsx    # Toggle light/dark mode
 │   ├── pages/              # Páginas do SaaS, Admin e Demo
 │   │   ├── loja/           # Páginas da loja pública (LojaHome, LojaProduto, LojaCheckout, etc.)
