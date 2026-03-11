@@ -728,7 +728,7 @@ export const lojaCategoriesApi = {
     request<{ success: boolean }>('/categorias?action=bulk-update-products', { method: 'PATCH', body: JSON.stringify({ products }) }),
   getCategoryProducts: (lojaId: string, categoryId: string | null) =>
     request<Array<{ _id: string; name: string; image: string; price: number; sort_order: number; category_id: string | null; is_active: boolean }>>(
-      `/loja-extras?scope=category-products&loja_id=${lojaId}&category_id=${categoryId || 'null'}`
+      `/storefront?scope=category-products&loja_id=${lojaId}&category_id=${categoryId || 'null'}`
     ),
 };
 
@@ -927,17 +927,17 @@ export const fretesApi = {
 // === Cupons API ===
 
 export const cuponsApi = {
-  list: (lojaId: string) => request<Cupom[]>(`/loja-extras?scope=cupons&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<Cupom[]>(`/marketing?scope=cupons&loja_id=${lojaId}`),
   validar: (lojaId: string, codigo: string) =>
-    request<{ tipo: string; valor: number; valor_minimo_pedido: number | null; codigo: string }>(`/loja-extras?scope=cupom-publico&loja_id=${lojaId}&codigo=${codigo}`),
+    request<{ tipo: string; valor: number; valor_minimo_pedido: number | null; codigo: string }>(`/marketing?scope=cupom-publico&loja_id=${lojaId}&codigo=${codigo}`),
   create: (data: Partial<Cupom> & { loja_id: string }) =>
-    request<Cupom>('/loja-extras?scope=cupom', { method: 'POST', body: JSON.stringify(data) }),
+    request<Cupom>('/marketing?scope=cupom', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Cupom>) =>
-    request<Cupom>(`/loja-extras?scope=cupom&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<Cupom>(`/marketing?scope=cupom&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=cupom&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/marketing?scope=cupom&id=${id}`, { method: 'DELETE' }),
   toggle: (id: string) =>
-    request<Cupom>(`/loja-extras?scope=cupom&id=${id}`, { method: 'PATCH' }),
+    request<Cupom>(`/marketing?scope=cupom&id=${id}`, { method: 'PATCH' }),
 };
 
 // === Mídias API ===
@@ -957,21 +957,21 @@ export const midiasApi = {
 // === Temas API ===
 
 export const temasApi = {
-  get: (lojaId: string) => request<TemaConfig>(`/loja-extras?scope=tema&loja_id=${lojaId}`),
+  get: (lojaId: string) => request<TemaConfig>(`/storefront?scope=tema&loja_id=${lojaId}`),
   update: (lojaId: string, data: Partial<TemaConfig>) =>
-    request<TemaConfig>(`/loja-extras?scope=tema&loja_id=${lojaId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<TemaConfig>(`/storefront?scope=tema&loja_id=${lojaId}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // === Pixels API ===
 
 export const pixelsApi = {
-  list: (lojaId: string) => request<TrackingPixelData[]>(`/loja-extras?scope=pixels&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<TrackingPixelData[]>(`/marketing?scope=pixels&loja_id=${lojaId}`),
   create: (data: Partial<TrackingPixelData> & { loja_id: string }) =>
-    request<TrackingPixelData>('/loja-extras?scope=pixel', { method: 'POST', body: JSON.stringify(data) }),
+    request<TrackingPixelData>('/marketing?scope=pixel', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<TrackingPixelData>) =>
-    request<TrackingPixelData>(`/loja-extras?scope=pixel&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<TrackingPixelData>(`/marketing?scope=pixel&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=pixel&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/marketing?scope=pixel&id=${id}`, { method: 'DELETE' }),
 };
 
 // === Mux Video API ===
@@ -988,15 +988,15 @@ export const muxApi = {
 // === Páginas API ===
 
 export const paginasApi = {
-  list: (lojaId: string) => request<PaginaData[]>(`/loja-extras?scope=paginas&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<PaginaData[]>(`/storefront?scope=paginas&loja_id=${lojaId}`),
   create: (data: { loja_id: string; titulo: string; conteudo?: string }) =>
-    request<PaginaData>('/loja-extras?scope=pagina', { method: 'POST', body: JSON.stringify(data) }),
+    request<PaginaData>('/storefront?scope=pagina', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: { titulo?: string; conteudo?: string; is_active?: boolean }) =>
-    request<PaginaData>(`/loja-extras?scope=pagina&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<PaginaData>(`/storefront?scope=pagina&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=pagina&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/storefront?scope=pagina&id=${id}`, { method: 'DELETE' }),
   getPublic: (lojaId: string, slug: string) =>
-    request<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+    request<PaginaData>(`/storefront?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
 };
 
 // === Leads API (Newsletter) ===
@@ -1012,7 +1012,7 @@ export interface LeadData {
 
 export const leadsApi = {
   subscribe: async (lojaId: string, email: string, origem: 'POPUP' | 'FOOTER') => {
-    const res = await fetch(`${API_BASE_PUB}/loja-extras?scope=lead-newsletter`, {
+    const res = await fetch(`${API_BASE_PUB}/marketing?scope=lead-newsletter`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loja_id: lojaId, email, origem }),
@@ -1021,13 +1021,13 @@ export const leadsApi = {
     return res.json() as Promise<{ success: boolean }>;
   },
   list: (lojaId: string) =>
-    request<LeadData[]>(`/loja-extras?scope=leads&loja_id=${lojaId}`),
+    request<LeadData[]>(`/marketing?scope=leads&loja_id=${lojaId}`),
   update: (id: string, data: { email: string }) =>
-    request<LeadData>(`/loja-extras?scope=lead&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<LeadData>(`/marketing?scope=lead&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=lead&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/marketing?scope=lead&id=${id}`, { method: 'DELETE' }),
   import: (lojaId: string, emails: string[], origem: 'POPUP' | 'FOOTER') =>
-    request<{ success: boolean; inseridos: number }>('/loja-extras?scope=leads-import', {
+    request<{ success: boolean; inseridos: number }>('/marketing?scope=leads-import', {
       method: 'POST', body: JSON.stringify({ loja_id: lojaId, emails, origem }),
     }),
 };
@@ -1037,7 +1037,7 @@ export const leadsApi = {
 export const cuponsPopupApi = {
   getBulk: (lojaId: string, ids: string[]) =>
     publicRequest<Array<{ _id: string; codigo: string; tipo: string; valor: number }>>(
-      `/loja-extras?scope=cupons-popup&loja_id=${lojaId}&ids=${ids.join(',')}`
+      `/marketing?scope=cupons-popup&loja_id=${lojaId}&ids=${ids.join(',')}`
     ),
 };
 
@@ -1103,7 +1103,7 @@ export const lojaPublicaApi = {
   getFretes: (lojaId: string) =>
     publicRequest<RegraFrete[]>(`/fretes?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
-    publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
+    publicRequest<LojaCategory[]>(`/storefront?scope=categorias-publico&loja_id=${lojaId}`),
   getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string; subcategory_ids?: string; page?: number }) => {
     const params = new URLSearchParams({ scope: 'categoria-publica', loja_id: lojaId, category_slug: slug });
     if (sort) params.set('sort', sort);
@@ -1115,7 +1115,7 @@ export const lojaPublicaApi = {
     return publicRequest<CategoriaPublicaResponse>(`/products?${params.toString()}`);
   },
   getPagina: (lojaId: string, slug: string) =>
-    publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+    publicRequest<PaginaData>(`/storefront?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
   calcularFrete: (data: CalculateFreightRequest) =>
     publicPostRequest<{ success: boolean; fretes: CalculatedFreight[] }>(
       '/fretes?scope=calcular-frete', data
@@ -1155,7 +1155,7 @@ export const gatewaysApi = {
 
 // === Platform API (público) ===
 export const platformApi = {
-  getDomain: () => publicRequest<{ domain: string }>('/loja-extras?scope=global-domain'),
+  getDomain: () => publicRequest<{ domain: string }>('/storefront?scope=global-domain'),
 };
 
 // === Relatórios API ===
