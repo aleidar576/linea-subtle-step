@@ -1174,7 +1174,7 @@ export const relatoriosApi = {
     const params = new URLSearchParams({ scope: 'relatorios', loja_id: lojaId });
     if (dateFrom) params.set('date_from', dateFrom);
     if (dateTo) params.set('date_to', dateTo);
-    return request<RelatorioData>(`/pedidos?${params.toString()}`);
+    return request<RelatorioData>(`/relatorios?${params.toString()}`);
   },
 };
 
