@@ -218,12 +218,12 @@ const AdminIntegracoes = () => {
           <div>
             <label className="text-sm font-medium mb-1 block">URL do Webhook</label>
             <div className="flex gap-2">
-              <Input value={`${window.location.origin}/api/loja-extras?scope=stripe-webhook`} readOnly className="font-mono text-xs" />
+              <Input value={`${window.location.origin}/api/assinaturas?scope=stripe-webhook`} readOnly className="font-mono text-xs" />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/api/loja-extras?scope=stripe-webhook`);
+                  navigator.clipboard.writeText(`${window.location.origin}/api/assinaturas?scope=stripe-webhook`);
                   toast({ title: 'URL copiada!' });
                 }}
               >
