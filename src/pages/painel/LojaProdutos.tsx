@@ -164,8 +164,10 @@ function parseCsvLine(line: string): string[] {
 function jsonExample(): Partial<LojaProduct> {
   return {
     name: 'Produto Exemplo',
+    sku: 'SKU-001',
     short_description: 'Descrição curta do produto',
     description: 'Descrição longa detalhada do produto com informações completas.',
+    description_image: null,
     price: 9990,
     original_price: 14990,
     image: 'https://exemplo.com/imagem-principal.jpg',
@@ -173,10 +175,12 @@ function jsonExample(): Partial<LojaProduct> {
     features: ['Material premium', 'Garantia 1 ano'],
     promotion: '30% OFF',
     category_id: null,
+    category_ids: [],
     is_active: true,
     rating: 4.8,
     rating_count: '+200',
     social_proof_gender: 'feminino',
+    badge_imagem: null,
     estoque: 50,
     vender_sem_estoque: true,
     variacoes: [
@@ -190,13 +194,24 @@ function jsonExample(): Partial<LojaProduct> {
       qtd_antes_ver_mais: 3,
       usar_comentarios_padrao: true,
       avaliacoes_manuais: [
-        { nome: 'Maria S.', texto: 'Adorei o produto!', nota: 5, data: '2025-01-15' },
+        { nome: 'Maria S.', texto: 'Adorei o produto!', nota: 5, data: '2025-01-15', imagens: [] },
       ],
     },
-    frete_config: { tipo: 'entregue_ate', data_1: null, data_2: null },
+    frete_config: { tipo: 'entregue_ate', data_1: null, data_2: null, ocultar_frete_produto: false },
+    usar_frete_global: true,
+    fretes_vinculados: [],
+    fretes_especificos: [],
     parcelas_fake: null,
     vendas_fake: 150,
-    oferta_relampago: { ativo: false, icone: 'zap', titulo: 'Oferta Relâmpago', data_termino: null, estoque_campanha: 0 },
+    oferta_relampago: { ativo: false, icone: 'zap', titulo: 'Oferta Relâmpago', data_termino: null, estoque_campanha: 0, evergreen_minutos: 0, evergreen_segundos: 0 },
+    vantagens_titulo: null,
+    vantagens: { ativo: false, itens: [] },
+    protecao_cliente: { ativo: false, itens: [] },
+    pessoas_vendo: { ativo: false, min: 10, max: 50 },
+    cross_sell: { modo: 'aleatorio', categoria_manual_id: null },
+    videos: [],
+    video_layout: 'auto',
+    dimensoes: { peso: 0, altura: 0, largura: 0, comprimento: 0 },
   };
 }
 
