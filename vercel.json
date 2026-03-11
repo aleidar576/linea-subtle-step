@@ -12,6 +12,7 @@
     { "source": "/api/categorias", "destination": "/api/categorias.js" },
     { "source": "/api/pedidos", "destination": "/api/pedidos.js" },
     { "source": "/api/loja-extras", "destination": "/api/loja-extras.js" },
+    { "source": "/api/midia", "destination": "/api/midia.js" },
     { "source": "/api/cliente-auth", "destination": "/api/cliente-auth.js" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],

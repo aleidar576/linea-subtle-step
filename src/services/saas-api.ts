@@ -978,11 +978,11 @@ export const pixelsApi = {
 
 export const muxApi = {
   getUploadUrl: (lojaId: string) =>
-    request<{ upload_url: string; upload_id: string }>(`/loja-extras?scope=mux-upload&loja_id=${lojaId}`, { method: 'POST' }),
+    request<{ upload_url: string; upload_id: string }>(`/midia?scope=mux-upload&loja_id=${lojaId}`, { method: 'POST' }),
   getStatus: (lojaId: string, uploadId: string) =>
-    request<{ status: string; asset_id: string | null; playback_id: string | null }>(`/loja-extras?scope=mux-status&loja_id=${lojaId}&upload_id=${uploadId}`),
+    request<{ status: string; asset_id: string | null; playback_id: string | null }>(`/midia?scope=mux-status&loja_id=${lojaId}&upload_id=${uploadId}`),
   deleteVideo: (lojaId: string, assetId: string, productId?: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=mux-delete&loja_id=${lojaId}&asset_id=${assetId}${productId ? `&product_id=${productId}` : ''}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/midia?scope=mux-delete&loja_id=${lojaId}&asset_id=${assetId}${productId ? `&product_id=${productId}` : ''}`, { method: 'DELETE' }),
 };
 
 // === Páginas API ===
