@@ -24,30 +24,21 @@ const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', c
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [uploadProgress, setUploadProgress] = useState('');
 
+  const processOneFile = async (file: File): Promise<string | null> => {
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!validTypes.includes(file.type)) {
-      toast({ title: 'Tipo inválido', description: 'Apenas JPG, PNG, WebP e GIF são aceitos.', variant: 'destructive' });
-      return;
-    }
-    if (file.size > 4.5 * 1024 * 1024) {
-      toast({ title: 'Arquivo muito grande', description: 'O limite é 4.5MB.', variant: 'destructive' });
-      return;
-    }
+    if (!validTypes.includes(file.type)) return null;
+    if (file.size > 4.5 * 1024 * 1024) return null;
 
-    setUploading(true);
-    try {
-      // Compress image before upload
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 0.2,
-        maxWidthOrHeight: 1080,
-        useWebWorker: true,
-        fileType: 'image/webp',
-      });
+    const compressed = await imageCompression(file, {
+      maxSizeMB: 0.2,
+      maxWidthOrHeight: 1080,
+      useWebWorker: true,
+      fileType: 'image/webp',
+    });
 
+    return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -60,18 +51,45 @@ const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', c
             const result = await midiasApi.upload(lojaId!, base64);
             url = result.url;
           }
-          onChange(url);
-          setUrlInput(url);
-          toast({ title: 'Upload concluído!' });
-        } catch (err: any) {
-          toast({ title: 'Erro no upload', description: err.message, variant: 'destructive' });
-        } finally {
-          setUploading(false);
+          resolve(url);
+        } catch {
+          resolve(null);
         }
       };
       reader.readAsDataURL(compressed);
-    } catch {
-      setUploading(false);
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const validFiles = Array.from(files).filter(f => validTypes.includes(f.type) && f.size <= 4.5 * 1024 * 1024);
+
+    if (validFiles.length === 0) {
+      toast({ title: 'Nenhum arquivo válido', description: 'Apenas JPG, PNG, WebP e GIF até 4.5MB.', variant: 'destructive' });
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
+
+    setUploading(true);
+    let successCount = 0;
+
+    for (let i = 0; i < validFiles.length; i++) {
+      setUploadProgress(`${i + 1}/${validFiles.length}`);
+      const url = await processOneFile(validFiles[i]);
+      if (url) {
+        onChange(url);
+        setUrlInput(url);
+        successCount++;
+      }
+    }
+
+    setUploading(false);
+    setUploadProgress('');
+    if (successCount > 0) {
+      toast({ title: `${successCount} ${successCount === 1 ? 'imagem enviada' : 'imagens enviadas'}!` });
     }
     if (fileRef.current) fileRef.current.value = '';
   };
