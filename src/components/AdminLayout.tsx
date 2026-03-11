@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/admin/avisos', label: 'Avisos', icon: Bell },
   { to: '/admin/tickets', label: 'Tickets', icon: ShieldCheck },
   { to: '/admin/pacotes-comentarios', label: 'Pacotes', icon: MessageSquare },
+  { to: '/admin/marketing', label: 'Marketing', icon: Megaphone },
   { to: '/admin/integracoes', label: 'Integrações', icon: Plug },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings },
   { to: '/admin/estatisticas', label: 'Estatísticas', icon: BarChart3 },

@@ -89,11 +89,11 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   }, [location.pathname, location.search, pixels]);
 
   const trackPageView = useCallback(() => { fireEvent(pixels, 'PageView'); }, [pixels]);
-  const trackViewContent = useCallback((data: TrackingEventData) => { fireEvent(pixels, 'ViewContent', data); }, [pixels]);
-  const trackAddToCart = useCallback((data: TrackingEventData) => { fireEvent(pixels, 'AddToCart', data); }, [pixels]);
-  const trackInitiateCheckout = useCallback((data: TrackingEventData) => { fireEvent(pixels, 'InitiateCheckout', data); }, [pixels]);
-  const trackAddPaymentInfo = useCallback((data: TrackingEventData) => { fireEvent(pixels, 'AddPaymentInfo', data); }, [pixels]);
-  const trackPurchase = useCallback((data: TrackingEventData) => { fireEvent(pixels, 'Purchase', data); }, [pixels]);
+  const trackViewContent = useCallback((data: PixelEventData) => { fireEvent(pixels, 'ViewContent', data); }, [pixels]);
+  const trackAddToCart = useCallback((data: PixelEventData) => { fireEvent(pixels, 'AddToCart', data); }, [pixels]);
+  const trackInitiateCheckout = useCallback((data: PixelEventData) => { fireEvent(pixels, 'InitiateCheckout', data); }, [pixels]);
+  const trackAddPaymentInfo = useCallback((data: PixelEventData) => { fireEvent(pixels, 'AddPaymentInfo', data); }, [pixels]);
+  const trackPurchase = useCallback((data: PixelEventData) => { fireEvent(pixels, 'Purchase', data); }, [pixels]);
 
   return (
     <TrackingContext.Provider value={{

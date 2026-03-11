@@ -40,6 +40,7 @@ const LojistaRegistro = () => {
     setLoading(true);
     try {
       const res = await lojistaAuthApi.registro({ nome, email, password, telefone, termos_aceitos: true });
+      trackSaaSEvent('CompleteRegistration', { content_name: 'Registro Lojista' });
       toast({ title: 'Conta criada!', description: res.message });
       navigate('/verificar-email?pending=true');
     } catch (err: any) {
