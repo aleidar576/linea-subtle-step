@@ -445,7 +445,7 @@ const LojaPedidos = () => {
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Link de Recuperação</label>
                     <div className="flex gap-2">
-                      <Input value={`${window.location.origin}${getRecoveryLink(selectedCarrinho)}`} readOnly className="text-xs" />
+                      <Input value={`${getStoreBaseUrl()}${getRecoveryLink(selectedCarrinho)}`} readOnly className="text-xs" />
                       <Button variant="outline" size="sm" onClick={() => copyRecoveryLink(selectedCarrinho)} className="gap-1 shrink-0">
                         <Copy className="h-4 w-4" /> Copiar
                       </Button>
