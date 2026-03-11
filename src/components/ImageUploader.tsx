@@ -14,6 +14,7 @@ interface ImageUploaderProps {
   placeholder?: string;
   className?: string;
   adminMode?: boolean;
+  multiple?: boolean;
 }
 
 const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', className, adminMode }: ImageUploaderProps) => {
