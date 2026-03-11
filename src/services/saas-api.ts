@@ -915,13 +915,13 @@ export interface TemaConfig {
 // === Fretes API ===
 
 export const fretesApi = {
-  list: (lojaId: string) => request<RegraFrete[]>(`/loja-extras?scope=fretes&loja_id=${lojaId}`),
+  list: (lojaId: string) => request<RegraFrete[]>(`/fretes?scope=fretes&loja_id=${lojaId}`),
   create: (data: Partial<RegraFrete> & { loja_id: string }) =>
-    request<RegraFrete>('/loja-extras?scope=frete', { method: 'POST', body: JSON.stringify(data) }),
+    request<RegraFrete>('/fretes?scope=frete', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<RegraFrete>) =>
-    request<RegraFrete>(`/loja-extras?scope=frete&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<RegraFrete>(`/fretes?scope=frete&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
-    request<{ success: boolean }>(`/loja-extras?scope=frete&id=${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/fretes?scope=frete&id=${id}`, { method: 'DELETE' }),
 };
 
 // === Cupons API ===
@@ -1101,7 +1101,7 @@ export const lojaPublicaApi = {
   getProduct: (lojaId: string, productSlug: string) =>
     publicRequest<LojaProduct>(`/products?scope=produto-publico&loja_id=${lojaId}&slug=${productSlug}`),
   getFretes: (lojaId: string) =>
-    publicRequest<RegraFrete[]>(`/loja-extras?scope=fretes-publico&loja_id=${lojaId}`),
+    publicRequest<RegraFrete[]>(`/fretes?scope=fretes-publico&loja_id=${lojaId}`),
   getCategorias: (lojaId: string) =>
     publicRequest<LojaCategory[]>(`/loja-extras?scope=categorias-publico&loja_id=${lojaId}`),
   getCategoriaBySlug: (lojaId: string, slug: string, sort?: string, filters?: { price_min?: number; price_max?: number; variations?: string; subcategory_ids?: string; page?: number }) => {
@@ -1118,7 +1118,7 @@ export const lojaPublicaApi = {
     publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
   calcularFrete: (data: CalculateFreightRequest) =>
     publicPostRequest<{ success: boolean; fretes: CalculatedFreight[] }>(
-      '/loja-extras?scope=calcular-frete', data
+      '/fretes?scope=calcular-frete', data
     ),
 };
 
