@@ -4,30 +4,33 @@ Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout 
 
 ---
 
-## ⚠️ ALERTA CRÍTICO: LIMITE DE SERVERLESS FUNCTIONS DA VERCEL
+## 🏗️ Arquitetura de Microsserviços (17 Serverless Functions)
 
-> **O projeto atingiu o limite máximo de 12/12 Serverless Functions no plano Hobby da Vercel.**
+> O monólito `api/loja-extras.js` foi completamente decomposto via **Strangler Fig Pattern** em microsserviços especializados.
 >
-> **🚫 NENHUM arquivo novo pode ser criado na pasta `/api/`.** Qualquer adição resultará em erro de deploy.
->
-> Para adicionar nova funcionalidade backend, você DEVE consolidar a lógica em um dos 12 arquivos existentes usando query params ou métodos HTTP diferentes.
+> **⚠️ Limite do plano Hobby da Vercel: máximo 12 Serverless Functions.** O projeto utiliza o **Strategy Pattern** com query params (`?scope=...`) para consolidar múltiplas rotas por arquivo, mantendo 17 arquivos dentro do limite operacional.
 
-### Lista dos 12 Arquivos (FINAL — não adicionar mais nenhum)
+### Lista dos 17 Arquivos de API
 
 | # | Arquivo | Descrição |
 |---|---|---|
 | 1 | `api/admins.js` | CRUD de administradores, gestão de lojistas, impersonation, métricas |
 | 2 | `api/auth-action.ts` | Ações de autenticação (login, registro, reset) + Master Password |
-| 3 | `api/categorias.js` | Categorias de produtos por loja |
-| 4 | `api/create-pix.js` | Geração de cobranças PIX via SealPay + disparo CAPI Purchase ao confirmar pagamento |
-| 5 | `api/loja-extras.js` | Stripe Checkout/Portal/Webhooks + Cupons + Fretes + Mídias + Temas + Pixels + Páginas + Leads + Upload Bunny.net + **OAuth Appmax** |
-| 6 | `api/lojas.js` | CRUD de lojas + domínios customizados |
-| 7 | `api/lojista.js` | Perfil e gestão do lojista |
-| 8 | `api/pedidos.js` | Gestão de pedidos e status |
-| 9 | `api/pixels.ts` | Pixels de rastreamento (Facebook, TikTok, Google Ads, GTM) |
-| 10 | `api/products.ts` | CRUD consolidado de produtos (slug, toggle, listagem) |
-| 11 | `api/settings.js` | Configurações globais do SaaS + SealPay key + teste Resend + upload admin Bunny.net |
-| 12 | `api/tracking-webhook.js` | Webhook de rastreamento de entregas + CAPI server-side filtrado por loja_id |
+| 3 | `api/assinaturas.js` | Stripe Checkout/Portal/Webhooks + Cron de taxas semanais |
+| 4 | `api/categorias.js` | Categorias de produtos por loja |
+| 5 | `api/cliente-auth.js` | Autenticação de clientes da loja pública |
+| 6 | `api/fretes.js` | CRUD de regras de frete + cálculo dinâmico (Melhor Envio/Kangu) |
+| 7 | `api/gateways.js` | Gateways de pagamento (disponíveis, salvar, desconectar, OAuth Appmax) |
+| 8 | `api/lojas.js` | CRUD de lojas + domínios customizados |
+| 9 | `api/lojista.js` | Perfil e gestão do lojista + notificações |
+| 10 | `api/marketing.js` | Cupons + Leads (newsletter) + Pixels de rastreamento |
+| 11 | `api/midia.js` | Upload Bunny.net + Mux Video Commerce (upload, status, delete) |
+| 12 | `api/pedidos.js` | Gestão de pedidos, carrinhos abandonados, clientes, relatórios |
+| 13 | `api/process-payment.js` | Processamento de pagamentos (PIX SealPay + Appmax multi-método) |
+| 14 | `api/products.ts` | CRUD consolidado de produtos (slug, toggle, listagem, categoria pública) |
+| 15 | `api/settings.js` | Configurações globais do SaaS + gateways plataforma + testes de integração |
+| 16 | `api/storefront.js` | Temas + Páginas CMS + Vitrine pública (categorias, domain, products) |
+| 17 | `api/tracking-webhook.js` | Webhook de rastreamento de entregas + CAPI server-side filtrado por loja_id |
 
 ---
 
