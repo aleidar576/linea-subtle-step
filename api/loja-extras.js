@@ -1,6 +1,6 @@
 // ============================================
-// 🧩 Loja Extras API (Cupons + Temas + Pixels + Páginas + Leads + Gateways + Stripe)
-// Strangler Fig — Fretes extraído para api/fretes.js, Mídia para api/midia.js
+// 🧩 Loja Extras API (Cupons + Temas + Pixels + Páginas + Leads + Gateways)
+// Strangler Fig — Fretes→api/fretes.js, Mídia→api/midia.js, Assinaturas→api/assinaturas.js
 // ============================================
 
 const mongoose = require('mongoose');
