@@ -16,6 +16,7 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
 };
 
 const LojaAssinatura = () => {
+  const { trackSaaSEvent } = useSaaSPixels();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [profile, setProfile] = useState<LojistaProfile | null>(null);
   const [loading, setLoading] = useState(true);
