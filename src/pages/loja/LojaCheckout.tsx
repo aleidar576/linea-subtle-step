@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Copy, Check, Ticket, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X, AlertCircle, QrCode, FileText, Lock } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -159,7 +159,8 @@ interface AppliedCoupon {
 
 const LojaCheckout = () => {
   const navigate = useNavigate();
-  const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart } = useCart();
+  const [searchParams] = useSearchParams();
+  const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart, addToCart } = useCart();
   const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, gatewayLoading, metodosSuportados, installmentConfig } = useLoja();
 
   // Gateway blocking is rendered at the end, after all hooks
@@ -172,6 +173,42 @@ const LojaCheckout = () => {
   const { cliente, isLoggedIn, isLoading: authLoading, enderecoPadrao } = useClienteAuth();
   const { data: allCheckoutProducts = [] } = useLojaPublicaProducts(lojaId);
 
+  // ── Recovery: auto-add products from ?recovery= param ──
+  const recoveryProcessed = useRef(false);
+  useEffect(() => {
+    if (recoveryProcessed.current || !allCheckoutProducts.length) return;
+    const recoveryParam = searchParams.get('recovery');
+    if (!recoveryParam) return;
+    recoveryProcessed.current = true;
+
+    const entries = decodeURIComponent(recoveryParam).split(',').map(e => {
+      const [pid, qty] = e.split(':');
+      return { productId: pid, quantity: parseInt(qty) || 1 };
+    }).filter(e => e.productId);
+
+    // Clear existing cart and add recovery items
+    clearCart();
+    entries.forEach(({ productId, quantity }) => {
+      const p = allCheckoutProducts.find((prod: any) => prod._id === productId || prod.product_id === productId);
+      if (p) {
+        const cartProduct: import('@/data/products').Product = {
+          id: p._id || p.product_id,
+          name: p.nome || p.name,
+          slug: p.slug || '',
+          description: p.descricao || p.description || '',
+          shortDescription: p.descricao_curta || p.shortDescription || '',
+          price: p.preco || p.price || 0,
+          originalPrice: p.preco_original || p.originalPrice,
+          image: p.imagens?.[0] || p.image || '',
+          images: p.imagens || p.images || [],
+          features: [],
+        };
+        for (let i = 0; i < quantity; i++) {
+          addToCart(cartProduct);
+        }
+      }
+    });
+  }, [allCheckoutProducts, searchParams, addToCart, clearCart]);
   const [currentStep, setCurrentStep] = useState<Step>(() => {
     if (exigirCadastro) return 'identification';
     return 'customer';
