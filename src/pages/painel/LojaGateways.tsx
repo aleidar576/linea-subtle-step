@@ -366,7 +366,7 @@ function AppmaxConfig({
   const handleActivate = async () => {
     setActivating(true);
     try {
-      await authRequest('/loja-extras?scope=salvar-gateway', {
+      await authRequest('/gateways?scope=salvar-gateway', {
         method: 'POST',
         body: JSON.stringify({
           id_gateway: 'appmax',
