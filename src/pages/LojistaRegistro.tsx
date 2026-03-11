@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
+import { useSaaSPixels } from '@/hooks/useSaaSPixels';
 
 const LojistaRegistro = () => {
   const [nome, setNome] = useState('');
