@@ -5,7 +5,7 @@ import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBran
 import { ContentTransition } from '@/components/PageTransition';
 import { useEffect } from 'react';
 import {
-  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard
+  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/admin/avisos', label: 'Avisos', icon: Bell },
   { to: '/admin/tickets', label: 'Tickets', icon: ShieldCheck },
   { to: '/admin/pacotes-comentarios', label: 'Pacotes', icon: MessageSquare },
+  { to: '/admin/marketing', label: 'Marketing', icon: Megaphone },
   { to: '/admin/integracoes', label: 'Integrações', icon: Plug },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings },
   { to: '/admin/estatisticas', label: 'Estatísticas', icon: BarChart3 },

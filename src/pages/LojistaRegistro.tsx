@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
+import { useSaaSPixels } from '@/hooks/useSaaSPixels';
 
 const LojistaRegistro = () => {
   const [nome, setNome] = useState('');
@@ -19,6 +20,7 @@ const LojistaRegistro = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authSubtitle, brandName } = useSaaSBrand();
+  const { trackSaaSEvent } = useSaaSPixels();
   useFaviconUpdater();
 
   useEffect(() => {
@@ -38,6 +40,7 @@ const LojistaRegistro = () => {
     setLoading(true);
     try {
       const res = await lojistaAuthApi.registro({ nome, email, password, telefone, termos_aceitos: true });
+      trackSaaSEvent('CompleteRegistration', { content_name: 'Registro Lojista' });
       toast({ title: 'Conta criada!', description: res.message });
       navigate('/verificar-email?pending=true');
     } catch (err: any) {

@@ -9,6 +9,7 @@ import { LojistaAuthProvider } from "@/hooks/useLojistaAuth";
 import { TrackingProvider } from "@/hooks/useTracking";
 import { PageTransition } from "@/components/PageTransition";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { SaaSPixelProvider } from "@/hooks/useSaaSPixels";
 
 // SaaS pages
 import LandingPage from "./pages/LandingPage";
@@ -67,6 +68,7 @@ import AdminGateways from "./pages/AdminGateways";
 import AdminPlanos from "./pages/AdminPlanos";
 import SegurancaConfirmacao from "./pages/SegurancaConfirmacao";
 import AdminIntegracoes from "./pages/AdminIntegracoes";
+import AdminMarketing from "./pages/AdminMarketing";
 
 // Loja Pública (Host-Based)
 import LojaLayoutComponent from "./components/LojaLayout";
@@ -113,6 +115,7 @@ const SaaSApp = () => (
           <Sonner />
           <BrowserRouter>
             <TrackingProvider>
+              <SaaSPixelProvider>
                 <Routes>
                   {/* SaaS routes */}
                   <Route path="/" element={<LandingPage />} />
@@ -172,12 +175,14 @@ const SaaSApp = () => (
                     <Route path="configuracoes" element={<AdminConfigEmpresa />} />
                     <Route path="pacotes-comentarios" element={<AdminPacotesComentarios />} />
                     <Route path="integracoes" element={<AdminIntegracoes />} />
+                    <Route path="marketing" element={<AdminMarketing />} />
                     <Route path="gateways" element={<AdminGateways />} />
                     <Route path="estatisticas" element={<AdminEstatisticas />} />
                   </Route>
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+              </SaaSPixelProvider>
             </TrackingProvider>
           </BrowserRouter>
         </TooltipProvider>

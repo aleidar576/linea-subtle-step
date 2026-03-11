@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 import { settingsApi } from '@/services/api';
+import { useSaaSPixels } from '@/hooks/useSaaSPixels';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   trialing: { label: 'Trial Ativo', className: 'bg-blue-500/10 text-blue-600' },
@@ -15,6 +16,7 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
 };
 
 const LojaAssinatura = () => {
+  const { trackSaaSEvent } = useSaaSPixels();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [profile, setProfile] = useState<LojistaProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,8 @@ const LojaAssinatura = () => {
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
       toast({ title: '🎉 Assinatura ativada!', description: 'Seu trial de 7 dias começou.' });
+      // Fire Subscribe event for SaaS pixels (Stripe checkout success)
+      trackSaaSEvent('Subscribe', { content_name: 'Assinatura Lojista', currency: 'BRL' });
     }
   }, [searchParams]);
 
