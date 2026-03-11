@@ -223,7 +223,7 @@ const AdminIntegracoes = () => {
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/api/loja-extras?scope=stripe-webhook`);
+                  navigator.clipboard.writeText(`${window.location.origin}/api/assinaturas?scope=stripe-webhook`);
                   toast({ title: 'URL copiada!' });
                 }}
               >
