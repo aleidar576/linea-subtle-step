@@ -160,7 +160,7 @@ const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', c
               <CloudUpload className="h-6 w-6 text-muted-foreground/50" />
             )}
             <span className="text-xs font-medium text-muted-foreground">
-              {uploading ? 'Enviando...' : 'Arraste ou clique para enviar'}
+              {uploading ? `Enviando${uploadProgress ? ` (${uploadProgress})` : ''}...` : multiple ? 'Arraste ou clique para enviar (múltiplos)' : 'Arraste ou clique para enviar'}
             </span>
             <span className="text-[10px] text-muted-foreground/60">
               JPG, PNG, WebP, GIF (comprimido automaticamente)
