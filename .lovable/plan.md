@@ -1,103 +1,119 @@
-## Diagnóstico da Cobrança Dupla
 
-### O que aconteceu (cronologia reconstruída)
 
-1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
-2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
-3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
+# Fase 5 — Xeque-Mate: Decomposicao Final do Monolito
 
-### Causa raiz
+## Resumo
 
-O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
+Dividir as 408 linhas restantes de `api/loja-extras.js` em dois microsservicos e deletar o arquivo original. Todas as 87 referencias no frontend estao concentradas em `src/services/saas-api.ts`.
 
-Isso acontece em **dois lugares** do código:
-- `processarCronTaxas()` (linha ~370 de `stripe.js`)
-- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+## Arquivos afetados
 
-### Correção
+| Arquivo | Acao |
+|---|---|
+| `api/marketing.js` | **Criar** — Cupons + Leads + Pixels |
+| `api/storefront.js` | **Criar** — Temas + Paginas + Vitrine publica |
+| `api/loja-extras.js` | **Deletar** |
+| `src/services/saas-api.ts` | **Editar** — redirecionar todas as URLs |
+| `vercel.json` | **Editar** — remover rewrite antigo, adicionar 2 novos |
 
-Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+## Detalhamento
 
-**Arquivo:** `lib/services/assinaturas/stripe.js`
+### 1. Criar `api/marketing.js`
 
-1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
-2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+Infraestrutura padrao: `bodyParser: false`, `getRawBody`, `verifyLojista`, `verifyOwnership`, `connectDB`.
 
-Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+Models: `Cupom`, `Loja`, `Lead`, `TrackingPixel`.
 
-### Bug secundário (menor)
+| Escopo | Metodo | Auth | Dominio |
+|---|---|---|---|
+| `cupom-publico` | GET | Nenhum | Cupons |
+| `cupons-popup` | GET | Nenhum | Cupons |
+| `lead-newsletter` | POST | Nenhum | Leads |
+| `cupons` | GET | Lojista | Cupons |
+| `cupom` | POST/PUT/DELETE/PATCH | Lojista | Cupons |
+| `pixels` | GET | Lojista | Pixels |
+| `pixel` | POST/PUT/DELETE | Lojista | Pixels |
+| `leads` | GET | Lojista | Leads |
+| `leads-export` | GET | Lojista | Leads |
+| `lead` | PUT/DELETE | Lojista | Leads |
+| `leads-import` | POST | Lojista | Leads |
 
-O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+Nota: `leads` e `leads-export` fazem `require('../models/Cliente.js')` inline — manter esse padrao.
 
----
+### 2. Criar `api/storefront.js`
 
-## Páginas de Categoria — Implementação Completa ✅
+Models: `Loja`, `Product`, `Pagina`, `Setting`, `Category` (inline require).
 
-### Arquivos modificados
+| Escopo | Metodo | Auth | Dominio |
+|---|---|---|---|
+| `categorias-publico` | GET | Nenhum | Vitrine |
+| `global-domain` | GET | Nenhum | Vitrine |
+| `category-products` | GET | Nenhum | Vitrine |
+| `pagina-publica` | GET | Nenhum | Paginas |
+| `tema` | GET/PUT | Lojista | Temas |
+| `paginas` | GET | Lojista | Paginas |
+| `pagina` | POST/PUT/DELETE | Lojista | Paginas |
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Category.js` | +campo `banner` (Mixed) |
-| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
-| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
-| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
-| API | `api/categorias.js` | PUT aceita campo `banner` |
-| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
-| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
-| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
-| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
-| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
-| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
-| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
-| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+Inclui a funcao `slugify` (necessaria para criacao de paginas).
 
-## Construtor de Navegação Visual (Menu Builder) ✅
+### 3. Deletar `api/loja-extras.js`
 
-### Arquivos Modificados
+Apos confirmar que todos os 18 escopos foram distribuidos, o arquivo sera deletado.
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
-| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
-| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
-| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
-| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
+### 4. Atualizar `src/services/saas-api.ts`
 
-### Estrutura do MenuItemConfig
-```ts
-{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
+Mapeamento completo de redirecionamento:
+
+```text
+MARKETING (api/marketing):
+  cuponsApi.list           /loja-extras?scope=cupons        → /marketing?scope=cupons
+  cuponsApi.validar        /loja-extras?scope=cupom-publico → /marketing?scope=cupom-publico
+  cuponsApi.create         /loja-extras?scope=cupom         → /marketing?scope=cupom
+  cuponsApi.update         /loja-extras?scope=cupom         → /marketing?scope=cupom
+  cuponsApi.delete         /loja-extras?scope=cupom         → /marketing?scope=cupom
+  cuponsApi.toggle         /loja-extras?scope=cupom         → /marketing?scope=cupom
+  pixelsApi.list           /loja-extras?scope=pixels        → /marketing?scope=pixels
+  pixelsApi.create         /loja-extras?scope=pixel         → /marketing?scope=pixel
+  pixelsApi.update         /loja-extras?scope=pixel         → /marketing?scope=pixel
+  pixelsApi.delete         /loja-extras?scope=pixel         → /marketing?scope=pixel
+  leadsApi.subscribe       /loja-extras?scope=lead-newsletter → /marketing?scope=lead-newsletter
+  leadsApi.list            /loja-extras?scope=leads         → /marketing?scope=leads
+  leadsApi.update          /loja-extras?scope=lead          → /marketing?scope=lead
+  leadsApi.delete          /loja-extras?scope=lead          → /marketing?scope=lead
+  leadsApi.import          /loja-extras?scope=leads-import  → /marketing?scope=leads-import
+  cuponsPopupApi.getBulk   /loja-extras?scope=cupons-popup  → /marketing?scope=cupons-popup
+
+STOREFRONT (api/storefront):
+  lojaPublicaApi.getCategorias  /loja-extras?scope=categorias-publico → /storefront?scope=categorias-publico
+  lojaPublicaApi.getPagina      /loja-extras?scope=pagina-publica     → /storefront?scope=pagina-publica
+  temasApi.get                  /loja-extras?scope=tema               → /storefront?scope=tema
+  temasApi.update               /loja-extras?scope=tema               → /storefront?scope=tema
+  paginasApi.list               /loja-extras?scope=paginas            → /storefront?scope=paginas
+  paginasApi.create             /loja-extras?scope=pagina             → /storefront?scope=pagina
+  paginasApi.update             /loja-extras?scope=pagina             → /storefront?scope=pagina
+  paginasApi.delete             /loja-extras?scope=pagina             → /storefront?scope=pagina
+  paginasApi.getPublic          /loja-extras?scope=pagina-publica     → /storefront?scope=pagina-publica
+  getCategoryProducts           /loja-extras?scope=category-products  → /storefront?scope=category-products
 ```
 
-### Funcionalidades
-- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
-- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
-- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
-- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
-- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
+Nota: `leadsApi.subscribe` usa `API_BASE_PUB` (fetch direto, nao `request`) — precisa trocar a URL la tambem.
 
-## Fase 1: Shoppertainment (Video Commerce) ✅
+### 5. Atualizar `vercel.json`
 
-### Arquivos Modificados/Criados
+Remover linha 14: `{ "source": "/api/loja-extras", "destination": "/api/loja-extras.js" }`
 
-| Camada | Arquivo | Mudança |
-|---|---|---|
-| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
-| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
-| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
-| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
-| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
-| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
-| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
-| Dep | `package.json` | +`@mux/mux-node` |
+Adicionar:
+```json
+{ "source": "/api/marketing", "destination": "/api/marketing.js" },
+{ "source": "/api/storefront", "destination": "/api/storefront.js" }
+```
 
-### Fluxo de Upload (com correções anti-falha)
+## Contagem final de funcoes serverless
 
-1. Lojista clica "Selecionar Vídeo" → valida 50MB
-2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
-3. Frontend faz PUT direto na URL do Mux (Direct Upload)
-4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
-5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
-6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
-7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)
+Apos a Fase 5, a pasta `api/` tera:
+- `admins.js`, `auth-action.ts`, `categorias.js`, `cliente-auth.js`, `fretes.js`, `gateways.js`, `lojas.js`, `lojista.js`, `marketing.js`, `midia.js`, `pedidos.js`, `process-payment.js`, `products.ts`, `settings.js`, `storefront.js`, `tracking-webhook.js`, `assinaturas.js` = **17 arquivos** (dentro do limite Vercel com o Strategy Pattern consolidando rotas).
+
+## Riscos
+
+Zero breaking changes — mesmos query params e response shapes. Os escopos publicos (`cupom-publico`, `categorias-publico`, `global-domain`, `category-products`, `pagina-publica`, `lead-newsletter`, `cupons-popup`) continuam sem auth. Nenhum outro arquivo frontend referencia `loja-extras` alem de `saas-api.ts`.
+
