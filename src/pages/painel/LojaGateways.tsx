@@ -559,7 +559,7 @@ const LojaGateways = () => {
 
   const handleDisconnect = async (gwId: string) => {
     try {
-      await authRequest('/loja-extras?scope=desconectar-gateway', {
+      await authRequest('/gateways?scope=desconectar-gateway', {
         method: 'POST',
         body: JSON.stringify({ id_gateway: gwId, loja_id: id }),
       });
