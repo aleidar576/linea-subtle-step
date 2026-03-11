@@ -35,7 +35,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     queryKey: ['tracking-pixels'],
     queryFn: async () => {
       const data = await trackingPixelsApi.listActive();
-      return data as TrackingPixel[];
+      return data as PixelInfo[];
     },
     staleTime: 5 * 60 * 1000,
     enabled: !isInternal, // Don't fetch pixels on admin/painel routes
