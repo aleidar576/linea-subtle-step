@@ -695,7 +695,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
   // Fetch gateway info for this store (must be before any early return)
   useEffect(() => {
     if (!loja?._id) return;
-    fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/loja-extras?scope=gateway-loja&loja_id=${loja._id}`)
+    fetch(`${window.location.hostname.includes('lovable.app') ? 'https://pandora-five-amber.vercel.app/api' : '/api'}/gateways?scope=gateway-loja&loja_id=${loja._id}`)
       .then(r => r.json())
       .then(d => { setGatewayAtivo(d.gateway_ativo || null); setInstallmentConfig(d.installment_config || null); setGatewayLoading(false); })
       .catch(() => { setGatewayLoading(false); });

@@ -303,9 +303,9 @@ const AdminGateways = () => {
                     Copie estas URLs e cole no painel de desenvolvedor da Appmax ao criar o seu Aplicativo.
                   </p>
                   {[
-                    { label: 'Host (Webhook)', value: `${window.location.origin}/api/loja-extras?scope=appmax-webhook` },
+                    { label: 'Host (Webhook)', value: `${window.location.origin}/api/gateways?scope=appmax-webhook` },
                     { label: 'URL do Sistema', value: window.location.origin },
-                    { label: 'URL de Validação', value: `${window.location.origin}/api/loja-extras?scope=appmax-install` },
+                    { label: 'URL de Validação', value: `${window.location.origin}/api/gateways?scope=appmax-install` },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <Label className="text-xs text-muted-foreground">{label}</Label>
