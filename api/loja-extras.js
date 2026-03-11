@@ -1,6 +1,6 @@
 // ============================================
-// 🧩 Loja Extras API (Fretes + Cupons + Mídias + Temas + Pixels + Páginas)
-// Serverless Function 12/12 — Vercel Hobby Limit
+// 🧩 Loja Extras API (Cupons + Temas + Pixels + Páginas + Leads + Gateways + Stripe)
+// Strangler Fig — Fretes extraído para api/fretes.js, Mídia para api/midia.js
 // ============================================
 
 const mongoose = require('mongoose');
