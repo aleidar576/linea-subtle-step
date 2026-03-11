@@ -159,7 +159,8 @@ interface AppliedCoupon {
 
 const LojaCheckout = () => {
   const navigate = useNavigate();
-  const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart } = useCart();
+  const [searchParams] = useSearchParams();
+  const { items, totalPrice, clearCart, discountPercent, discountAmount, finalPrice: cartFinalPrice, updateQuantity, removeFromCart, addToCart } = useCart();
   const { lojaId, exigirCadastro, nomeExibicao, slogan, gatewayAtivo, gatewayLoading, metodosSuportados, installmentConfig } = useLoja();
 
   // Gateway blocking is rendered at the end, after all hooks
