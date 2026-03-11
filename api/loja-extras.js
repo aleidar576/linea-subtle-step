@@ -20,7 +20,6 @@ const Plano = require('../models/Plano.js');
 
 // Services (Strategy Pattern)
 const { getSubscriptionService } = require('../lib/services/assinaturas');
-const { getShippingService } = require('../lib/services/fretes');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) console.error('[LOJA-EXTRAS] FATAL: JWT_SECRET não configurado nas variáveis de ambiente.');
