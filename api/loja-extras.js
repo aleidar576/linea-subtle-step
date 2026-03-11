@@ -663,44 +663,6 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // MÍDIAS (Agregação de produtos)
-    // ==========================================
-    if (scope === 'midias' && method === 'GET') {
-      const products = await Product.find({ loja_id: resolvedLojaId }).select('product_id name image images variacoes').lean();
-      const urlMap = {};
-      for (const p of products) {
-        const allUrls = [p.image, ...(p.images || [])];
-        for (const v of (p.variacoes || [])) {
-          if (v.imagem) allUrls.push(v.imagem);
-        }
-        for (const url of allUrls) {
-          if (!url) continue;
-          if (!urlMap[url]) urlMap[url] = { url, usado_em: [] };
-          urlMap[url].usado_em.push({ product_id: p.product_id, name: p.name });
-        }
-      }
-      const midias = Object.values(urlMap).sort((a, b) => b.usado_em.length - a.usado_em.length);
-      return res.json(midias);
-    }
-
-    if (scope === 'midia' && method === 'DELETE') {
-      const { url } = req.body;
-      if (!url || !resolvedLojaId) return res.status(400).json({ error: 'url e loja_id obrigatórios' });
-      const products = await Product.find({ loja_id: resolvedLojaId, $or: [{ image: url }, { images: url }, { 'variacoes.imagem': url }] });
-      let count = 0;
-      for (const p of products) {
-        if (p.image === url) p.image = (p.images || []).find(i => i !== url) || '';
-        p.images = (p.images || []).filter(i => i !== url);
-        for (const v of (p.variacoes || [])) {
-          if (v.imagem === url) v.imagem = null;
-        }
-        await p.save();
-        count++;
-      }
-      return res.json({ success: true, removido_de: count });
-    }
-
-    // ==========================================
     // TEMAS
     // ==========================================
     if (scope === 'tema') {
