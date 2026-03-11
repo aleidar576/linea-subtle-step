@@ -76,12 +76,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   // Initialize all pixel platforms (only on public routes)
   useEffect(() => {
     if (isInternal) return;
-    pixels.forEach(pixel => {
-      if (pixel.platform === 'facebook') initFacebookPixel(pixel.pixel_id);
-      else if (pixel.platform === 'tiktok') initTikTokPixel(pixel.pixel_id);
-      else if (pixel.platform === 'google_ads') initGoogleAds(pixel.pixel_id);
-      else if (pixel.platform === 'gtm') initGTM(pixel.pixel_id);
-    });
+    pixels.forEach(initPixel);
   }, [pixels, isInternal]);
 
   // Auto PageView on route change (only on public routes)
