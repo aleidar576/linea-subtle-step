@@ -962,8 +962,20 @@ api/assinaturas.js (Controller)
 | 10 | Sistema de Assinaturas Stripe (Checkout, Portal, Webhooks, Trial 7 dias) | ✅ Concluído |
 | 11 | Pixels multi-plataforma (FB, TikTok, GAds, GTM) + CAPI server-side + filtro por loja_id | ✅ Concluído |
 | 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net | ✅ Concluído |
-| 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira nos Painéis | ✅ Concluído |
-| 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas, Cron ajustado para 09h BRT | ✅ Concluído |
-| 15 | Ecossistema de Gateways (Admin + Lojista + Checkout), Sheet modular, SealPay migrado para gateway_ativo | ✅ Concluído |
-| 16 | OAuth Appmax (Instalação de Aplicativo), scopes appmax-connect/appmax-install, AppmaxConfig no painel lojista | ✅ Concluído |
+| 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira | ✅ Concluído |
+| 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas | ✅ Concluído |
+| 15 | Ecossistema de Gateways (Admin + Lojista + Checkout), Sheet modular, SealPay migrado | ✅ Concluído |
+| 16 | OAuth Appmax (Instalação de Aplicativo), scopes appmax-connect/appmax-install | ✅ Concluído |
 | 17 | **Strategy Pattern** — Extração de SealPay, Melhor Envio e Stripe para `lib/services/` com factories modulares | ✅ Concluído |
+
+### Strangler Fig — Decomposição do Monólito `api/loja-extras.js`
+
+| Fase | Microsserviço Extraído | Escopos Migrados | Status |
+|---|---|---|---|
+| SF-1 | `api/midia.js` | midias, midia, upload, mux-upload, mux-status, mux-delete | ✅ Concluído |
+| SF-2 | `api/fretes.js` | fretes, frete, fretes-publico, calcular-frete | ✅ Concluído |
+| SF-3 | `api/assinaturas.js` | stripe-checkout, stripe-portal, stripe-webhook, cron-taxas, pagar-taxas-manual | ✅ Concluído |
+| SF-4 | `api/gateways.js` | gateways-disponiveis, gateway-loja, salvar-gateway, desconectar-gateway, appmax-connect, appmax-install, appmax-webhook | ✅ Concluído |
+| SF-5 | `api/marketing.js` | cupons, cupom, cupom-publico, cupons-popup, leads, lead, lead-newsletter, leads-import, leads-export, pixels, pixel | ✅ Concluído |
+| SF-5 | `api/storefront.js` | tema, paginas, pagina, pagina-publica, categorias-publico, global-domain, category-products | ✅ Concluído |
+| **Final** | **`api/loja-extras.js` DELETADO** | — | ✅ **Monólito eliminado** |
