@@ -1440,6 +1440,50 @@ ${jsonExampleStr}`;
 
             {/* ══════════ TAB EXTRAS ══════════ */}
             <TabsContent value="extras" className="space-y-4">
+
+              {/* ── Precificação - Botão Comprar Agora ── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Precificação — Botão Comprar Agora</CardTitle>
+                  <p className="text-xs text-muted-foreground">Configure o texto exibido abaixo do botão "Comprar agora" na loja pública (mobile).</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Exibir texto extra abaixo do botão</Label>
+                    <Switch
+                      checked={editingProduct.config_botao_comprar?.ativo ?? true}
+                      onCheckedChange={v => setField('config_botao_comprar', { ...(editingProduct.config_botao_comprar || { ativo: true, tipo_texto: 'preco' }), ativo: v })}
+                    />
+                  </div>
+                  {(editingProduct.config_botao_comprar?.ativo ?? true) && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Tipo de texto</Label>
+                      <RadioGroup
+                        value={editingProduct.config_botao_comprar?.tipo_texto || 'preco'}
+                        onValueChange={v => setField('config_botao_comprar', { ...(editingProduct.config_botao_comprar || { ativo: true, tipo_texto: 'preco' }), tipo_texto: v })}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="preco" id="btn-preco" />
+                          <Label htmlFor="btn-preco" className="font-normal cursor-pointer">Mostrar Preço Original (ex: R$ 100,00)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="parcelas" id="btn-parcelas" />
+                          <Label htmlFor="btn-parcelas" className="font-normal cursor-pointer">Mostrar Parcelamento (ex: 12x de R$ 10,83)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="frete_gratis" id="btn-frete" />
+                          <Label htmlFor="btn-frete" className="font-normal cursor-pointer">Mostrar texto "Frete Grátis"</Label>
+                        </div>
+                      </RadioGroup>
+                      {editingProduct.config_botao_comprar?.tipo_texto === 'frete_gratis' && (
+                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">⚠️ O texto "Frete Grátis" é apenas visual para conversão e será exibido independentemente de haver configuração real de frete grátis.</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Accordion type="multiple">
 
                 {/* ── Acordeão 1: Gatilhos de Escassez ── */}

@@ -942,7 +942,17 @@ const LojaProduto = () => {
                 </button>
                 <button onClick={() => { if (!validateVariations()) return; handleBuyNow(); setDrawerOpen(false); }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex flex-col items-center leading-tight">
                   <span className="text-sm">Comprar agora</span>
-                  <span className="text-xs opacity-80">{formatPrice(product.price)}</span>
+                  {(() => {
+                    const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
+                    if (!btnCfg.ativo) return null;
+                    if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
+                    if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
+                      const opts = calculateAppmaxInstallments(product.price, installmentConfig);
+                      const last = opts[opts.length - 1];
+                      if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
+                    }
+                    return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
+                  })()}
                 </button>
               </div>
             </div>

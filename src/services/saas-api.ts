@@ -481,6 +481,7 @@ export interface LojaProduct {
   protecao_cliente?: { ativo: boolean; itens: { icone: string; texto: string }[] };
   pessoas_vendo?: { ativo: boolean; min: number; max: number };
   cross_sell?: { modo: string; categoria_manual_id: string | null };
+  config_botao_comprar?: { ativo: boolean; tipo_texto: 'preco' | 'parcelas' | 'frete_gratis' };
   dimensoes?: { peso: number; altura: number; largura: number; comprimento: number };
   videos?: { playback_id: string; asset_id: string }[];
   video_layout?: 'stories' | 'carousel' | 'auto';
