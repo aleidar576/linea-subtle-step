@@ -60,12 +60,7 @@ const PedidoSchema = new mongoose.Schema({
   etiqueta_url: { type: String, default: null },
   codigo_rastreio: { type: String, default: null },
   payment_details: {
-    type: {
-      method: { type: String, default: null },
-      installments: { type: Number, default: 1 },
-      card_brand: { type: String, default: null },
-      last4: { type: String, default: null },
-    },
+    type: mongoose.Schema.Types.Mixed,
     default: null,
   },
   utms: { type: mongoose.Schema.Types.Mixed, default: {} },
