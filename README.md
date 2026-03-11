@@ -591,7 +591,7 @@ Se você (IA) precisar adicionar, editar ou remover um Gateway, restrinja-se aos
 
 2. `api/settings.js`: Controla as configurações globais do admin no escopo `?scope=gateways-plataforma`.
 
-3. `api/loja-extras.js`: Controla o que o lojista vê e salva nos escopos `gateways-disponiveis` e `salvar-gateway`. **Rotas de OAuth de Gateways (como redirecionamento e webhooks de instalação) devem ser criadas aqui usando escopos.**
+3. `api/gateways.js`: Controla o que o lojista vê e salva nos escopos `gateways-disponiveis`, `salvar-gateway` e `desconectar-gateway`. **Rotas de OAuth de Gateways (como redirecionamento e webhooks de instalação) devem ser criadas aqui usando escopos.**
 
 ---
 
@@ -599,7 +599,7 @@ Se você (IA) precisar adicionar, editar ou remover um Gateway, restrinja-se aos
 
 Se você for instruída a mexer em pagamentos ou gateways, você **DEVE** respeitar estas regras:
 
-1. **Limite da Pasta API:** É terminantemente proibido criar novos arquivos na pasta `/api`. O limite máximo é de 12 Serverless Functions. Novas integrações de backend devem ser feitas adicionando `scopes` lógicos (ex: `if (scope === 'stripe-connect')`) dentro de `api/loja-extras.js` ou arquivos existentes.
+1. **Limite da Pasta API:** Novas integrações de backend devem ser feitas adicionando `scopes` lógicos (ex: `if (scope === 'stripe-connect')`) dentro do microsserviço apropriado (`api/gateways.js`, `api/marketing.js`, etc.) ou arquivos existentes.
 
 2. **NUNCA altere o `vite.config.mts`.**
 
