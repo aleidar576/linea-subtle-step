@@ -678,13 +678,13 @@ export const planosApi = {
 
 export const stripeApi = {
   createCheckout: (plano_id: string) =>
-    request<{ url: string }>('/loja-extras?scope=stripe-checkout', {
+    request<{ url: string }>('/assinaturas?scope=stripe-checkout', {
       method: 'POST', body: JSON.stringify({ plano_id }),
     }),
   createPortal: () =>
-    request<{ url: string }>('/loja-extras?scope=stripe-portal', { method: 'POST' }),
+    request<{ url: string }>('/assinaturas?scope=stripe-portal', { method: 'POST' }),
   pagarTaxasManual: () =>
-    request<{ success: boolean; message: string }>('/loja-extras?scope=pagar-taxas-manual', { method: 'POST' }),
+    request<{ success: boolean; message: string }>('/assinaturas?scope=pagar-taxas-manual', { method: 'POST' }),
 };
 
 export const lojaProductsApi = {
