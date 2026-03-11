@@ -1,103 +1,93 @@
-## Diagnóstico da Cobrança Dupla
 
-### O que aconteceu (cronologia reconstruída)
 
-1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
-2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
-3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
+# Fase 4 — Strangler Fig: Extração do Microsserviço de Gateways
 
-### Causa raiz
+## Resumo
 
-O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
+Extrair 7 escopos de gateways de pagamento do lojista do `api/loja-extras.js` (646 linhas) para um novo `api/gateways.js`. Três escopos são **públicos** (`gateways-disponiveis`, `gateway-loja`, `appmax-install`, `appmax-webhook`) e três são **autenticados** (`appmax-connect`, `salvar-gateway`, `desconectar-gateway`). O monólito perderá a dependência do model `Lojista` e cairá para ~330 linhas.
 
-Isso acontece em **dois lugares** do código:
-- `processarCronTaxas()` (linha ~370 de `stripe.js`)
-- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+## Arquivos afetados
 
-### Correção
+| Arquivo | Ação |
+|---|---|
+| `api/gateways.js` | **Criar** — novo microsserviço |
+| `api/loja-extras.js` | **Editar** — remover 7 blocos + import `Lojista` |
+| `src/services/saas-api.ts` | **Editar** — redirecionar `gatewaysApi` |
+| `src/pages/painel/LojaGateways.tsx` | **Editar** — redirecionar chamadas diretas |
+| `src/components/LojaLayout.tsx` | **Editar** — redirecionar fetch `gateway-loja` |
+| `src/pages/AdminGateways.tsx` | **Editar** — atualizar URLs de integração exibidas |
+| `vercel.json` | **Editar** — adicionar rewrite |
 
-Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+## Detalhamento
 
-**Arquivo:** `lib/services/assinaturas/stripe.js`
+### 1. Criar `api/gateways.js`
 
-1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
-2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+Mesmo padrão: `bodyParser: false`, `getRawBody`, `verifyLojista`, `verifyOwnership`.
 
-Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+| Escopo | Método | Auth | Linhas origem |
+|---|---|---|---|
+| `gateways-disponiveis` | GET | Nenhum | 96-110 |
+| `gateway-loja` | GET | Nenhum | 113-128 |
+| `appmax-install` | POST | Nenhum (webhook) | 189-215 |
+| `appmax-webhook` | POST | Nenhum (webhook) | 218-228 |
+| `appmax-connect` | GET | Lojista | 245-336 |
+| `salvar-gateway` | POST | Lojista | 341-369 |
+| `desconectar-gateway` | POST | Lojista | 374-397 |
 
-### Bug secundário (menor)
+Imports: `connectDB`, `jwt`, models `Loja`, `Lojista`, `Setting`, e `getPaymentService` (inline no bloco appmax-webhook).
 
-O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+### 2. Limpar `api/loja-extras.js`
 
----
+Remover:
+- Linhas 96-128 (`gateways-disponiveis` + `gateway-loja`)
+- Linhas 188-228 (`appmax-install` + `appmax-webhook`)
+- Linhas 244-397 (`appmax-connect` + `salvar-gateway` + `desconectar-gateway`)
+- Import linha 18: `const Lojista = require(...)` — verificado: não é usado nos blocos restantes (Cupons, Temas, Pixels, Páginas, Leads)
 
-## Páginas de Categoria — Implementação Completa ✅
+Resultado: `loja-extras.js` cairá de ~646 para ~330 linhas. Domínios restantes: Cupons, Temas, Pixels, Páginas, Leads + rotas públicas auxiliares.
 
-### Arquivos modificados
+### 3. Atualizar frontend (4 arquivos)
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Category.js` | +campo `banner` (Mixed) |
-| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
-| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
-| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
-| API | `api/categorias.js` | PUT aceita campo `banner` |
-| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
-| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
-| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
-| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
-| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
-| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
-| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
-| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
-
-## Construtor de Navegação Visual (Menu Builder) ✅
-
-### Arquivos Modificados
-
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
-| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
-| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
-| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
-| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
-
-### Estrutura do MenuItemConfig
-```ts
-{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
+**`src/services/saas-api.ts`** — objeto `gatewaysApi` (linhas 1143-1153):
+```
+/loja-extras?scope=gateways-disponiveis  →  /gateways?scope=gateways-disponiveis
+/loja-extras?scope=gateway-loja          →  /gateways?scope=gateway-loja
+/loja-extras?scope=salvar-gateway        →  /gateways?scope=salvar-gateway
+/loja-extras?scope=desconectar-gateway   →  /gateways?scope=desconectar-gateway
 ```
 
-### Funcionalidades
-- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
-- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
-- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
-- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
-- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
+**`src/pages/painel/LojaGateways.tsx`** — 6 chamadas `authRequest` diretas:
+```
+/loja-extras?scope=salvar-gateway        →  /gateways?scope=salvar-gateway
+/loja-extras?scope=appmax-connect        →  /gateways?scope=appmax-connect
+/loja-extras?scope=gateways-disponiveis  →  /gateways?scope=gateways-disponiveis
+/loja-extras?scope=desconectar-gateway   →  /gateways?scope=desconectar-gateway
+```
 
-## Fase 1: Shoppertainment (Video Commerce) ✅
+**`src/components/LojaLayout.tsx`** — fetch direto (linha 698):
+```
+/loja-extras?scope=gateway-loja  →  /gateways?scope=gateway-loja
+```
 
-### Arquivos Modificados/Criados
+**`src/pages/AdminGateways.tsx`** — URLs de integração exibidas ao admin (linhas 306-308):
+```
+/loja-extras?scope=appmax-webhook   →  /gateways?scope=appmax-webhook
+/loja-extras?scope=appmax-install   →  /gateways?scope=appmax-install
+```
 
-| Camada | Arquivo | Mudança |
-|---|---|---|
-| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
-| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
-| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
-| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
-| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
-| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
-| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
-| Dep | `package.json` | +`@mux/mux-node` |
+### 4. Atualizar `vercel.json`
 
-### Fluxo de Upload (com correções anti-falha)
+Adicionar rewrite (o rewrite `/api/gateways` **não existe** ainda — o atual aponta para `api/gateways.js` que era placeholder):
+```json
+{ "source": "/api/gateways", "destination": "/api/gateways.js" }
+```
 
-1. Lojista clica "Selecionar Vídeo" → valida 50MB
-2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
-3. Frontend faz PUT direto na URL do Mux (Direct Upload)
-4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
-5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
-6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
-7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)
+**Nota**: Verificar se já existe — se sim, apenas confirmar que aponta para `api/gateways.js`.
+
+## Impacto e riscos
+
+- **Zero breaking change** no frontend — mesmos query params e response shapes
+- **Checkout preservado** — `gateway-loja` continua público, `LojaLayout.tsx` apenas troca a URL
+- **Webhooks Appmax** — URLs de webhook configuradas no painel Appmax precisarão ser atualizadas pelo admin para `/api/gateways?scope=appmax-webhook` e `/api/gateways?scope=appmax-install`
+- **Admin visual** — As URLs exibidas em `AdminGateways.tsx` serão atualizadas automaticamente
+
