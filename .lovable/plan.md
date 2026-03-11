@@ -1,103 +1,69 @@
-## Diagnóstico da Cobrança Dupla
 
-### O que aconteceu (cronologia reconstruída)
 
-1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
-2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
-3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
+# Fase 1 -- Strangler Fig: Extração do Microsserviço de Mídia
 
-### Causa raiz
+## Resumo
 
-O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
+Extrair 6 escopos de mídia do monólito `api/loja-extras.js` (1049 linhas) para um novo `api/midia.js`, e redirecionar as chamadas do frontend. O monólito ficará ~180 linhas mais leve e perderá a dependência do `@mux/mux-node`.
 
-Isso acontece em **dois lugares** do código:
-- `processarCronTaxas()` (linha ~370 de `stripe.js`)
-- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+## Arquivos afetados
 
-### Correção
+| Arquivo | Ação |
+|---|---|
+| `api/midia.js` | **Criar** -- novo microsserviço |
+| `api/loja-extras.js` | **Editar** -- remover 6 blocos + import Mux |
+| `src/services/saas-api.ts` | **Editar** -- redirecionar URLs |
+| `vercel.json` | **Editar** -- adicionar rewrite |
 
-Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+## Detalhamento
 
-**Arquivo:** `lib/services/assinaturas/stripe.js`
+### 1. Criar `api/midia.js`
 
-1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
-2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+Novo handler serverless com a mesma estrutura de autenticação (`verifyLojista`, `verifyOwnership`) e `bodyParser: false` + `getRawBody`. Gerenciará 6 escopos:
 
-Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+| Escopo | Método | Origem (linhas) |
+|---|---|---|
+| `upload` | POST | 826-862 (Bunny.net) |
+| `midias` | GET | 668-683 (listagem agregada) |
+| `midia` | DELETE | 686-701 (remoção de referências) |
+| `mux-upload` | POST | 943-970 |
+| `mux-status` | GET | 973-1003 |
+| `mux-delete` | DELETE | 1007-1042 |
 
-### Bug secundário (menor)
+Os escopos `midias` e `midia` (listagem e remoção) são movidos junto porque pertencem ao mesmo domínio de mídia -- manter coesão de domínio.
 
-O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+Imports necessários: `mongoose`, `connectDB`, `jwt`, models `Loja` e `Product`, e `@mux/mux-node` (require inline, padrão já existente).
 
----
+### 2. Limpar `api/loja-extras.js`
 
-## Páginas de Categoria — Implementação Completa ✅
+- Deletar linhas 666-701 (midias/midia)
+- Deletar linhas 822-863 (upload Bunny)
+- Deletar linhas 938-1042 (mux-upload/mux-status/mux-delete)
+- Nenhum `require('@mux/mux-node')` no topo para remover (já é feito inline nos blocos que serão deletados)
+- A linha final de fallback `return res.status(400)` permanece
 
-### Arquivos modificados
+### 3. Atualizar `src/services/saas-api.ts`
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Category.js` | +campo `banner` (Mixed) |
-| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
-| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
-| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
-| API | `api/categorias.js` | PUT aceita campo `banner` |
-| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
-| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
-| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
-| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
-| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
-| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
-| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
-| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+Trocar a base URL de 3 objetos API:
 
-## Construtor de Navegação Visual (Menu Builder) ✅
-
-### Arquivos Modificados
-
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
-| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
-| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
-| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
-| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
-
-### Estrutura do MenuItemConfig
-```ts
-{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
+```
+midiasApi:  /loja-extras?scope=midias|midia|upload  →  /midia?scope=midias|midia|upload
+muxApi:     /loja-extras?scope=mux-*               →  /midia?scope=mux-*
 ```
 
-### Funcionalidades
-- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
-- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
-- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
-- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
-- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
+Nenhuma mudança de assinatura, tipos ou hooks -- apenas substituição de string na URL.
 
-## Fase 1: Shoppertainment (Video Commerce) ✅
+### 4. Atualizar `vercel.json`
 
-### Arquivos Modificados/Criados
+Adicionar rewrite:
+```json
+{ "source": "/api/midia", "destination": "/api/midia.js" }
+```
 
-| Camada | Arquivo | Mudança |
-|---|---|---|
-| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
-| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
-| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
-| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
-| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
-| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
-| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
-| Dep | `package.json` | +`@mux/mux-node` |
+## Impacto e riscos
 
-### Fluxo de Upload (com correções anti-falha)
+- **Zero breaking change** no frontend: mesmos query params, mesmos response shapes
+- **Zero mudança em hooks** (`useLojaExtras.tsx`, `ImageUploader.tsx`, `LojaProdutos.tsx`) -- eles consomem `midiasApi`/`muxApi` que são atualizados internamente
+- O `loja-extras.js` cairá de ~1049 para ~870 linhas
+- Dependência `@mux/mux-node` migra integralmente para `api/midia.js`
 
-1. Lojista clica "Selecionar Vídeo" → valida 50MB
-2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
-3. Frontend faz PUT direto na URL do Mux (Direct Upload)
-4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
-5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
-6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
-7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)
