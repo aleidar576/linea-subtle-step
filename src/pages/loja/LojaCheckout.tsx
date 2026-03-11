@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Copy, Check, Ticket, ChevronRight, ChevronDown, Truck, MapPin, CreditCard, ShoppingBag, LogIn, UserPlus, ShoppingCart, User, Package, Minus, Plus, Trash2, CheckCircle2, Tag, X, AlertCircle, QrCode, FileText, Lock } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
