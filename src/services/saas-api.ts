@@ -829,10 +829,10 @@ export const pedidosApi = {
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   gerarEtiqueta: (pedidoId: string, overrideServiceId?: string | number) =>
     request<{ melhor_envio_order_id?: string; etiqueta_url?: string; codigo_rastreio?: string; already_existed?: boolean; error?: string }>(
-      '/pedidos?scope=gerar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId, overrideServiceId }) }
+      '/etiquetas?scope=gerar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId, overrideServiceId }) }
     ),
   cancelarEtiqueta: (pedidoId: string) =>
-    request<{ success: boolean }>('/pedidos?scope=cancelar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId }) }),
+    request<{ success: boolean }>('/etiquetas?scope=cancelar-etiqueta', { method: 'POST', body: JSON.stringify({ pedidoId }) }),
   updateDados: (id: string, data: { cliente?: Record<string, string>; endereco?: Record<string, string>; atualizar_cadastro?: boolean }) =>
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=dados`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
