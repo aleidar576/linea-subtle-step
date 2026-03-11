@@ -1,103 +1,85 @@
-## Diagnóstico da Cobrança Dupla
 
-### O que aconteceu (cronologia reconstruída)
 
-1. **09:54** — Stripe renovou automaticamente a mensalidade do plano (subscription_cycle) → webhook `invoice.payment_succeeded` → log "Mensalidade do plano renovada com sucesso", status mudou de `trialing` para `active`
-2. **09:54** — Cron rodou, encontrou R$ 10,00 de taxas, criou invoice manual, finalizou e pagou com sucesso via `stripe.invoices.pay()` → zerou `taxas_acumuladas`
-3. **11:11** — Stripe tentou cobrar a **mesma invoice manual** novamente por conta do `auto_advance: true` → como já estava paga/sem saldo, falhou → webhook `invoice.payment_failed` com `billing_reason: manual` → marcou `status_taxas: 'falha'` e `tentativas_taxas: 1`
+# Fase 2 — Strangler Fig: Extração do Microsserviço de Fretes
 
-### Causa raiz
+## Resumo
 
-O parâmetro **`auto_advance: true`** na criação da invoice diz ao Stripe: "tente cobrar automaticamente". Mas logo em seguida o código chama `finalizeInvoice()` + `pay()` manualmente. Resultado: **duas tentativas de cobrança na mesma invoice** — uma explícita (sucesso) e uma automática do Stripe (falha).
+Extrair 6 escopos de logística/frete do monólito `api/loja-extras.js` (~863 linhas) para um novo `api/fretes.js`. Dois escopos são **públicos** (sem auth) e quatro são **autenticados** (lojista). O monólito perderá a dependência de `getShippingService` e do model `Frete`.
 
-Isso acontece em **dois lugares** do código:
-- `processarCronTaxas()` (linha ~370 de `stripe.js`)
-- `pagarTaxasManual()` (linha ~440 de `stripe.js`)
+## Arquivos afetados
 
-### Correção
+| Arquivo | Ação |
+|---|---|
+| `api/fretes.js` | **Criar** — novo microsserviço |
+| `api/loja-extras.js` | **Editar** — remover 6 blocos + imports não usados |
+| `src/services/saas-api.ts` | **Editar** — redirecionar URLs |
+| `vercel.json` | **Editar** — adicionar rewrite |
 
-Mudar `auto_advance: true` para **`auto_advance: false`** nas duas funções, já que o código faz a cobrança explicitamente via `finalizeInvoice()` + `pay()`.
+## Detalhamento
 
-**Arquivo:** `lib/services/assinaturas/stripe.js`
+### 1. Criar `api/fretes.js`
 
-1. Em `processarCronTaxas` — alterar `auto_advance: false` na criação da invoice
-2. Em `pagarTaxasManual` — alterar `auto_advance: false` na criação da invoice
+Novo handler com a mesma estrutura de auth (`verifyLojista`, `verifyOwnership`) + `bodyParser: false` + `getRawBody`. Gerenciará:
 
-Duas linhas de mudança, sem impacto em nenhuma outra parte do sistema.
+| Escopo | Método | Auth | Linhas origem |
+|---|---|---|---|
+| `fretes-publico` | GET | Nenhum | 226-230 |
+| `calcular-frete` | POST | Nenhum | 232-310 |
+| `fretes` | GET | Lojista | 583-586 |
+| `frete` | POST | Lojista | 588-595 |
+| `frete` | PUT | Lojista | 597-604 |
+| `frete` | DELETE | Lojista | 606-615 |
 
-### Bug secundário (menor)
+Imports necessários: `mongoose`, `connectDB`, `jwt`, models `Frete`, `Loja`, `Product`, e `getShippingService` de `lib/services/fretes`.
 
-O webhook `invoice.payment_succeeded` registra "Mensalidade do plano renovada com sucesso" mesmo para invoices manuais de taxas. Deveria verificar o `billing_reason` e logar a mensagem correta. Posso corrigir isso também.
+Estrutura do handler:
+1. CORS OPTIONS
+2. connectDB
+3. Escopos públicos (`fretes-publico`, `calcular-frete`) — sem verificação de token
+4. Escopos autenticados (`fretes`, `frete`) — com `verifyLojista` + `verifyOwnership`
+5. Fallback 400
 
----
+### 2. Limpar `api/loja-extras.js`
 
-## Páginas de Categoria — Implementação Completa ✅
+- Deletar linhas 225-310 (bloco público: `fretes-publico` + `calcular-frete`)
+- Deletar linhas 580-615 (bloco autenticado: `fretes` GET + `frete` POST/PUT/DELETE)
+- Remover imports não mais usados:
+  - `const Frete = require('../models/Frete.js');` (linha 11)
+  - `const { getShippingService } = require('../lib/services/fretes');` (linha 24)
+- Atualizar comentário do cabeçalho (remover "Fretes")
 
-### Arquivos modificados
+Resultado: `loja-extras.js` cairá de ~863 para ~740 linhas.
 
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Category.js` | +campo `banner` (Mixed) |
-| Model | `models/Product.js` | +campo `vendas_count` (Number, indexed) |
-| Model | `models/Loja.js` | +`categoria_config` em configuracoes |
-| API | `api/products.ts` | +scope `categoria-publica` com filtros/sort |
-| API | `api/categorias.js` | PUT aceita campo `banner` |
-| Service | `lib/services/pedidos/confirmarPagamento.js` | +`$inc vendas_count` via bulkWrite |
-| Frontend | `src/services/saas-api.ts` | +interfaces, +`getCategoriaBySlug` |
-| Frontend | `src/hooks/useLojaPublica.tsx` | +`useLojaPublicaCategoria` |
-| Frontend | `src/contexts/LojaContext.tsx` | +`categoriaConfig` no contexto |
-| Frontend | `src/components/LojaLayout.tsx` | +`categoriaConfig` no provider |
-| Frontend | `src/pages/loja/LojaCategoria.tsx` | **NOVO** — página completa |
-| Frontend | `src/App.tsx` | +rota `/categoria/:categorySlug` |
-| Admin | `src/pages/painel/LojaCategorias.tsx` | +editor de banner |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Categoria" |
+### 3. Atualizar `src/services/saas-api.ts`
 
-## Construtor de Navegação Visual (Menu Builder) ✅
+Trocar URLs em dois locais:
 
-### Arquivos Modificados
-
-| Camada | Arquivo | Mudança |
-|--------|---------|---------|
-| Model | `models/Loja.js` | +campo `menu_principal` (Mixed array) em configuracoes |
-| Types | `src/services/saas-api.ts` | +interface `MenuItemConfig`, +campo em `Loja.configuracoes` |
-| Context | `src/contexts/LojaContext.tsx` | +`menuPrincipal: MenuItemConfig[]` no LojaContextType |
-| Admin | `src/components/admin/MenuBuilder.tsx` | **NOVO** — construtor visual com Dialog, nesting, reorder |
-| Admin | `src/pages/painel/LojaTemas.tsx` | +aba "Navegação" (grid-cols-8), +estado `menuPrincipal`, +save |
-| Frontend | `src/components/LojaLayout.tsx` | +NavigationMenu desktop (Linha 2), +Sheet mobile (hamburger), +fallback categorias |
-
-### Estrutura do MenuItemConfig
-```ts
-{ id, type: 'category'|'page'|'custom', reference_id, label, url, children: MenuItemConfig[] }
+**`fretesApi` (linhas 917-925):**
+```
+/loja-extras?scope=fretes  →  /fretes?scope=fretes
+/loja-extras?scope=frete   →  /fretes?scope=frete
 ```
 
-### Funcionalidades
-- Admin: Adicionar categorias (com subcats automáticas), páginas, links customizados
-- Admin: Editar labels, mover cima/baixo, excluir, adicionar sub-itens (até 2 níveis)
-- Loja Desktop: Barra de nav com NavigationMenu (triggers com dropdown para children)
-- Loja Mobile: Hamburger → Sheet lateral com Collapsible para sub-itens
-- Fallback: Se menu vazio, renderiza categorias ativas automaticamente
+**`lojaPublicaApi` (linhas 1103-1104 e 1119-1122):**
+```
+/loja-extras?scope=fretes-publico   →  /fretes?scope=fretes-publico
+/loja-extras?scope=calcular-frete   →  /fretes?scope=calcular-frete
+```
 
-## Fase 1: Shoppertainment (Video Commerce) ✅
+Nenhuma mudança de assinatura, tipos ou hooks.
 
-### Arquivos Modificados/Criados
+### 4. Atualizar `vercel.json`
 
-| Camada | Arquivo | Mudança |
-|---|---|---|
-| Model | `models/Loja.js` | +`mux: { ativo }` em integracoes |
-| Model | `models/Product.js` | +`videos[]` (playback_id, asset_id), +`video_layout` |
-| API | `api/loja-extras.js` | +3 escopos: `mux-upload`, `mux-status`, `mux-delete` |
-| Frontend | `src/services/saas-api.ts` | +`LojaIntegracaoMux`, +campos em `LojaProduct`, +`muxApi` |
-| Frontend | `src/hooks/useLojaCategories.tsx` | Fix tipo banner no update |
-| Admin | `src/pages/painel/LojaIntegracoes.tsx` | +Card Mux com Switch (sem token) |
-| Admin | `src/pages/painel/LojaProdutos.tsx` | Refatoração Extras em 4 Accordions + UI de vídeos |
-| Dep | `package.json` | +`@mux/mux-node` |
+Adicionar rewrite:
+```json
+{ "source": "/api/fretes", "destination": "/api/fretes.js" }
+```
 
-### Fluxo de Upload (com correções anti-falha)
+## Impacto e riscos
 
-1. Lojista clica "Selecionar Vídeo" → valida 50MB
-2. Frontend chama `mux-upload` → recebe `upload_url` + `upload_id`
-3. Frontend faz PUT direto na URL do Mux (Direct Upload)
-4. Frontend inicia **polling** a cada 3s no escopo `mux-status` com `upload_id`
-5. Quando `status === 'ready'`, adiciona `{ playback_id, asset_id }` ao **estado local** do formulário
-6. Vídeo SÓ é persistido no MongoDB quando lojista clica "Salvar Produto"
-7. Exclusão: AlertDialog obrigatório → `mux-delete` (deleta na nuvem + remove do array no BD)
+- **Zero breaking change** — mesmos query params, mesmos response shapes
+- **Checkout público preservado** — `calcular-frete` e `fretes-publico` continuam sem auth
+- **Hooks intactos** — `useFretes`, `useCreateFrete`, etc. consomem `fretesApi` que é atualizado internamente
+- **Página LojaFretes.tsx** — sem alteração (usa hooks que usam `fretesApi`)
+- **LojaCheckout.tsx / LojaProduto.tsx** — sem alteração (usam `lojaPublicaApi.calcularFrete` / `getFretes`)
+
