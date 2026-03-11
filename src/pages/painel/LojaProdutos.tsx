@@ -1811,16 +1811,17 @@ const LojaProdutos = () => {
               </div>
             )}
             <div className="border-t border-border pt-3 mt-2">
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Ou insira uma URL personalizada</Label>
-              <form onSubmit={e => {
-                e.preventDefault();
-                const input = (e.target as HTMLFormElement).elements.namedItem('customUrl') as HTMLInputElement;
-                const url = input?.value?.trim();
-                if (url && imagePickerIdx !== null) { updateVariacao(imagePickerIdx, 'imagem', url); setImagePickerIdx(null); }
-              }} className="flex gap-2">
-                <Input name="customUrl" placeholder="https://exemplo.com/imagem.jpg" className="flex-1" />
-                <Button type="submit" size="sm" className="gap-1 shrink-0"><LinkIcon className="h-3 w-3" /> Usar URL</Button>
-              </form>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Ou envie do computador / insira uma URL</Label>
+              <ImageUploader
+                lojaId={id || ''}
+                onChange={(url) => {
+                  if (imagePickerIdx !== null) {
+                    updateVariacao(imagePickerIdx, 'imagem', url);
+                    setImagePickerIdx(null);
+                  }
+                }}
+                placeholder="https://exemplo.com/imagem.jpg"
+              />
             </div>
           </DialogContent>
         </Dialog>
