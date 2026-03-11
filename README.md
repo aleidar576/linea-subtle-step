@@ -678,7 +678,7 @@ Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga est
                          └──────────────────────┘
 ```
 
-### Scopes no Backend (`api/loja-extras.js`)
+### Scopes no Backend (`api/gateways.js`)
 
 | Scope | Método | Auth | Descrição |
 |---|---|---|---|
