@@ -17,7 +17,7 @@ interface ImageUploaderProps {
   multiple?: boolean;
 }
 
-const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', className, adminMode }: ImageUploaderProps) => {
+const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', className, adminMode, multiple }: ImageUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [urlInput, setUrlInput] = useState(value || '');
   const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload');
