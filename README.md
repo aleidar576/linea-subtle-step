@@ -629,7 +629,7 @@ Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga est
 
 4. Crie o formulário ou botão de OAuth no `case 'novo_gateway':` dentro do Sheet em `LojaGateways.tsx`.
 
-5. Se for OAuth, crie os escopos de conexão (`novo-connect` e `novo-install`) em `api/loja-extras.js`.
+5. Se for OAuth, crie os escopos de conexão (`novo-connect` e `novo-install`) em `api/gateways.js`.
 
 6. Atualize as condicionais visuais de métodos de pagamento no `LojaCheckout.tsx`.
 
