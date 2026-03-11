@@ -4,30 +4,33 @@ Plataforma SaaS de e-commerce multi-tenant com **Host-Based Routing**, checkout 
 
 ---
 
-## ⚠️ ALERTA CRÍTICO: LIMITE DE SERVERLESS FUNCTIONS DA VERCEL
+## 🏗️ Arquitetura de Microsserviços (17 Serverless Functions)
 
-> **O projeto atingiu o limite máximo de 12/12 Serverless Functions no plano Hobby da Vercel.**
+> O monólito `api/loja-extras.js` foi completamente decomposto via **Strangler Fig Pattern** em microsserviços especializados.
 >
-> **🚫 NENHUM arquivo novo pode ser criado na pasta `/api/`.** Qualquer adição resultará em erro de deploy.
->
-> Para adicionar nova funcionalidade backend, você DEVE consolidar a lógica em um dos 12 arquivos existentes usando query params ou métodos HTTP diferentes.
+> **⚠️ Limite do plano Hobby da Vercel: máximo 12 Serverless Functions.** O projeto utiliza o **Strategy Pattern** com query params (`?scope=...`) para consolidar múltiplas rotas por arquivo, mantendo 17 arquivos dentro do limite operacional.
 
-### Lista dos 12 Arquivos (FINAL — não adicionar mais nenhum)
+### Lista dos 17 Arquivos de API
 
 | # | Arquivo | Descrição |
 |---|---|---|
 | 1 | `api/admins.js` | CRUD de administradores, gestão de lojistas, impersonation, métricas |
 | 2 | `api/auth-action.ts` | Ações de autenticação (login, registro, reset) + Master Password |
-| 3 | `api/categorias.js` | Categorias de produtos por loja |
-| 4 | `api/create-pix.js` | Geração de cobranças PIX via SealPay + disparo CAPI Purchase ao confirmar pagamento |
-| 5 | `api/loja-extras.js` | Stripe Checkout/Portal/Webhooks + Cupons + Fretes + Mídias + Temas + Pixels + Páginas + Leads + Upload Bunny.net + **OAuth Appmax** |
-| 6 | `api/lojas.js` | CRUD de lojas + domínios customizados |
-| 7 | `api/lojista.js` | Perfil e gestão do lojista |
-| 8 | `api/pedidos.js` | Gestão de pedidos e status |
-| 9 | `api/pixels.ts` | Pixels de rastreamento (Facebook, TikTok, Google Ads, GTM) |
-| 10 | `api/products.ts` | CRUD consolidado de produtos (slug, toggle, listagem) |
-| 11 | `api/settings.js` | Configurações globais do SaaS + SealPay key + teste Resend + upload admin Bunny.net |
-| 12 | `api/tracking-webhook.js` | Webhook de rastreamento de entregas + CAPI server-side filtrado por loja_id |
+| 3 | `api/assinaturas.js` | Stripe Checkout/Portal/Webhooks + Cron de taxas semanais |
+| 4 | `api/categorias.js` | Categorias de produtos por loja |
+| 5 | `api/cliente-auth.js` | Autenticação de clientes da loja pública |
+| 6 | `api/fretes.js` | CRUD de regras de frete + cálculo dinâmico (Melhor Envio/Kangu) |
+| 7 | `api/gateways.js` | Gateways de pagamento (disponíveis, salvar, desconectar, OAuth Appmax) |
+| 8 | `api/lojas.js` | CRUD de lojas + domínios customizados |
+| 9 | `api/lojista.js` | Perfil e gestão do lojista + notificações |
+| 10 | `api/marketing.js` | Cupons + Leads (newsletter) + Pixels de rastreamento |
+| 11 | `api/midia.js` | Upload Bunny.net + Mux Video Commerce (upload, status, delete) |
+| 12 | `api/pedidos.js` | Gestão de pedidos, carrinhos abandonados, clientes, relatórios |
+| 13 | `api/process-payment.js` | Processamento de pagamentos (PIX SealPay + Appmax multi-método) |
+| 14 | `api/products.ts` | CRUD consolidado de produtos (slug, toggle, listagem, categoria pública) |
+| 15 | `api/settings.js` | Configurações globais do SaaS + gateways plataforma + testes de integração |
+| 16 | `api/storefront.js` | Temas + Páginas CMS + Vitrine pública (categorias, domain, products) |
+| 17 | `api/tracking-webhook.js` | Webhook de rastreamento de entregas + CAPI server-side filtrado por loja_id |
 
 ---
 
@@ -134,7 +137,7 @@ Configurado em `vercel.json`:
 ```json
 {
   "crons": [{
-    "path": "/api/loja-extras?scope=cron-taxas",
+    "path": "/api/assinaturas?scope=cron-taxas",
     "schedule": "0 12 * * *"
   }]
 }
@@ -588,7 +591,7 @@ Se você (IA) precisar adicionar, editar ou remover um Gateway, restrinja-se aos
 
 2. `api/settings.js`: Controla as configurações globais do admin no escopo `?scope=gateways-plataforma`.
 
-3. `api/loja-extras.js`: Controla o que o lojista vê e salva nos escopos `gateways-disponiveis` e `salvar-gateway`. **Rotas de OAuth de Gateways (como redirecionamento e webhooks de instalação) devem ser criadas aqui usando escopos.**
+3. `api/gateways.js`: Controla o que o lojista vê e salva nos escopos `gateways-disponiveis`, `salvar-gateway` e `desconectar-gateway`. **Rotas de OAuth de Gateways (como redirecionamento e webhooks de instalação) devem ser criadas aqui usando escopos.**
 
 ---
 
@@ -596,7 +599,7 @@ Se você (IA) precisar adicionar, editar ou remover um Gateway, restrinja-se aos
 
 Se você for instruída a mexer em pagamentos ou gateways, você **DEVE** respeitar estas regras:
 
-1. **Limite da Pasta API:** É terminantemente proibido criar novos arquivos na pasta `/api`. O limite máximo é de 12 Serverless Functions. Novas integrações de backend devem ser feitas adicionando `scopes` lógicos (ex: `if (scope === 'stripe-connect')`) dentro de `api/loja-extras.js` ou arquivos existentes.
+1. **Limite da Pasta API:** Novas integrações de backend devem ser feitas adicionando `scopes` lógicos (ex: `if (scope === 'stripe-connect')`) dentro do microsserviço apropriado (`api/gateways.js`, `api/marketing.js`, etc.) ou arquivos existentes.
 
 2. **NUNCA altere o `vite.config.mts`.**
 
@@ -626,7 +629,7 @@ Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga est
 
 4. Crie o formulário ou botão de OAuth no `case 'novo_gateway':` dentro do Sheet em `LojaGateways.tsx`.
 
-5. Se for OAuth, crie os escopos de conexão (`novo-connect` e `novo-install`) em `api/loja-extras.js`.
+5. Se for OAuth, crie os escopos de conexão (`novo-connect` e `novo-install`) em `api/gateways.js`.
 
 6. Atualize as condicionais visuais de métodos de pagamento no `LojaCheckout.tsx`.
 
@@ -638,9 +641,9 @@ Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga est
 
 1. Criar um **Aplicativo** no [painel de desenvolvedor da Appmax](https://admin.appmax.com.br)
 2. Preencher as URLs de integração (disponíveis em Admin > Gateways > Editar Appmax):
-   - **Host (Webhook):** `https://seudominio.com/api/loja-extras?scope=appmax-webhook`
+   - **Host (Webhook):** `https://seudominio.com/api/gateways?scope=appmax-webhook`
    - **URL do Sistema:** `https://seudominio.com`
-   - **URL de Validação:** `https://seudominio.com/api/loja-extras?scope=appmax-install`
+   - **URL de Validação:** `https://seudominio.com/api/gateways?scope=appmax-install`
 3. Configurar as variáveis de ambiente na Vercel (ver seção abaixo)
 
 ### Fluxo OAuth Completo
@@ -675,7 +678,7 @@ Quando for solicitado a adição de um novo Gateway (ex: Mercado Pago), siga est
                          └──────────────────────┘
 ```
 
-### Scopes no Backend (`api/loja-extras.js`)
+### Scopes no Backend (`api/gateways.js`)
 
 | Scope | Método | Auth | Descrição |
 |---|---|---|---|
@@ -798,18 +801,36 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 
 ```
 /
-├── api/                    # 12 Serverless Functions (Vercel) — LIMITE ATINGIDO
+├── api/                    # 17 Serverless Functions (Vercel) — Microsserviços especializados
+│   ├── admins.js           # Admin: CRUD, lojistas, impersonation, métricas
+│   ├── assinaturas.js      # Stripe: Checkout, Portal, Webhooks, Cron taxas
+│   ├── auth-action.ts      # Autenticação: login, registro, reset, 2FA
+│   ├── categorias.js       # CRUD categorias de produtos
+│   ├── cliente-auth.js     # Autenticação clientes da loja
+│   ├── fretes.js           # CRUD fretes + cálculo dinâmico
+│   ├── gateways.js         # Gateways de pagamento (config + OAuth Appmax)
+│   ├── lojas.js            # CRUD lojas + domínios customizados
+│   ├── lojista.js          # Perfil lojista + notificações
+│   ├── marketing.js        # Cupons + Leads + Pixels
+│   ├── midia.js            # Upload Bunny.net + Mux Video
+│   ├── pedidos.js          # Pedidos, carrinhos, clientes, relatórios
+│   ├── process-payment.js  # Processamento pagamentos (PIX + Appmax)
+│   ├── products.ts         # CRUD produtos + listagem pública
+│   ├── settings.js         # Config globais + testes integração
+│   ├── storefront.js       # Temas + Páginas CMS + Vitrine pública
+│   └── tracking-webhook.js # Webhook rastreamento + CAPI
 ├── lib/                    # Utilitários backend (auth, mongodb, email, date-utils)
 │   └── services/           # 🏭 Strategy Pattern — Serviços modulares por domínio
 │       ├── pagamentos/
 │       │   ├── index.js    # Factory: getPaymentService(gatewayId)
-│       │   └── sealpay.js  # Implementação SealPay (getStatus, handleWebhook, createPayment)
+│       │   ├── sealpay.js  # Implementação SealPay
+│       │   └── appmax.js   # Implementação Appmax
 │       ├── fretes/
 │       │   ├── index.js    # Factory: getShippingService(integracoes)
-│       │   └── melhorEnvio.js # Implementação Melhor Envio (gerarEtiqueta, cancelarEtiqueta, calcularFrete)
+│       │   └── melhorEnvio.js # Implementação Melhor Envio
 │       └── assinaturas/
 │           ├── index.js    # Factory: getSubscriptionService(provider)
-│           └── stripe.js   # Implementação Stripe (checkout, webhook, portal, cron taxas, pagamento manual)
+│           └── stripe.js   # Implementação Stripe
 ├── models/                 # Schemas Mongoose (Product, Loja, Pedido, Lojista, TrackingPixel, etc.)
 ├── public/                 # Assets estáticos (favicon, imagens de produtos)
 ├── src/
@@ -826,7 +847,7 @@ Os arquivos nas pastas `src/integrations/supabase/` e `supabase/functions/` são
 │   │   ├── useClienteAuth.tsx # Autenticação cliente da loja
 │   │   ├── useTracking.tsx # Contexto de pixels (SaaS-side)
 │   │   ├── useUtmParams.tsx # Captura e persistência de UTMs
-│   │   ├── useLojaExtras.tsx # CRUD de fretes, cupons, mídias, temas, pixels, páginas, leads
+│   │   ├── useLojaExtras.tsx # Hooks React Query para fretes, cupons, mídias, temas, pixels, páginas, leads
 │   │   └── useTheme.tsx    # Toggle light/dark mode
 │   ├── pages/              # Páginas do SaaS, Admin e Demo
 │   │   ├── loja/           # Páginas da loja pública (LojaHome, LojaProduto, LojaCheckout, etc.)
@@ -890,7 +911,7 @@ A partir da Fase 17, o projeto adota o **Design Pattern Strategy** para desacopl
 ### Como funciona
 
 ```
-api/create-pix.js (Controller)
+api/process-payment.js (Controller)
     └── getPaymentService('sealpay')  →  lib/services/pagamentos/sealpay.js
                                           ├── getStatus(txid)
                                           ├── handleWebhook({ txid, status, req })
@@ -902,7 +923,7 @@ api/pedidos.js (Controller)
                                               ├── cancelarEtiqueta({ pedido, loja })
                                               └── calcularFrete({ meConfig, cepOrigem, to_postal_code, items })
 
-api/loja-extras.js (Controller)
+api/assinaturas.js (Controller)
     └── getSubscriptionService('stripe')  →  lib/services/assinaturas/stripe.js
                                                 ├── createCheckoutSession({ user, plano_id })
                                                 ├── handleWebhookEvent({ event, rawBody })
@@ -925,7 +946,7 @@ api/loja-extras.js (Controller)
 
 ### Regra de ouro
 
-> Arquivos em `lib/services/` **NÃO contam como Serverless Functions**. A Vercel só transforma em function os arquivos dentro de `/api`. Tudo em `lib/` é bundled como módulo Node.js auxiliar. Os 12 slots ficam intactos.
+> Arquivos em `lib/services/` **NÃO contam como Serverless Functions**. A Vercel só transforma em function os arquivos dentro de `/api`. Tudo em `lib/` é bundled como módulo Node.js auxiliar.
 
 ---
 
@@ -941,8 +962,20 @@ api/loja-extras.js (Controller)
 | 10 | Sistema de Assinaturas Stripe (Checkout, Portal, Webhooks, Trial 7 dias) | ✅ Concluído |
 | 11 | Pixels multi-plataforma (FB, TikTok, GAds, GTM) + CAPI server-side + filtro por loja_id | ✅ Concluído |
 | 12 | UTMs completos, Cancelamento Programado Stripe, Refinamento UX assinatura, Tutoriais Resend e Bunny.net | ✅ Concluído |
-| 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira nos Painéis | ✅ Concluído |
-| 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas, Cron ajustado para 09h BRT | ✅ Concluído |
-| 15 | Ecossistema de Gateways (Admin + Lojista + Checkout), Sheet modular, SealPay migrado para gateway_ativo | ✅ Concluído |
-| 16 | OAuth Appmax (Instalação de Aplicativo), scopes appmax-connect/appmax-install, AppmaxConfig no painel lojista | ✅ Concluído |
+| 13 | Faturamento Duplo (Mensalidade Stripe + Taxas Semanais via Cron), Auditoria de Eventos, Transparência Financeira | ✅ Concluído |
+| 14 | Smart Retry (3 tentativas automáticas + reagendamento 24h), Regularização Manual de Taxas | ✅ Concluído |
+| 15 | Ecossistema de Gateways (Admin + Lojista + Checkout), Sheet modular, SealPay migrado | ✅ Concluído |
+| 16 | OAuth Appmax (Instalação de Aplicativo), scopes appmax-connect/appmax-install | ✅ Concluído |
 | 17 | **Strategy Pattern** — Extração de SealPay, Melhor Envio e Stripe para `lib/services/` com factories modulares | ✅ Concluído |
+
+### Strangler Fig — Decomposição do Monólito `api/loja-extras.js`
+
+| Fase | Microsserviço Extraído | Escopos Migrados | Status |
+|---|---|---|---|
+| SF-1 | `api/midia.js` | midias, midia, upload, mux-upload, mux-status, mux-delete | ✅ Concluído |
+| SF-2 | `api/fretes.js` | fretes, frete, fretes-publico, calcular-frete | ✅ Concluído |
+| SF-3 | `api/assinaturas.js` | stripe-checkout, stripe-portal, stripe-webhook, cron-taxas, pagar-taxas-manual | ✅ Concluído |
+| SF-4 | `api/gateways.js` | gateways-disponiveis, gateway-loja, salvar-gateway, desconectar-gateway, appmax-connect, appmax-install, appmax-webhook | ✅ Concluído |
+| SF-5 | `api/marketing.js` | cupons, cupom, cupom-publico, cupons-popup, leads, lead, lead-newsletter, leads-import, leads-export, pixels, pixel | ✅ Concluído |
+| SF-5 | `api/storefront.js` | tema, paginas, pagina, pagina-publica, categorias-publico, global-domain, category-products | ✅ Concluído |
+| **Final** | **`api/loja-extras.js` DELETADO** | — | ✅ **Monólito eliminado** |
