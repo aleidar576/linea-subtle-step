@@ -115,6 +115,7 @@ const SaaSApp = () => (
           <Sonner />
           <BrowserRouter>
             <TrackingProvider>
+              <SaaSPixelProvider>
                 <Routes>
                   {/* SaaS routes */}
                   <Route path="/" element={<LandingPage />} />
