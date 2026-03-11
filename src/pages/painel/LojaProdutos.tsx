@@ -721,11 +721,7 @@ const LojaProdutos = () => {
     downloadFile(JSON.stringify(editingProduct, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
   };
 
-  const handleDownloadJsonExample = () => {
-    downloadFile(JSON.stringify(jsonExample(), null, 2), 'produto-exemplo.json', 'application/json');
-  };
-
-  const handleJsonPaste = () => {
+  const handleJsonPaste = async () => {
     try {
       const data = JSON.parse(jsonText);
       // Fix: if variacoes have imagem URLs not in images array, add them
@@ -743,9 +739,92 @@ const LojaProdutos = () => {
       setJsonDialogOpen(false);
       setJsonText('');
       toast({ title: 'Dados preenchidos com sucesso. Revise e salve o produto.' });
+
+      // === CDN Migration (background) ===
+      if (!id) return;
+      const allUrls: string[] = [];
+      if (data.image) allUrls.push(data.image);
+      if (Array.isArray(data.images)) allUrls.push(...data.images);
+      if (Array.isArray(data.variacoes)) {
+        data.variacoes.forEach((v: any) => { if (v.imagem) allUrls.push(v.imagem); });
+      }
+      if (data.avaliacoes_config?.avaliacoes_manuais) {
+        data.avaliacoes_config.avaliacoes_manuais.forEach((r: any) => {
+          if (Array.isArray(r.imagens)) allUrls.push(...r.imagens);
+        });
+      }
+      const uniqueUrls = [...new Set(allUrls.filter(Boolean))];
+      if (uniqueUrls.length === 0) return;
+
+      setCdnMigrating(true);
+      toast({ title: `Enviando ${uniqueUrls.length} imagens para CDN...` });
+      try {
+        const result = await midiasApi.uploadExternal(id, uniqueUrls);
+        const urlMap: Record<string, string> = {};
+        let ok = 0, fail = 0;
+        for (const r of result.results) {
+          if (r.new_url && r.new_url !== r.original) {
+            urlMap[r.original] = r.new_url;
+            ok++;
+          } else if (!r.new_url) {
+            fail++;
+          }
+        }
+        if (Object.keys(urlMap).length > 0) {
+          setEditingProduct(prev => {
+            if (!prev) return prev;
+            const replace = (u: string) => urlMap[u] || u;
+            const newData = { ...prev };
+            if (newData.image) newData.image = replace(newData.image);
+            if (newData.images) newData.images = newData.images.map(replace);
+            if (newData.variacoes) {
+              newData.variacoes = newData.variacoes.map((v: any) => ({
+                ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem,
+              }));
+            }
+            if (newData.avaliacoes_config?.avaliacoes_manuais) {
+              newData.avaliacoes_config = {
+                ...newData.avaliacoes_config,
+                avaliacoes_manuais: newData.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
+                  ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
+                })),
+              };
+            }
+            return newData;
+          });
+        }
+        toast({ title: `CDN: ${ok} enviadas${fail > 0 ? `, ${fail} falharam` : ''}` });
+      } catch (err) {
+        console.error('[CDN Migration]', err);
+        toast({ title: 'Algumas imagens não puderam ser migradas para a CDN.', variant: 'destructive' });
+      } finally {
+        setCdnMigrating(false);
+      }
     } catch {
       toast({ title: 'Código JSON inválido. Verifique a formatação.', variant: 'destructive' });
     }
+  };
+
+  const jsonExampleStr = JSON.stringify(jsonExample(), null, 2);
+
+  const aiPromptText = `Atue como um especialista em extração de dados de e-commerce. Vou te enviar o código HTML (ou texto) de uma página de produto. Sua missão é extrair todos os dados possíveis e formatá-los estritamente no modelo JSON abaixo.
+
+REGRAS CRÍTICAS DE IMAGEM: Analise as URLs das imagens no HTML. Você deve extrair APENAS as imagens de MAIOR resolução. Ignore thumbnails ou ícones (ex: remova parâmetros como '-150x150' ou 'width=100' das URLs se necessário para pegar a imagem original).
+
+Retorne APENAS o código JSON válido, sem formatações markdown em volta, pronto para ser parseado.
+
+MODELO JSON:
+
+${jsonExampleStr}`;
+
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(jsonExampleStr);
+    toast({ title: 'JSON copiado!' });
+  };
+
+  const handleCopyAiPrompt = () => {
+    navigator.clipboard.writeText(aiPromptText);
+    toast({ title: 'Prompt + JSON copiado!' });
   };
 
   // Discount calculation
