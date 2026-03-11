@@ -112,13 +112,33 @@ const LojaPedidos = () => {
     URL.revokeObjectURL(url);
   };
 
+  // ── Recovery link with correct store domain ──
+  const [globalDomain, setGlobalDomain] = useState('');
+  useEffect(() => {
+    platformApi.getDomain().then(d => setGlobalDomain(d.domain)).catch(() => {});
+  }, []);
+
+  const getStoreBaseUrl = () => {
+    if (loja?.dominio_customizado && loja?.dominio_verificado) {
+      return `https://${loja.dominio_customizado}`;
+    }
+    if (loja?.slug && globalDomain) {
+      return `https://${loja.slug}.${globalDomain}`;
+    }
+    return '';
+  };
+
   const getRecoveryLink = (c: CarrinhoAbandonado) => {
     const productIds = c.itens?.map(i => `${i.product_id}:${i.quantity}`).join(',') || '';
     return `/checkout?recovery=${encodeURIComponent(productIds)}`;
   };
 
   const copyRecoveryLink = async (c: CarrinhoAbandonado) => {
-    const baseUrl = window.location.origin;
+    const baseUrl = getStoreBaseUrl();
+    if (!baseUrl) {
+      toast.error('Domínio da loja não configurado');
+      return;
+    }
     const link = `${baseUrl}${getRecoveryLink(c)}`;
     await navigator.clipboard.writeText(link);
     toast.success('Link de recuperação copiado!');
