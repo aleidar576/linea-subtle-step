@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 import { settingsApi } from '@/services/api';
+import { useSaaSPixels } from '@/hooks/useSaaSPixels';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   trialing: { label: 'Trial Ativo', className: 'bg-blue-500/10 text-blue-600' },

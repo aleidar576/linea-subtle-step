@@ -182,6 +182,7 @@ const SaaSApp = () => (
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+              </SaaSPixelProvider>
             </TrackingProvider>
           </BrowserRouter>
         </TooltipProvider>
