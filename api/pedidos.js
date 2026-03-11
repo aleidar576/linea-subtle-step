@@ -89,6 +89,7 @@ module.exports = async function handler(req, res) {
         utms: body.utms || {},
         frete_id: body.frete_id || null,
         frete_nome: body.frete_nome || null,
+        payment_details: body.payment_details || null,
       });
 
       // === ACUMULAR TAXAS DA PLATAFORMA quando pedido é criado já como pago ===
