@@ -12,6 +12,23 @@ const { sendEmail, getBranding, emailRastreioHtml } = require('../lib/email.js')
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
+const PAYMENT_DEBUG_LOGS = process.env.PAYMENT_DEBUG_LOGS === '1';
+
+function safePaymentDetails(details) {
+  if (!details) return null;
+  return {
+    method: details.method || null,
+    installments: Number(details.installments || 1),
+    card_brand: details.card_brand || null,
+    last4: details.last4 ? String(details.last4).slice(-4) : null,
+  };
+}
+
+function paymentDebugLog(tag, payload) {
+  if (!PAYMENT_DEBUG_LOGS) return;
+  console.log(`[PAYMENT-DEBUG][PEDIDOS] ${tag}`, payload);
+}
+
 function requireLojista(req) {
   const token = getTokenFromHeader(req);
   if (!token) return null;
