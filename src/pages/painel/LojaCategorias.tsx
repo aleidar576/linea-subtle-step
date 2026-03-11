@@ -458,7 +458,7 @@ const LojaCategorias = () => {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => deleteMut.mutate(cat._id)}>Excluir</AlertDialogAction>
+                <AlertDialogAction onClick={() => deleteMut.mutate(cat._id, { onSuccess: () => { setMode('list'); setSelectedCat(null); toast({ title: 'Categoria excluída' }); } })}>Excluir</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
