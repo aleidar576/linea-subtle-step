@@ -1115,7 +1115,7 @@ export const lojaPublicaApi = {
     return publicRequest<CategoriaPublicaResponse>(`/products?${params.toString()}`);
   },
   getPagina: (lojaId: string, slug: string) =>
-    publicRequest<PaginaData>(`/loja-extras?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
+    publicRequest<PaginaData>(`/storefront?scope=pagina-publica&loja_id=${lojaId}&slug=${slug}`),
   calcularFrete: (data: CalculateFreightRequest) =>
     publicPostRequest<{ success: boolean; fretes: CalculatedFreight[] }>(
       '/fretes?scope=calcular-frete', data
