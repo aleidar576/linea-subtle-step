@@ -299,7 +299,7 @@ module.exports = async function handler(req, res) {
 
       async function uploadExternalImageToBunny(url) {
         if (!/^https?:\/\//i.test(url)) {
-          return { original: url, new_url: null };
+          return { original: url, new_url: null, error: 'URL inválida (não começa com http)' };
         }
 
         // Skip if already on our CDN
@@ -311,7 +311,7 @@ module.exports = async function handler(req, res) {
         try {
           parsedUrl = new URL(url);
         } catch {
-          return { original: url, new_url: null };
+          return { original: url, new_url: null, error: 'URL malformada' };
         }
 
         const controller = new AbortController();
@@ -325,14 +325,21 @@ module.exports = async function handler(req, res) {
               'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
               'Referer': `${parsedUrl.origin}/`,
             },
+            redirect: 'follow',
           });
-          if (!resp.ok) return { original: url, new_url: null };
+          if (!resp.ok) return { original: url, new_url: null, error: `Servidor retornou HTTP ${resp.status} (${resp.statusText || 'erro'})` };
 
           const contentType = (resp.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+          
+          // Check if response is actually an image
+          if (contentType && !contentType.startsWith('image/') && contentType !== 'application/octet-stream') {
+            return { original: url, new_url: null, error: `Tipo de conteúdo não é imagem: ${contentType}` };
+          }
+          
           const ext = MIME_TO_EXT[contentType] || '.webp';
 
           const buffer = Buffer.from(await resp.arrayBuffer());
-          if (buffer.length < 100) return { original: url, new_url: null }; // too small / broken
+          if (buffer.length < 100) return { original: url, new_url: null, error: `Arquivo muito pequeno (${buffer.length} bytes) — possivelmente corrompido` };
 
           const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
 
@@ -342,12 +349,17 @@ module.exports = async function handler(req, res) {
             body: buffer,
           });
 
-          if (!uploadRes.ok) return { original: url, new_url: null };
+          if (!uploadRes.ok) {
+            const errText = await uploadRes.text().catch(() => '');
+            return { original: url, new_url: null, error: `Falha no upload para CDN (HTTP ${uploadRes.status}): ${errText.slice(0, 100)}` };
+          }
 
           return { original: url, new_url: `https://${pullZone}/${fileName}` };
         } catch (err) {
-          console.warn(`[UPLOAD-EXTERNAL] Falha: ${url} →`, err.message);
-          return { original: url, new_url: null };
+          const msg = err.name === 'AbortError'
+            ? 'Timeout: servidor de origem demorou mais de 12s para responder'
+            : `Erro de rede: ${err.message}`;
+          return { original: url, new_url: null, error: msg };
         } finally {
           clearTimeout(timeout);
         }
