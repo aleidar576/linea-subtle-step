@@ -2030,15 +2030,27 @@ ${jsonExampleStr}`;
               <DialogTitle>Importar Produto via JSON</DialogTitle>
               <DialogDescription>Cole o código JSON do produto abaixo para preencher os campos automaticamente.</DialogDescription>
             </DialogHeader>
-            <Textarea className="min-h-[300px] font-mono text-sm" placeholder='{"name": "Meu Produto", "price": 9990, ...}' value={jsonText} onChange={e => setJsonText(e.target.value)} />
+            <Textarea className="min-h-[300px] font-mono text-sm" placeholder='{"name": "Meu Produto", "price": 9990, ...}' value={jsonText} onChange={e => validateJsonText(e.target.value)} />
+            {jsonErrors.length > 0 && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 space-y-1">
+                {jsonErrors.map((err, i) => (
+                  <p key={i} className="text-xs text-destructive flex items-start gap-1.5">
+                    <span className="mt-0.5">⚠️</span> {err}
+                  </p>
+                ))}
+              </div>
+            )}
+            {jsonText.trim() && jsonErrors.length === 0 && (
+              <p className="text-xs text-emerald-500 flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
+            )}
             {cdnMigrating && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Migrando imagens para CDN...
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setJsonDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleJsonPaste} disabled={cdnMigrating}>Preencher Dados</Button>
+              <Button variant="outline" onClick={() => { setJsonDialogOpen(false); setJsonErrors([]); }}>Cancelar</Button>
+              <Button onClick={handleJsonPaste} disabled={cdnMigrating || jsonErrors.length > 0}>Preencher Dados</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
