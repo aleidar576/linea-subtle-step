@@ -274,6 +274,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // Nunca permitir alteração do codigo_interno via PUT
+      delete req.body.codigo_interno;
+
       const product = await Product.findByIdAndUpdate(id, req.body, { new: true }).lean();
       if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
       return res.status(200).json(product);
