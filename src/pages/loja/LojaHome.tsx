@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Star, ChevronLeft, ChevronRight, ShieldCheck, Truck, CreditCard, Zap, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, ZoomIn } from 'lucide-react';
+import { Flame, Star, ChevronLeft, ChevronRight, ShieldCheck, Truck, CreditCard, Zap, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, ZoomIn, Sparkles } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
 import { useLojaPublicaProducts } from '@/hooks/useLojaPublica';
