@@ -63,7 +63,7 @@ module.exports = async function handler(req, res) {
     const allCatVariants = [...catIds, ...catIdStrings];
     
     const counts = await Product.aggregate([
-      { $match: { loja_id: lojaObjId, $or: [{ category_id: { $in: allCatVariants } }, { category_ids: { $elemMatch: { $in: allCatVariants } } }] } },
+      { $match: { loja_id: lojaObjId, $or: [{ category_id: { $in: allCatVariants } }, { category_ids: { $in: allCatVariants } }] } },
       { $addFields: {
         _all_cats: {
           $setUnion: [
