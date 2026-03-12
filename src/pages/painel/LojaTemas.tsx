@@ -596,7 +596,7 @@ const LojaTemas = () => {
                               <div>
                                 <Label className="text-xs">Imagem Mobile <span className="text-muted-foreground">(768×400px)</span></Label>
                                 {banner.imagem_mobile && <img src={banner.imagem_mobile} alt="Preview mobile" className="w-full max-h-24 object-cover rounded-lg border border-border mb-2" />}
-                                {id && <ImageUploader lojaId={id} value={banner.imagem_mobile || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem mobile" />}
+                                {id && <ImageUploader lojaId={id} value={banner.imagem_mobile || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem mobile" qualityProfile="banner" />}
                               </div>
                             )}
                             <p className="text-[10px] text-muted-foreground">💡 Se apenas uma imagem for enviada, será usada tanto no desktop quanto no mobile.</p>

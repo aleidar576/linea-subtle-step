@@ -38,9 +38,10 @@ const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', c
     if (!validTypes.includes(file.type)) return null;
     if (file.size > 4.5 * 1024 * 1024) return null;
 
+    const profile = COMPRESSION_PROFILES[qualityProfile];
     const compressed = await imageCompression(file, {
-      maxSizeMB: 0.2,
-      maxWidthOrHeight: 1080,
+      maxSizeMB: profile.maxSizeMB,
+      maxWidthOrHeight: profile.maxWidthOrHeight,
       useWebWorker: true,
       fileType: 'image/webp',
     });
