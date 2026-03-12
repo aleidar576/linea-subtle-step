@@ -509,11 +509,83 @@ const LojaProdutos = () => {
     if (!editingProduct?.name) { toast({ title: 'Nome é obrigatório', variant: 'destructive' }); return; }
     setSaving(true);
     try {
-      if (editingProduct._id) {
-        await updateMut.mutateAsync({ id: editingProduct._id, data: editingProduct });
+      // === CDN Migration: scan payload for external URLs ===
+      const pullZone = 'cdn.dusking.com.br';
+      const payload = { ...editingProduct };
+      const allUrls: string[] = [];
+      if (payload.image) allUrls.push(payload.image);
+      if ((payload as any).description_image) allUrls.push((payload as any).description_image);
+      if ((payload as any).badge_imagem) allUrls.push((payload as any).badge_imagem);
+      if (Array.isArray(payload.images)) allUrls.push(...payload.images);
+      if (Array.isArray(payload.variacoes)) {
+        payload.variacoes.forEach((v: any) => { if (v.imagem) allUrls.push(v.imagem); });
+      }
+      if (payload.avaliacoes_config?.avaliacoes_manuais) {
+        payload.avaliacoes_config.avaliacoes_manuais.forEach((r: any) => {
+          if (Array.isArray(r.imagens)) allUrls.push(...r.imagens);
+        });
+      }
+      const externalUrls = [...new Set(
+        allUrls.filter(u => u && /^https?:\/\//i.test(u) && !u.includes(pullZone))
+      )];
+
+      // Migrate external images to CDN before saving
+      let urlMap: Record<string, string> = {};
+      if (externalUrls.length > 0 && id) {
+        setSaveLabel('Migrando imagens...');
+        try {
+          const result = await midiasApi.uploadExternal(id, externalUrls);
+          let ok = 0;
+          const failures: { url: string; error: string }[] = [];
+          for (const r of result.results) {
+            if (r.new_url && r.new_url !== r.original) {
+              urlMap[r.original] = r.new_url;
+              ok++;
+            } else if (r.new_url === r.original) {
+              ok++;
+            } else {
+              failures.push({ url: r.original, error: (r as any).error || 'Erro desconhecido' });
+            }
+          }
+          if (failures.length > 0) {
+            const detail = failures.map(f => `• ${f.url.slice(0, 60)}…\n  → ${f.error}`).join('\n');
+            toast({ title: `CDN: ${ok} OK, ${failures.length} falha(s)`, description: detail.slice(0, 300), variant: 'destructive', duration: 15000 });
+          } else if (ok > 0) {
+            toast({ title: `✅ ${ok} imagem(ns) migrada(s) para CDN` });
+          }
+        } catch (err: any) {
+          console.error('[CDN Migration]', err);
+          toast({ title: 'Erro na migração de imagens', description: 'URLs originais serão mantidas.', variant: 'destructive' });
+        }
+      }
+
+      // Replace external URLs with CDN URLs in payload
+      if (Object.keys(urlMap).length > 0) {
+        const replace = (u: string) => urlMap[u] || u;
+        if (payload.image) payload.image = replace(payload.image);
+        if ((payload as any).description_image) (payload as any).description_image = replace((payload as any).description_image);
+        if ((payload as any).badge_imagem) (payload as any).badge_imagem = replace((payload as any).badge_imagem);
+        if (Array.isArray(payload.images)) payload.images = payload.images.map(replace);
+        if (Array.isArray(payload.variacoes)) {
+          payload.variacoes = payload.variacoes.map((v: any) => ({ ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem }));
+        }
+        if (payload.avaliacoes_config?.avaliacoes_manuais) {
+          payload.avaliacoes_config = {
+            ...payload.avaliacoes_config,
+            avaliacoes_manuais: payload.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
+              ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
+            })),
+          };
+        }
+      }
+
+      // === Save to database ===
+      setSaveLabel('Salvando...');
+      if (payload._id) {
+        await updateMut.mutateAsync({ id: payload._id, data: payload });
         toast({ title: 'Produto atualizado!' });
       } else {
-        await createMut.mutateAsync(editingProduct);
+        await createMut.mutateAsync(payload);
         toast({ title: 'Produto criado!' });
       }
       goBack();
@@ -521,6 +593,7 @@ const LojaProdutos = () => {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setSaving(false);
+      setSaveLabel(null);
     }
   };
 
