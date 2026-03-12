@@ -915,6 +915,8 @@ REGRAS CRITICAS DE TEXTO: Não traga nenhum código, nem quebra de linha, nem /n
 
 Retorne APENAS o código JSON válido, sem formatações markdown em volta, pronto para ser parseado.
 
+Nunca use aspas dupla dentro de títulos, textos e categorias, as aspas duplas são exclusivas da formatação json
+
 Vou te enviar daqui pra frente apenas códigos em HTML, vc sempre, sempre, sempre vai ler o código inteiro, analisar as informações conforme as regras acima e preencher o modelo abaixo:
 
 MODELO JSON:
