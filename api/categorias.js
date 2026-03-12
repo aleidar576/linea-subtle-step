@@ -53,11 +53,16 @@ module.exports = async function handler(req, res) {
     const cats = await Category.find({ loja_id }).sort({ ordem: 1 }).lean();
     // Count products per category
     const catIds = cats.map(c => c._id);
-    const lojaObjId = require('mongoose').Types.ObjectId.createFromHexString(loja_id);
+    const mongoose = require('mongoose');
+    const lojaObjId = mongoose.Types.ObjectId.createFromHexString(loja_id);
     
     // Count products per category using both category_id and category_ids
+    // Handle legacy data where category_id might be stored as string
+    const catIdStrings = catIds.map(id => id.toString());
+    const allCatVariants = [...catIds, ...catIdStrings];
+    
     const counts = await Product.aggregate([
-      { $match: { loja_id: lojaObjId, $or: [{ category_id: { $in: catIds } }, { category_ids: { $elemMatch: { $in: catIds } } }] } },
+      { $match: { loja_id: lojaObjId, $or: [{ category_id: { $in: allCatVariants } }, { category_ids: { $elemMatch: { $in: allCatVariants } } }] } },
       { $addFields: {
         _all_cats: {
           $setUnion: [
@@ -67,13 +72,17 @@ module.exports = async function handler(req, res) {
         }
       }},
       { $unwind: '$_all_cats' },
-      { $match: { _all_cats: { $in: catIds } } },
-      { $group: { _id: '$_all_cats', count: { $sum: 1 } } },
+      { $group: { _id: { $toString: '$_all_cats' }, count: { $sum: 1 } } },
     ]);
     const countMap = {};
-    counts.forEach(c => { countMap[c._id.toString()] = c.count; });
+    counts.forEach(c => { countMap[c._id] = c.count; });
 
-    const uncategorized = await Product.countDocuments({ loja_id, category_id: null, $or: [{ category_ids: { $exists: false } }, { category_ids: { $size: 0 } }] });
+    // Count uncategorized: no category_id AND (no category_ids OR empty)
+    const uncategorized = await Product.countDocuments({
+      loja_id: lojaObjId,
+      $or: [{ category_id: null }, { category_id: { $exists: false } }],
+      $and: [{ $or: [{ category_ids: { $exists: false } }, { category_ids: { $size: 0 } }] }],
+    });
 
     const result = cats.map(c => ({ ...c, qtd_produtos: countMap[c._id.toString()] || 0 }));
     return res.status(200).json({ categories: result, uncategorized_count: uncategorized });
@@ -131,16 +140,35 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    // Remove category from products (both category_id and category_ids)
+    const mongoose = require('mongoose');
+    const catObjId = new mongoose.Types.ObjectId(id);
+    const catStr = id.toString();
+
+    // Remove category from products - handle both ObjectId and string in category_id
     const moved = await Product.updateMany(
-      { $or: [{ category_id: cat._id }, { category_ids: cat._id }] },
-      { $set: { category_id: null }, $pull: { category_ids: cat._id } }
+      { $or: [
+        { category_id: catObjId },
+        { category_id: catStr },
+        { category_ids: catObjId },
+        { category_ids: catStr },
+      ]},
+      {
+        $pull: { category_ids: { $in: [catObjId, catStr] } },
+      }
     );
-    // Sync category_id from remaining category_ids
+
+    // Now fix category_id: set to null where it matches, then re-sync from category_ids
+    await Product.updateMany(
+      { $or: [{ category_id: catObjId }, { category_id: catStr }] },
+      { $set: { category_id: null } }
+    );
+
+    // Sync category_id from remaining category_ids (where category_id is now null but array has items)
     await Product.updateMany(
       { category_id: null, 'category_ids.0': { $exists: true } },
       [{ $set: { category_id: { $arrayElemAt: ['$category_ids', 0] } } }]
     );
+
     // Move subcategories to uncategorized
     await Category.updateMany({ parent_id: cat._id }, { $set: { parent_id: null } });
     await Category.findByIdAndDelete(id);
