@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Star, ChevronLeft, ChevronRight, ShieldCheck, Truck, CreditCard, Zap, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, ZoomIn } from 'lucide-react';
+import { Flame, Star, ChevronLeft, ChevronRight, ShieldCheck, Truck, CreditCard, Zap, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, ZoomIn, Sparkles } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
 import { useLojaPublicaProducts } from '@/hooks/useLojaPublica';
@@ -14,7 +14,7 @@ function formatPrice(cents: number) {
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  ShieldCheck, Truck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Flame,
+  ShieldCheck, Truck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Flame, Sparkles,
 };
 
 const LojaHome = () => {
@@ -41,7 +41,7 @@ const LojaHome = () => {
   const destaques = hp.destaques;
 
   // Build sections from new array format or fallback to old format
-  const secoesRaw: Array<{ titulo: string; categoria_id: string }> = hp.secoes_produtos && Array.isArray(hp.secoes_produtos) && hp.secoes_produtos.length > 0
+  const secoesRaw: Array<{ titulo: string; categoria_id: string; icone?: string }> = hp.secoes_produtos && Array.isArray(hp.secoes_produtos) && hp.secoes_produtos.length > 0
     ? hp.secoes_produtos
     : [
         { titulo: hp.titulo_secao_produtos || 'Mais Vendidos', categoria_id: categoriaHomeId || 'all' },
@@ -273,7 +273,12 @@ const LojaHome = () => {
         <section key={sIdx} className={`py-8 lg:py-12 ${sIdx > 0 ? 'border-t border-border/50' : ''}`}>
           <div className="container">
             <div className="mb-6 flex items-center gap-2">
-              <Flame className="h-5 w-5 text-primary" />
+              {(() => {
+                const iconKey = secao.icone || 'Flame';
+                if (iconKey === 'none') return null;
+                const SectionIcon = ICON_MAP[iconKey] || Flame;
+                return <SectionIcon className="h-5 w-5 text-primary" />;
+              })()}
               <h2 className="text-lg font-bold text-foreground sm:text-xl">
                 {searchQuery && sIdx === 0 ? `Resultados para "${searchQuery}"` : (secao.titulo || 'Produtos')}
               </h2>
