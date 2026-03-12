@@ -95,6 +95,7 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
     features: [],
     promotion: null,
     category_id: null,
+    category_ids: [],
     is_active: true,
     rating: 5.0,
     rating_count: '+100',
