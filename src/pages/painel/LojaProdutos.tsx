@@ -595,10 +595,13 @@ const LojaProdutos = () => {
         await updateMut.mutateAsync({ id: payload._id, data: payload });
         toast({ title: 'Produto atualizado!' });
       } else {
-        await createMut.mutateAsync(payload);
+        const created = await createMut.mutateAsync(payload);
         toast({ title: 'Produto criado!' });
+        // Atualiza o state com o ID retornado para que próximos saves sejam updates
+        if (created?._id) {
+          setEditingProduct(prev => prev ? { ...prev, _id: created._id } : prev);
+        }
       }
-      goBack();
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
