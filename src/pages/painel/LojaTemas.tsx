@@ -586,7 +586,7 @@ const LojaTemas = () => {
                                 <span className="text-[10px] text-muted-foreground">Desktop: 1440×500px | Mobile: 768×400px</span>
                               </div>
                               {banner.imagem && <img src={banner.imagem} alt="Preview" className="w-full max-h-32 object-cover rounded-lg border border-border mb-2" />}
-                              {id && <ImageUploader lojaId={id} value={banner.imagem || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem" />}
+                              {id && <ImageUploader lojaId={id} value={banner.imagem || ''} onChange={url => { const u = [...banners]; u[idx] = { ...banner, imagem: url }; setHp({ banners: u }); }} placeholder="Selecionar imagem" qualityProfile="banner" />}
                             </div>
                             <div className="flex items-center gap-2">
                               <Switch checked={banner.imagem_mobile_ativo || false} onCheckedChange={v => { const u = [...banners]; u[idx] = { ...banner, imagem_mobile_ativo: v }; setHp({ banners: u }); }} />
