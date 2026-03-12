@@ -280,6 +280,7 @@ const LojaProdutos = () => {
   const [csvImporting, setCsvImporting] = useState(false);
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
+  const [jsonErrors, setJsonErrors] = useState<string[]>([]);
   const [imagePickerIdx, setImagePickerIdx] = useState<number | null>(null);
   const [pacotesComentarios, setPacotesComentarios] = useState<PacoteComentario[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
