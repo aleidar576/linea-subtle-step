@@ -1507,13 +1507,43 @@ const LojaTemas = () => {
                           <Input value={col.titulo} onChange={e => updateColuna(colIdx, 'titulo', e.target.value)} placeholder="Título da coluna" className="font-semibold flex-1" />
                           <Button variant="ghost" size="icon" onClick={() => removeColuna(colIdx)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
-                        {col.links.map((link, linkIdx) => (
-                          <div key={linkIdx} className="flex gap-2 items-center">
-                            <Input value={link.nome || (link as any).label || ''} onChange={e => updateLink(colIdx, linkIdx, 'nome', e.target.value)} placeholder="Nome do link" className="flex-1 text-xs" maxLength={50} />
-                            <Input value={link.url || ''} onChange={e => updateLink(colIdx, linkIdx, 'url', e.target.value)} placeholder="/contato ou https://..." className="flex-1 text-xs" maxLength={500} />
-                            <Button variant="ghost" size="icon" onClick={() => removeLinkFromColuna(colIdx, linkIdx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                          </div>
-                        ))}
+                        {col.links.map((link, linkIdx) => {
+                          const linkType = (link as any).tipo || (link.url?.startsWith('/') && !link.url?.startsWith('/http') ? 'pagina' : 'custom');
+                          const systemPages = [
+                            { value: '/', label: 'Início (Home)' },
+                            ...(paginas || []).filter((p: any) => p.is_active).map((p: any) => ({ value: `/pagina/${p.slug}`, label: p.titulo })),
+                            ...(categories || []).filter((c: any) => !c.parent_id).map((c: any) => ({ value: `/categoria/${c.slug}`, label: `Cat: ${c.nome}` })),
+                          ];
+                          return (
+                            <div key={linkIdx} className="space-y-2 border rounded-md p-3 bg-background/50">
+                              <div className="flex gap-2 items-center">
+                                <Input value={link.nome || (link as any).label || ''} onChange={e => updateLink(colIdx, linkIdx, 'nome', e.target.value)} placeholder="Nome do link" className="flex-1 text-xs" maxLength={50} />
+                                <Button variant="ghost" size="icon" onClick={() => removeLinkFromColuna(colIdx, linkIdx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                              </div>
+                              <div className="flex gap-2 items-center">
+                                <Select value={(link as any).tipo || 'custom'} onValueChange={v => { updateLink(colIdx, linkIdx, 'tipo', v); if (v === 'pagina') updateLink(colIdx, linkIdx, 'url', '/'); else updateLink(colIdx, linkIdx, 'url', ''); }}>
+                                  <SelectTrigger className="w-[160px] text-xs h-8"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pagina">Página do Sistema</SelectItem>
+                                    <SelectItem value="custom">Link Personalizado</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {(link as any).tipo === 'pagina' ? (
+                                  <Select value={link.url || '/'} onValueChange={v => updateLink(colIdx, linkIdx, 'url', v)}>
+                                    <SelectTrigger className="flex-1 text-xs h-8"><SelectValue placeholder="Selecione uma página" /></SelectTrigger>
+                                    <SelectContent>
+                                      {systemPages.map(sp => (
+                                        <SelectItem key={sp.value} value={sp.value}>{sp.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Input value={link.url || ''} onChange={e => updateLink(colIdx, linkIdx, 'url', e.target.value)} placeholder="https://... ou /caminho" className="flex-1 text-xs h-8" maxLength={500} />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                         {col.links.length < 8 && (
                           <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => addLinkToColuna(colIdx)}><Plus className="h-3 w-3" /> Adicionar Link</Button>
                         )}
