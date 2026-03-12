@@ -32,6 +32,7 @@ const FreteEspecificoSchema = new mongoose.Schema({
 
 const ProductSchema = new mongoose.Schema({
   product_id: { type: String, required: true, unique: true },
+  codigo_interno: { type: Number, default: null, index: true },
   loja_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Loja', index: true, default: null },
   category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   category_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
@@ -151,5 +152,6 @@ ProductSchema.index({ loja_id: 1, category_ids: 1, is_active: 1, sort_order: 1 }
 ProductSchema.index({ loja_id: 1, is_active: 1, vendas_count: -1 });
 ProductSchema.index({ loja_id: 1, is_active: 1, price: 1 });
 ProductSchema.index({ loja_id: 1, is_active: 1, createdAt: -1 });
+ProductSchema.index({ loja_id: 1, codigo_interno: -1 });
 
 module.exports = mongoose.models.Product || mongoose.model('Product', ProductSchema);

@@ -719,7 +719,9 @@ const LojaProdutos = () => {
   // === JSON handlers ===
   const handleExportJson = () => {
     if (!editingProduct) return;
-    downloadFile(JSON.stringify(editingProduct, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
+    const exportData = { ...editingProduct };
+    delete (exportData as any).codigo_interno;
+    downloadFile(JSON.stringify(exportData, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
   };
 
   // Normalize raw JSON text: fix newlines in strings, replace inner double quotes with single
@@ -831,6 +833,8 @@ const LojaProdutos = () => {
         data.images = [...new Set(currentImages)];
         if (!data.image && data.images.length > 0) data.image = data.images[0];
       }
+      // Strip codigo_interno from imported data (never import it)
+      delete data.codigo_interno;
       setEditingProduct(prev => prev ? { ...prev, ...data, loja_id: prev.loja_id, _id: prev._id } : prev);
       setJsonDialogOpen(false);
       setJsonText('');
@@ -1032,6 +1036,13 @@ ${jsonExampleStr}`;
                       <CardTitle className="text-base">Informações Gerais</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {editingProduct.codigo_interno != null && (
+                        <div>
+                          <Label>Código Interno</Label>
+                          <Input value={String(editingProduct.codigo_interno)} disabled className="bg-muted text-muted-foreground cursor-not-allowed" />
+                          <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente pelo sistema. Não pode ser alterado.</p>
+                        </div>
+                      )}
                       <div>
                         <Label>Nome *</Label>
                         <Input placeholder="Nome do produto" value={editingProduct.name || ''} onChange={e => setField('name', e.target.value)} />
