@@ -239,6 +239,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const maxSortDoc = await Product.findOne(catFilter).sort({ sort_order: -1 }).select('sort_order').lean();
       body.sort_order = ((maxSortDoc as any)?.sort_order ?? -1) + 1;
 
+      // Auto-gerar codigo_interno sequencial por loja
+      delete body.codigo_interno; // nunca aceitar do cliente
+      if (targetLojaId) {
+        const maxCodigoDoc = await Product.findOne({ loja_id: targetLojaId }).sort({ codigo_interno: -1 }).select('codigo_interno').lean();
+        body.codigo_interno = ((maxCodigoDoc as any)?.codigo_interno ?? 0) + 1;
+      }
+
       const product = await Product.create(body);
       return res.status(201).json(product);
     } catch (error) {

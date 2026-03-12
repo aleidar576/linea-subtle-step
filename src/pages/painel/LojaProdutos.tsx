@@ -833,6 +833,8 @@ const LojaProdutos = () => {
         data.images = [...new Set(currentImages)];
         if (!data.image && data.images.length > 0) data.image = data.images[0];
       }
+      // Strip codigo_interno from imported data (never import it)
+      delete data.codigo_interno;
       setEditingProduct(prev => prev ? { ...prev, ...data, loja_id: prev.loja_id, _id: prev._id } : prev);
       setJsonDialogOpen(false);
       setJsonText('');

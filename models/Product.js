@@ -32,6 +32,7 @@ const FreteEspecificoSchema = new mongoose.Schema({
 
 const ProductSchema = new mongoose.Schema({
   product_id: { type: String, required: true, unique: true },
+  codigo_interno: { type: Number, default: null, index: true },
   loja_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Loja', index: true, default: null },
   category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   category_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
