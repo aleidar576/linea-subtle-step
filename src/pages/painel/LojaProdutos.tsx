@@ -299,7 +299,7 @@ const LojaProdutos = () => {
   const [videoProcessing, setVideoProcessing] = useState<{ upload_id: string; progress: number } | null>(null);
   const [videoDeleteAssetId, setVideoDeleteAssetId] = useState<string | null>(null);
   const [jsonExampleOpen, setJsonExampleOpen] = useState(false);
-  const [cdnMigrating, setCdnMigrating] = useState(false);
+  const [saveLabel, setSaveLabel] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
@@ -509,11 +509,83 @@ const LojaProdutos = () => {
     if (!editingProduct?.name) { toast({ title: 'Nome é obrigatório', variant: 'destructive' }); return; }
     setSaving(true);
     try {
-      if (editingProduct._id) {
-        await updateMut.mutateAsync({ id: editingProduct._id, data: editingProduct });
+      // === CDN Migration: scan payload for external URLs ===
+      const pullZone = 'cdn.dusking.com.br';
+      const payload = { ...editingProduct };
+      const allUrls: string[] = [];
+      if (payload.image) allUrls.push(payload.image);
+      if ((payload as any).description_image) allUrls.push((payload as any).description_image);
+      if ((payload as any).badge_imagem) allUrls.push((payload as any).badge_imagem);
+      if (Array.isArray(payload.images)) allUrls.push(...payload.images);
+      if (Array.isArray(payload.variacoes)) {
+        payload.variacoes.forEach((v: any) => { if (v.imagem) allUrls.push(v.imagem); });
+      }
+      if (payload.avaliacoes_config?.avaliacoes_manuais) {
+        payload.avaliacoes_config.avaliacoes_manuais.forEach((r: any) => {
+          if (Array.isArray(r.imagens)) allUrls.push(...r.imagens);
+        });
+      }
+      const externalUrls = [...new Set(
+        allUrls.filter(u => u && /^https?:\/\//i.test(u) && !u.includes(pullZone))
+      )];
+
+      // Migrate external images to CDN before saving
+      let urlMap: Record<string, string> = {};
+      if (externalUrls.length > 0 && id) {
+        setSaveLabel('Migrando imagens...');
+        try {
+          const result = await midiasApi.uploadExternal(id, externalUrls);
+          let ok = 0;
+          const failures: { url: string; error: string }[] = [];
+          for (const r of result.results) {
+            if (r.new_url && r.new_url !== r.original) {
+              urlMap[r.original] = r.new_url;
+              ok++;
+            } else if (r.new_url === r.original) {
+              ok++;
+            } else {
+              failures.push({ url: r.original, error: (r as any).error || 'Erro desconhecido' });
+            }
+          }
+          if (failures.length > 0) {
+            const detail = failures.map(f => `• ${f.url.slice(0, 60)}…\n  → ${f.error}`).join('\n');
+            toast({ title: `CDN: ${ok} OK, ${failures.length} falha(s)`, description: detail.slice(0, 300), variant: 'destructive', duration: 15000 });
+          } else if (ok > 0) {
+            toast({ title: `✅ ${ok} imagem(ns) migrada(s) para CDN` });
+          }
+        } catch (err: any) {
+          console.error('[CDN Migration]', err);
+          toast({ title: 'Erro na migração de imagens', description: 'URLs originais serão mantidas.', variant: 'destructive' });
+        }
+      }
+
+      // Replace external URLs with CDN URLs in payload
+      if (Object.keys(urlMap).length > 0) {
+        const replace = (u: string) => urlMap[u] || u;
+        if (payload.image) payload.image = replace(payload.image);
+        if ((payload as any).description_image) (payload as any).description_image = replace((payload as any).description_image);
+        if ((payload as any).badge_imagem) (payload as any).badge_imagem = replace((payload as any).badge_imagem);
+        if (Array.isArray(payload.images)) payload.images = payload.images.map(replace);
+        if (Array.isArray(payload.variacoes)) {
+          payload.variacoes = payload.variacoes.map((v: any) => ({ ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem }));
+        }
+        if (payload.avaliacoes_config?.avaliacoes_manuais) {
+          payload.avaliacoes_config = {
+            ...payload.avaliacoes_config,
+            avaliacoes_manuais: payload.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
+              ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
+            })),
+          };
+        }
+      }
+
+      // === Save to database ===
+      setSaveLabel('Salvando...');
+      if (payload._id) {
+        await updateMut.mutateAsync({ id: payload._id, data: payload });
         toast({ title: 'Produto atualizado!' });
       } else {
-        await createMut.mutateAsync(editingProduct);
+        await createMut.mutateAsync(payload);
         toast({ title: 'Produto criado!' });
       }
       goBack();
@@ -521,6 +593,7 @@ const LojaProdutos = () => {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setSaving(false);
+      setSaveLabel(null);
     }
   };
 
@@ -859,87 +932,7 @@ const LojaProdutos = () => {
       // Strip codigo_interno from imported data (never import it)
       delete data.codigo_interno;
 
-      // === STEP 1: Varredura Inteligente — collect all external URLs ===
-      const pullZone = 'cdn.dusking.com.br'; // Our CDN domain
-      const allUrls: string[] = [];
-      if (data.image) allUrls.push(data.image);
-      if (data.description_image) allUrls.push(data.description_image);
-      if (data.badge_imagem) allUrls.push(data.badge_imagem);
-      if (Array.isArray(data.images)) allUrls.push(...data.images);
-      if (Array.isArray(data.variacoes)) {
-        data.variacoes.forEach((v: any) => { if (v.imagem) allUrls.push(v.imagem); });
-      }
-      if (data.avaliacoes_config?.avaliacoes_manuais) {
-        data.avaliacoes_config.avaliacoes_manuais.forEach((r: any) => {
-          if (Array.isArray(r.imagens)) allUrls.push(...r.imagens);
-        });
-      }
-      // Filter: only external URLs (not already on our CDN)
-      const externalUrls = [...new Set(
-        allUrls.filter(u => u && /^https?:\/\//i.test(u) && !u.includes(pullZone))
-      )];
-
-      // === STEP 2: CDN Migration (BEFORE saving to state) ===
-      let urlMap: Record<string, string> = {};
-      if (externalUrls.length > 0 && id) {
-        setCdnMigrating(true);
-        toast({ title: `Migrando ${externalUrls.length} imagem(ns) para CDN...` });
-        try {
-          const result = await midiasApi.uploadExternal(id, externalUrls);
-          let ok = 0;
-          const failures: { url: string; error: string }[] = [];
-          for (const r of result.results) {
-            if (r.new_url && r.new_url !== r.original) {
-              urlMap[r.original] = r.new_url;
-              ok++;
-            } else if (r.new_url === r.original) {
-              ok++; // already on CDN
-            } else {
-              failures.push({ url: r.original, error: (r as any).error || 'Erro desconhecido' });
-            }
-          }
-          if (failures.length > 0) {
-            const detail = failures.map(f => `• ${f.url.slice(0, 60)}…\n  → ${f.error}`).join('\n');
-            toast({
-              title: `CDN: ${ok} OK, ${failures.length} falha(s)`,
-              description: detail.slice(0, 300),
-              variant: 'destructive',
-              duration: 15000,
-            });
-            console.warn('[CDN Migration] Falhas:', failures);
-          } else if (ok > 0) {
-            toast({ title: `✅ ${ok} imagem(ns) migrada(s) para CDN` });
-          }
-        } catch (err: any) {
-          console.error('[CDN Migration]', err);
-          toast({
-            title: 'Erro na migração de imagens para CDN',
-            description: err?.message || 'As URLs originais serão mantidas.',
-            variant: 'destructive',
-          });
-        } finally {
-          setCdnMigrating(false);
-        }
-      }
-
-      // === STEP 3: Troca Final — replace all external URLs with CDN URLs ===
-      const replace = (u: string) => urlMap[u] || u;
-      if (data.image) data.image = replace(data.image);
-      if (data.description_image) data.description_image = replace(data.description_image);
-      if (data.badge_imagem) data.badge_imagem = replace(data.badge_imagem);
-      if (Array.isArray(data.images)) data.images = data.images.map(replace);
-      if (Array.isArray(data.variacoes)) {
-        data.variacoes = data.variacoes.map((v: any) => ({
-          ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem,
-        }));
-      }
-      if (data.avaliacoes_config?.avaliacoes_manuais) {
-        data.avaliacoes_config.avaliacoes_manuais = data.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
-          ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
-        }));
-      }
-
-      // === STEP 4: Set state with clean CDN URLs ===
+      // === Set state with original URLs (CDN migration happens on Save) ===
       setEditingProduct(prev => prev ? { ...prev, ...data, loja_id: prev.loja_id, _id: prev._id } : prev);
       setJsonDialogOpen(false);
       setJsonText('');
@@ -1052,7 +1045,7 @@ ${jsonExampleStr}`;
               {/* Único botão Salvar */}
               <Button onClick={handleSave} disabled={saving} className="gap-1.5">
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editingProduct._id ? 'Salvar' : 'Criar'}
+                {saveLabel || (editingProduct._id ? 'Salvar' : 'Criar')}
               </Button>
             </div>
           </div>
@@ -2098,14 +2091,14 @@ ${jsonExampleStr}`;
             {jsonText.trim() && jsonErrors.length === 0 && (
               <p className="text-xs text-emerald-500 flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
             )}
-            {cdnMigrating && (
+            {false && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Migrando imagens para CDN...
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => { setJsonDialogOpen(false); setJsonErrors([]); }}>Cancelar</Button>
-              <Button onClick={handleJsonPaste} disabled={cdnMigrating || jsonErrors.length > 0}>Preencher Dados</Button>
+              <Button onClick={handleJsonPaste} disabled={jsonErrors.length > 0}>Preencher Dados</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
