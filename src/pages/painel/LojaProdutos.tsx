@@ -2563,7 +2563,9 @@ ${jsonExampleStr}`;
                     </TableCell>
                     <TableCell className="px-4 py-3">{p.estoque ?? 0}</TableCell>
                     <TableCell className="px-4 py-3 text-sm text-muted-foreground">{catName}</TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-foreground">R$ {(p.price / 100).toFixed(2).replace('.', ',')}</TableCell>
+                    <TableCell className="px-4 py-3 text-right tabular-nums font-semibold text-foreground whitespace-nowrap">
+                      {(p.price / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </TableCell>
                     <TableCell className="px-4 py-3">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
