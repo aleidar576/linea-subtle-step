@@ -55,7 +55,7 @@ module.exports = async function handler(req, res) {
     const cats = await Category.find({ loja_id }).sort({ ordem: 1 }).lean();
     // Count products per category
     const catIds = cats.map(c => c._id);
-    const mongoose = require('mongoose');
+    
     const lojaObjId = mongoose.Types.ObjectId.createFromHexString(loja_id);
     
     // Count products per category using both category_id and category_ids
