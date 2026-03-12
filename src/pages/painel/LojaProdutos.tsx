@@ -709,12 +709,19 @@ const LojaProdutos = () => {
             price: Number(row.price) || 0,
             original_price: row.original_price ? Number(row.original_price) : null,
             estoque: Number(row.estoque) || 0,
-            category_id: row.category_id || null,
             is_active: row.is_active !== 'false',
             promotion: row.promotion || null,
             image: row.image || '',
             images: row.images ? row.images.split(';').filter(Boolean) : [],
           };
+          // Support both category_id (single) and category_ids (multi, semicolon-separated)
+          if (row.category_ids) {
+            data.category_ids = row.category_ids.split(';').filter(Boolean);
+            data.category_id = data.category_ids[0] || null;
+          } else if (row.category_id) {
+            data.category_id = row.category_id;
+            data.category_ids = [row.category_id];
+          }
           if (row._id) {
             await lojaProductsApi.update(row._id, data);
           } else {

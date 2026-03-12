@@ -87,10 +87,13 @@ module.exports = async function handler(req, res) {
   if (scope === 'category-products' && method === 'GET') {
     const categoryId = req.query.category_id;
     if (!loja_id) return res.status(400).json({ error: 'loja_id é obrigatório' });
-    const filter = categoryId && categoryId !== 'null'
-      ? { loja_id, category_id: categoryId }
-      : { loja_id, category_id: null };
-    const products = await Product.find(filter).sort({ sort_order: 1 }).select('_id name image price sort_order category_id is_active').lean();
+    let filter;
+    if (categoryId && categoryId !== 'null') {
+      filter = { loja_id, $or: [{ category_id: categoryId }, { category_ids: categoryId }] };
+    } else {
+      filter = { loja_id, category_id: null, $or: [{ category_ids: { $exists: false } }, { category_ids: { $size: 0 } }] };
+    }
+    const products = await Product.find(filter).sort({ sort_order: 1 }).select('_id name image price sort_order category_id category_ids is_active').lean();
     return res.json(products);
   }
 

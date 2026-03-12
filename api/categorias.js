@@ -131,8 +131,16 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    // Move products to uncategorized
-    const moved = await Product.updateMany({ category_id: cat._id }, { $set: { category_id: null } });
+    // Remove category from products (both category_id and category_ids)
+    await Product.updateMany(
+      { $or: [{ category_id: cat._id }, { category_ids: cat._id }] },
+      { $set: { category_id: null }, $pull: { category_ids: cat._id } }
+    );
+    // Sync category_id from remaining category_ids
+    await Product.updateMany(
+      { category_id: null, 'category_ids.0': { $exists: true } },
+      [{ $set: { category_id: { $arrayElemAt: ['$category_ids', 0] } } }]
+    );
     // Move subcategories to uncategorized
     await Category.updateMany({ parent_id: cat._id }, { $set: { parent_id: null } });
     await Category.findByIdAndDelete(id);
