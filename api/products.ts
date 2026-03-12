@@ -207,6 +207,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = req.body;
       const targetLojaId = body.loja_id;
 
+      // Sync category_id from category_ids if provided
+      if (Array.isArray(body.category_ids) && body.category_ids.length > 0) {
+        body.category_id = body.category_ids[0];
+      }
+
       // Lojista: validar ownership da loja
       if (lojista && targetLojaId) {
         const loja = await Loja.findOne({ _id: targetLojaId, lojista_id: lojista.lojista_id });
