@@ -269,8 +269,15 @@ module.exports = async function handler(req, res) {
       if (!Array.isArray(urls) || urls.length === 0) {
         return res.status(400).json({ error: 'urls (array) é obrigatório' });
       }
-      if (urls.length > 30) {
-        return res.status(400).json({ error: 'Máximo 30 URLs por requisição' });
+
+      const normalizedUrls = [...new Set(
+        urls
+          .filter((u) => typeof u === 'string')
+          .map((u) => u.trim())
+          .filter(Boolean)
+      )];
+      if (normalizedUrls.length === 0) {
+        return res.status(400).json({ error: 'Nenhuma URL válida enviada' });
       }
 
       const apiKey = process.env.BUNNY_API_KEY;
@@ -291,13 +298,24 @@ module.exports = async function handler(req, res) {
       };
 
       async function uploadExternalImageToBunny(url) {
+        if (!/^https?:\/\//i.test(url)) {
+          return { original: url, new_url: null };
+        }
+
         // Skip if already on our CDN
         if (url.includes(pullZone)) {
           return { original: url, new_url: url };
         }
 
+        let parsedUrl;
+        try {
+          parsedUrl = new URL(url);
+        } catch {
+          return { original: url, new_url: null };
+        }
+
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
+        const timeout = setTimeout(() => controller.abort(), 12000);
 
         try {
           const resp = await fetch(url, {
@@ -305,10 +323,9 @@ module.exports = async function handler(req, res) {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-              'Referer': new URL(url).origin + '/',
+              'Referer': `${parsedUrl.origin}/`,
             },
           });
-          clearTimeout(timeout);
           if (!resp.ok) return { original: url, new_url: null };
 
           const contentType = (resp.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
@@ -329,14 +346,20 @@ module.exports = async function handler(req, res) {
 
           return { original: url, new_url: `https://${pullZone}/${fileName}` };
         } catch (err) {
-          clearTimeout(timeout);
           console.warn(`[UPLOAD-EXTERNAL] Falha: ${url} →`, err.message);
           return { original: url, new_url: null };
+        } finally {
+          clearTimeout(timeout);
         }
       }
 
-      const results = await Promise.allSettled(urls.map(u => uploadExternalImageToBunny(u)));
-      const mapped = results.map(r => r.status === 'fulfilled' ? r.value : { original: '', new_url: null });
+      const BATCH_SIZE = 30;
+      const mapped = [];
+      for (let i = 0; i < normalizedUrls.length; i += BATCH_SIZE) {
+        const batch = normalizedUrls.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(batch.map((u) => uploadExternalImageToBunny(u)));
+        mapped.push(...results.map((r) => (r.status === 'fulfilled' ? r.value : { original: '', new_url: null })));
+      }
 
       return res.json({ results: mapped });
     }
