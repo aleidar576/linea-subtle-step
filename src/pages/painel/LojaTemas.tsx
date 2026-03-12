@@ -83,7 +83,7 @@ const DEFAULT_HOMEPAGE: HomepageConfig = {
   setas_fundo_invisivel: false,
   titulo_secao_produtos: 'Mais Vendidos',
   social_proof: { ativo: true, titulo: 'Avaliações dos Clientes', nota_media: 4.9, subtexto: 'Baseado em +11 Milhões de avaliações', comentarios: [] },
-  tarja: { cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' },
+  tarja: { ativo: false, cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' },
   trust_badges: [],
 };
 
@@ -233,7 +233,7 @@ const LojaTemas = () => {
   const setHp = (partial: Partial<HomepageConfig>) => setHomepage({ ...homepage, ...partial });
   const banners = hp.banners || [];
   const sp = hp.social_proof || { ativo: true, titulo: '', nota_media: 4.9, subtexto: '', imagem_url: '', comentarios: [] as any[] };
-  const tarja = hp.tarja || { cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' };
+  const tarja = hp.tarja || { ativo: false, cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' };
   const badges = hp.trust_badges || [];
   const tarjaTopo = (hp as any).tarja_topo || { ativo: false, texto: '', cor_fundo: '', cor_texto: '#ffffff', negrito: false, fonte: 'inherit', icone: '', icone_ativo: false };
   const destaquesData = (hp as any).destaques || { ativo: false, cor_fundo: '#f5f5f5', cor_texto: '#555555', itens: [] };
@@ -1026,27 +1026,40 @@ const LojaTemas = () => {
 
                   {/* Tarja Inferior */}
                   <div className="bg-muted/30 rounded-lg p-4 space-y-4">
-                    <Label className="text-base font-semibold">Tarja Inferior (Call to Action)</Label>
-                    <div>
-                      <Label className="text-xs">Cor de Fundo</Label>
-                      <div className="flex gap-2">
-                        <Input value={tarja.cor_fundo} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} placeholder="#1a1a2e" className="flex-1" />
-                        <input type="color" value={tarja.cor_fundo || '#1a1a2e'} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} className="w-10 h-10 rounded border border-input cursor-pointer" />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base font-semibold block">Tarja Inferior (Call to Action)</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Barra fixa no final da página com chamada para ação.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={tarja.ativo ?? false} onCheckedChange={v => setHp({ tarja: { ...tarja, ativo: v } })} />
+                        <Label className="text-xs">{tarja.ativo ? 'Ativa' : 'Desativada'}</Label>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div><Label className="text-xs">Título</Label><Input value={tarja.titulo} onChange={e => setHp({ tarja: { ...tarja, titulo: e.target.value } })} placeholder="Garanta seu desconto exclusivo!" /></div>
-                      <div><Label className="text-xs">Subtítulo</Label><Input value={tarja.subtitulo} onChange={e => setHp({ tarja: { ...tarja, subtitulo: e.target.value } })} placeholder="Últimas unidades com frete grátis." /></div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2"><Label className="text-xs">Botão</Label><Switch checked={tarja.botao_ativo} onCheckedChange={v => setHp({ tarja: { ...tarja, botao_ativo: v } })} /></div>
-                      {tarja.botao_ativo && (
-                        <>
-                          <Input value={tarja.botao_texto} onChange={e => setHp({ tarja: { ...tarja, botao_texto: e.target.value } })} placeholder="Aproveitar Oferta" className="flex-1" />
-                          <Input value={tarja.botao_link} onChange={e => setHp({ tarja: { ...tarja, botao_link: e.target.value } })} placeholder="/link" className="flex-1" />
-                        </>
-                      )}
-                    </div>
+                    {tarja.ativo && (
+                      <>
+                        <div>
+                          <Label className="text-xs">Cor de Fundo</Label>
+                          <div className="flex gap-2">
+                            <Input value={tarja.cor_fundo} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} placeholder="#1a1a2e" className="flex-1" />
+                            <input type="color" value={tarja.cor_fundo || '#1a1a2e'} onChange={e => setHp({ tarja: { ...tarja, cor_fundo: e.target.value } })} className="w-10 h-10 rounded border border-input cursor-pointer" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div><Label className="text-xs">Título</Label><Input value={tarja.titulo} onChange={e => setHp({ tarja: { ...tarja, titulo: e.target.value } })} placeholder="Garanta seu desconto exclusivo!" /></div>
+                          <div><Label className="text-xs">Subtítulo</Label><Input value={tarja.subtitulo} onChange={e => setHp({ tarja: { ...tarja, subtitulo: e.target.value } })} placeholder="Últimas unidades com frete grátis." /></div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2"><Label className="text-xs">Botão</Label><Switch checked={tarja.botao_ativo} onCheckedChange={v => setHp({ tarja: { ...tarja, botao_ativo: v } })} /></div>
+                          {tarja.botao_ativo && (
+                            <>
+                              <Input value={tarja.botao_texto} onChange={e => setHp({ tarja: { ...tarja, botao_texto: e.target.value } })} placeholder="Aproveitar Oferta" className="flex-1" />
+                              <Input value={tarja.botao_link} onChange={e => setHp({ tarja: { ...tarja, botao_link: e.target.value } })} placeholder="/link" className="flex-1" />
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Popup de Boas-Vindas */}

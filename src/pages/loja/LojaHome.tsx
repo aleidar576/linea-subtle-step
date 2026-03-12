@@ -373,7 +373,7 @@ const LojaHome = () => {
       )}
 
       {/* Tarja CTA */}
-      {tarja?.titulo && (
+      {tarja?.ativo && tarja?.titulo && (
         <section className="py-8 text-white" style={{ backgroundColor: tarja.cor_fundo || 'hsl(var(--primary))' }}>
           <div className="container text-center space-y-3">
             <h2 className="text-xl font-bold">{tarja.titulo}</h2>
