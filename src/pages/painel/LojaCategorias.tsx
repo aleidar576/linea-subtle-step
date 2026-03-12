@@ -29,6 +29,7 @@ interface CatProduct {
   price: number;
   sort_order: number;
   category_id: string | null;
+  category_ids?: string[];
   is_active: boolean;
 }
 
