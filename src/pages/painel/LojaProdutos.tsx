@@ -121,7 +121,7 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
 }
 
 // === CSV Helpers ===
-const CSV_COLUMNS = ['name', 'short_description', 'price', 'original_price', 'estoque', 'category_id', 'is_active', 'promotion', 'image', 'images'];
+const CSV_COLUMNS = ['name', 'short_description', 'price', 'original_price', 'estoque', 'category_ids', 'is_active', 'promotion', 'image', 'images'];
 
 function productsToCsv(products: LojaProduct[]): string {
   const header = CSV_COLUMNS.join(',');
@@ -129,6 +129,10 @@ function productsToCsv(products: LojaProduct[]): string {
     CSV_COLUMNS.map(col => {
       const val = (p as any)[col];
       if (col === 'images') return `"${(val || []).join(';')}"`;
+      if (col === 'category_ids') {
+        const ids = val || (p.category_id ? [p.category_id] : []);
+        return `"${(ids as string[]).join(';')}"`;
+      }
       if (typeof val === 'string') return `"${val.replace(/"/g, '""')}"`;
       return val ?? '';
     }).join(',')
@@ -138,7 +142,7 @@ function productsToCsv(products: LojaProduct[]): string {
 
 function csvModelTemplate(): string {
   const header = CSV_COLUMNS.join(',');
-  const example = 'Produto Exemplo,Descrição curta,9990,,10,,true,10% OFF,0,https://exemplo.com/img.jpg,""';
+  const example = 'Produto Exemplo,Descrição curta,9990,,10,"cat-id-1;cat-id-2",true,10% OFF,https://exemplo.com/img.jpg,""';
   return [header, example].join('\n');
 }
 
