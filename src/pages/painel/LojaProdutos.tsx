@@ -723,7 +723,49 @@ const LojaProdutos = () => {
 
   const handleJsonPaste = async () => {
     try {
-      const data = JSON.parse(jsonText);
+      // Normalize malformed multiline strings (common in copied URLs)
+      const normalizedJsonText = jsonText
+        .replace(/^\uFEFF/, '')
+        .replace(/"((?:\\.|[^"\\])*)"/g, (_match, content) => {
+          const cleaned = String(content)
+            .replace(/\r?\n+/g, ' ')
+            .replace(/\t+/g, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+          return `"${cleaned}"`;
+        });
+
+      const data = JSON.parse(normalizedJsonText);
+
+      // Normalize category refs: accept ObjectId OR category name/slug
+      const categoryLookup = new Map<string, string>();
+      (categories || []).forEach((c: any) => {
+        const idVal = String(c?._id || '').trim();
+        if (!idVal) return;
+        const nome = String(c?.nome || '').trim().toLowerCase();
+        const slug = String(c?.slug || '').trim().toLowerCase();
+        if (nome) categoryLookup.set(nome, idVal);
+        if (slug) categoryLookup.set(slug, idVal);
+        categoryLookup.set(idVal, idVal);
+      });
+
+      const normalizeCategoryRef = (value: any): string | null => {
+        if (value === null || value === undefined) return null;
+        const key = String(value).trim().toLowerCase();
+        if (!key) return null;
+        return categoryLookup.get(key) || null;
+      };
+
+      if (data.category_id !== undefined) {
+        data.category_id = normalizeCategoryRef(data.category_id);
+      }
+      if (Array.isArray(data.category_ids)) {
+        const mapped = data.category_ids
+          .map((v: any) => normalizeCategoryRef(v))
+          .filter((v: string | null): v is string => !!v);
+        data.category_ids = [...new Set(mapped)];
+        if (!data.category_id) data.category_id = data.category_ids[0] || null;
+      }
 
       // Sanitize: trim whitespace/newlines from all URL fields
       if (data.image) data.image = data.image.trim();
@@ -816,7 +858,11 @@ const LojaProdutos = () => {
         setCdnMigrating(false);
       }
     } catch {
-      toast({ title: 'Código JSON inválido. Verifique a formatação.', variant: 'destructive' });
+      toast({
+        title: 'JSON inválido para importação',
+        description: 'Remova quebras de linha dentro de URLs e use category_ids com nomes/slug existentes ou IDs válidos.',
+        variant: 'destructive',
+      });
     }
   };
 
