@@ -2091,7 +2091,7 @@ ${jsonExampleStr}`;
             {jsonText.trim() && jsonErrors.length === 0 && (
               <p className="text-xs text-emerald-500 flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
             )}
-            {cdnMigrating && (
+            {false && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Migrando imagens para CDN...
               </div>
