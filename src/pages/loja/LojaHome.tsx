@@ -188,8 +188,8 @@ const LojaHome = () => {
 
               return (
                 <div key={i} className={`absolute inset-0 transition-opacity duration-500 ${i === currentBanner ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  {imgDesktop && <img src={imgDesktop} alt={banner.titulo || ''} className="hidden sm:block h-full w-full object-cover" style={banner.blur_ativo ? { filter: `blur(${(banner.blur_intensidade || 30) * 0.2}px)`, transform: 'scale(1.05)' } : undefined} />}
-                  {imgMobile && <img src={imgMobile} alt={banner.titulo || ''} className="sm:hidden h-full w-full object-cover" style={banner.blur_ativo ? { filter: `blur(${(banner.blur_intensidade || 30) * 0.2}px)`, transform: 'scale(1.05)' } : undefined} />}
+{imgDesktop && <img src={imgDesktop} alt={banner.titulo || ''} className="hidden sm:block h-full w-full object-cover" fetchPriority="high" loading="eager" style={banner.blur_ativo ? { filter: `blur(${(banner.blur_intensidade || 30) * 0.2}px)`, transform: 'scale(1.05)' } : undefined} />}
+                  {imgMobile && <img src={imgMobile} alt={banner.titulo || ''} className="sm:hidden h-full w-full object-cover" fetchPriority="high" loading="eager" style={banner.blur_ativo ? { filter: `blur(${(banner.blur_intensidade || 30) * 0.2}px)`, transform: 'scale(1.05)' } : undefined} />}
 
                   {(banner.titulo || banner.subtitulo || banner.badge_texto) && (
                     <div className="absolute inset-0 z-10 pointer-events-none">
