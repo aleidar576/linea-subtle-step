@@ -53,14 +53,27 @@ module.exports = async function handler(req, res) {
     const cats = await Category.find({ loja_id }).sort({ ordem: 1 }).lean();
     // Count products per category
     const catIds = cats.map(c => c._id);
+    const lojaObjId = require('mongoose').Types.ObjectId.createFromHexString(loja_id);
+    
+    // Count products per category using both category_id and category_ids
     const counts = await Product.aggregate([
-      { $match: { loja_id: require('mongoose').Types.ObjectId.createFromHexString(loja_id), category_id: { $in: catIds } } },
-      { $group: { _id: '$category_id', count: { $sum: 1 } } },
+      { $match: { loja_id: lojaObjId, $or: [{ category_id: { $in: catIds } }, { category_ids: { $elemMatch: { $in: catIds } } }] } },
+      { $addFields: {
+        _all_cats: {
+          $setUnion: [
+            { $cond: [{ $ifNull: ['$category_id', false] }, ['$category_id'], []] },
+            { $cond: [{ $isArray: '$category_ids' }, '$category_ids', []] },
+          ]
+        }
+      }},
+      { $unwind: '$_all_cats' },
+      { $match: { _all_cats: { $in: catIds } } },
+      { $group: { _id: '$_all_cats', count: { $sum: 1 } } },
     ]);
     const countMap = {};
     counts.forEach(c => { countMap[c._id.toString()] = c.count; });
 
-    const uncategorized = await Product.countDocuments({ loja_id, category_id: null });
+    const uncategorized = await Product.countDocuments({ loja_id, category_id: null, $or: [{ category_ids: { $exists: false } }, { category_ids: { $size: 0 } }] });
 
     const result = cats.map(c => ({ ...c, qtd_produtos: countMap[c._id.toString()] || 0 }));
     return res.status(200).json({ categories: result, uncategorized_count: uncategorized });
@@ -118,8 +131,16 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    // Move products to uncategorized
-    const moved = await Product.updateMany({ category_id: cat._id }, { $set: { category_id: null } });
+    // Remove category from products (both category_id and category_ids)
+    const moved = await Product.updateMany(
+      { $or: [{ category_id: cat._id }, { category_ids: cat._id }] },
+      { $set: { category_id: null }, $pull: { category_ids: cat._id } }
+    );
+    // Sync category_id from remaining category_ids
+    await Product.updateMany(
+      { category_id: null, 'category_ids.0': { $exists: true } },
+      [{ $set: { category_id: { $arrayElemAt: ['$category_ids', 0] } } }]
+    );
     // Move subcategories to uncategorized
     await Category.updateMany({ parent_id: cat._id }, { $set: { parent_id: null } });
     await Category.findByIdAndDelete(id);
