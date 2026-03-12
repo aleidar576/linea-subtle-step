@@ -133,6 +133,7 @@ const LojaCategorias = () => {
       } : null;
       await updateMut.mutateAsync({ id: selectedCat._id, data: { nome: editorName, slug: editorSlug || slugify(editorName), banner } });
       toast({ title: 'Categoria atualizada!' });
+      setSelectedCat(null);
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     }
