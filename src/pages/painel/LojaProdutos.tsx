@@ -2098,7 +2098,7 @@ ${jsonExampleStr}`;
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => { setJsonDialogOpen(false); setJsonErrors([]); }}>Cancelar</Button>
-              <Button onClick={handleJsonPaste} disabled={cdnMigrating || jsonErrors.length > 0}>Preencher Dados</Button>
+              <Button onClick={handleJsonPaste} disabled={jsonErrors.length > 0}>Preencher Dados</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
