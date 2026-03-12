@@ -245,12 +245,16 @@ module.exports = async function handler(req, res) {
       .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     if (cleanSlug.length < 3) cleanSlug = cleanSlug + '-loja';
 
-    // Verificar limite do plano
-    const plano = lojista.plano || 'free';
-    const limit = PLAN_LIMITS[plano] || 1;
-    const count = await Loja.countDocuments({ lojista_id: lojista.lojista_id, is_active: true });
-    if (count >= limit) {
-      return res.status(403).json({ error: `O plano ${plano} permite apenas ${limit} loja(s). Faça upgrade.` });
+    // Verificar limite do plano (modo_amigo bypassa o limite)
+    const Lojista = require('../models/Lojista.js');
+    const lojistaDoc = await Lojista.findById(lojista.lojista_id).lean();
+    if (!lojistaDoc?.modo_amigo) {
+      const plano = lojista.plano || 'free';
+      const limit = PLAN_LIMITS[plano] || 1;
+      const count = await Loja.countDocuments({ lojista_id: lojista.lojista_id, is_active: true });
+      if (count >= limit) {
+        return res.status(403).json({ error: `O plano ${plano} permite apenas ${limit} loja(s). Faça upgrade.` });
+      }
     }
 
     // Verificar slug único
