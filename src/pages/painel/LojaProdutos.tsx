@@ -1045,7 +1045,7 @@ ${jsonExampleStr}`;
               {/* Único botão Salvar */}
               <Button onClick={handleSave} disabled={saving} className="gap-1.5">
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editingProduct._id ? 'Salvar' : 'Criar'}
+                {saveLabel || (editingProduct._id ? 'Salvar' : 'Criar')}
               </Button>
             </div>
           </div>
