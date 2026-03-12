@@ -2,10 +2,12 @@
 // 📂 API: Categorias (CRUD) - Multi-Tenant
 // ============================================
 
+const mongoose = require('mongoose');
 const connectDB = require('../lib/mongodb.js');
 const Category = require('../models/Category.js');
 const Product = require('../models/Product.js');
 const Loja = require('../models/Loja.js');
+const authPkg = require('../lib/auth.js');
 const authPkg = require('../lib/auth.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
