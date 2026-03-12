@@ -132,7 +132,7 @@ module.exports = async function handler(req, res) {
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
     // Remove category from products (both category_id and category_ids)
-    await Product.updateMany(
+    const moved = await Product.updateMany(
       { $or: [{ category_id: cat._id }, { category_ids: cat._id }] },
       { $set: { category_id: null }, $pull: { category_ids: cat._id } }
     );
