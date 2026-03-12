@@ -433,38 +433,52 @@ const LojaCategorias = () => {
 
     return (
       <div key={cat._id} className={isChild ? 'ml-8' : ''}>
-        <div
-          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 group cursor-pointer"
-          onClick={() => openEditor(cat)}
-        >
-          {isChild && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 group">
+          {/* Zona clicável: abre o editor */}
+          <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => openEditor(cat)}>
+            {isChild && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+            <span className="text-sm font-medium">{cat.nome}</span>
+            <Badge variant="secondary" className="text-xs">{cat.qtd_produtos || 0}</Badge>
+            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); openEditor(cat); }}>
+              <Edit2 className="h-3 w-3" />
+            </Button>
+          </div>
 
-          <span className="text-sm font-medium flex-1">{cat.nome}</span>
-          <Badge variant="secondary" className="text-xs">{cat.qtd_produtos || 0}</Badge>
-          <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); openEditor(cat); }}>
-            <Edit2 className="h-3 w-3" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-                <Trash2 className="h-3 w-3 text-destructive" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir "{cat.nome}"?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {(cat.qtd_produtos || 0) > 0
-                    ? `${cat.qtd_produtos} produto(s) serão movidos para "Sem categoria".`
-                    : 'Esta ação não pode ser desfeita.'}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => deleteMut.mutate(cat._id, { onSuccess: () => { setMode('list'); setSelectedCat(null); toast({ title: 'Categoria excluída' }); } })}>Excluir</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* Zona de ações: isolada do onClick do editor */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir "{cat.nome}"?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {(cat.qtd_produtos || 0) > 0
+                      ? `${cat.qtd_produtos} produto(s) serão movidos para "Sem categoria".`
+                      : 'Esta ação não pode ser desfeita.'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => {
+                    const deletedId = cat._id;
+                    deleteMut.mutate(deletedId, {
+                      onSuccess: () => {
+                        if (selectedCat?._id === deletedId) {
+                          setSelectedCat(null);
+                        }
+                        setMode('list');
+                        toast({ title: 'Categoria excluída' });
+                      },
+                    });
+                  }}>Excluir</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
         {children.map(child => renderCategory(child, true))}
       </div>
