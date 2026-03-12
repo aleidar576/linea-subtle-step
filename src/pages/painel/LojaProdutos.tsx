@@ -724,6 +724,21 @@ const LojaProdutos = () => {
   const handleJsonPaste = async () => {
     try {
       const data = JSON.parse(jsonText);
+
+      // Sanitize: trim whitespace/newlines from all URL fields
+      if (data.image) data.image = data.image.trim();
+      if (data.description_image) data.description_image = data.description_image.trim();
+      if (data.badge_imagem) data.badge_imagem = data.badge_imagem.trim();
+      if (Array.isArray(data.images)) data.images = data.images.map((u: string) => u?.trim()).filter(Boolean);
+      if (Array.isArray(data.variacoes)) {
+        data.variacoes = data.variacoes.map((v: any) => ({ ...v, imagem: v.imagem?.trim() || null }));
+      }
+      if (data.avaliacoes_config?.avaliacoes_manuais) {
+        data.avaliacoes_config.avaliacoes_manuais = data.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
+          ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map((u: string) => u?.trim()).filter(Boolean) : r.imagens,
+        }));
+      }
+
       // Fix: if variacoes have imagem URLs not in images array, add them
       if (data.variacoes && Array.isArray(data.variacoes)) {
         const currentImages = [...(editingProduct?.images || []), ...(data.images || [])];
