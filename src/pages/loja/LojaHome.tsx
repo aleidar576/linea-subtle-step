@@ -77,7 +77,11 @@ const LojaHome = () => {
     if (secao.categoria_id && secao.categoria_id !== 'all') {
       items = items.filter(p => {
         const catIds = (p as any).category_ids;
-        return Array.isArray(catIds) ? catIds.includes(secao.categoria_id) : p.category_id === secao.categoria_id;
+        const targetId = secao.categoria_id;
+        if (Array.isArray(catIds) && catIds.length > 0) {
+          return catIds.some((id: any) => String(id) === String(targetId));
+        }
+        return String(p.category_id) === String(targetId);
       });
     }
     if (searchQuery) {
