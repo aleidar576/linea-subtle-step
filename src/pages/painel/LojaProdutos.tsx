@@ -932,8 +932,22 @@ const LojaProdutos = () => {
       // Strip codigo_interno from imported data (never import it)
       delete data.codigo_interno;
 
+      // Unify image + images: ensure main image is always in the gallery
+      const imagesFromJson = Array.isArray(data.images) ? data.images : [];
+      const mainImage = data.image || '';
+      const unifiedImages = Array.from(new Set([mainImage, ...imagesFromJson])).filter(Boolean) as string[];
+      data.image = mainImage || unifiedImages[0] || '';
+      data.images = unifiedImages;
+
       // === Set state with original URLs (CDN migration happens on Save) ===
-      setEditingProduct(prev => prev ? { ...prev, ...data, loja_id: prev.loja_id, _id: prev._id } : prev);
+      setEditingProduct(prev => prev ? {
+        ...prev,
+        ...data,
+        image: data.image || prev.image,
+        images: unifiedImages.length > 0 ? unifiedImages : prev.images,
+        loja_id: prev.loja_id,
+        _id: prev._id,
+      } : prev);
       setJsonDialogOpen(false);
       setJsonText('');
       toast({ title: 'Dados preenchidos com sucesso. Revise e salve o produto.' });
