@@ -15,9 +15,16 @@ interface ImageUploaderProps {
   className?: string;
   adminMode?: boolean;
   multiple?: boolean;
+  qualityProfile?: 'standard' | 'banner' | 'none';
 }
 
-const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', className, adminMode, multiple }: ImageUploaderProps) => {
+const COMPRESSION_PROFILES = {
+  standard: { maxSizeMB: 0.2, maxWidthOrHeight: 1080 },
+  banner:   { maxSizeMB: 1.5, maxWidthOrHeight: 2560 },
+  none:     { maxSizeMB: 5,   maxWidthOrHeight: 4000 },
+} as const;
+
+const ImageUploader = ({ lojaId, value, onChange, placeholder = 'https://...', className, adminMode, multiple, qualityProfile = 'standard' }: ImageUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [urlInput, setUrlInput] = useState(value || '');
   const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload');
