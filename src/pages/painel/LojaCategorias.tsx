@@ -168,7 +168,7 @@ const LojaCategorias = () => {
     setSavingOrder(true);
     try {
       const items = catProducts.map((p, i) => ({ id: p._id, category_id: selectedCat?._id || null, sort_order: i }));
-      await lojaCategoriesApi.bulkUpdateProducts(items);
+      await lojaCategoriesApi.bulkUpdateProducts(items, 'reorder');
       toast({ title: 'Ordem salva!' });
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
