@@ -299,7 +299,7 @@ const LojaProdutos = () => {
   const [videoProcessing, setVideoProcessing] = useState<{ upload_id: string; progress: number } | null>(null);
   const [videoDeleteAssetId, setVideoDeleteAssetId] = useState<string | null>(null);
   const [jsonExampleOpen, setJsonExampleOpen] = useState(false);
-  const [cdnMigrating, setCdnMigrating] = useState(false);
+  const [saveLabel, setSaveLabel] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
