@@ -719,7 +719,9 @@ const LojaProdutos = () => {
   // === JSON handlers ===
   const handleExportJson = () => {
     if (!editingProduct) return;
-    downloadFile(JSON.stringify(editingProduct, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
+    const exportData = { ...editingProduct };
+    delete (exportData as any).codigo_interno;
+    downloadFile(JSON.stringify(exportData, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
   };
 
   // Normalize raw JSON text: fix newlines in strings, replace inner double quotes with single
