@@ -1,38 +1,86 @@
+# Plano de Evolução — PANDORA SaaS
 
+## Strangler Fig — Decomposição do Monólito ✅ COMPLETA
 
-## Plan: Fix Category Delete Event Bubbling in LojaCategorias.tsx
+O monólito `api/loja-extras.js` (408+ linhas) foi completamente decomposto em 6 microsserviços especializados usando o padrão **Strangler Fig**. O arquivo original foi deletado.
 
-### Problem
-The `AlertDialog` for deleting a category (lines 447-467) is nested inside a `div` with `onClick={() => openEditor(cat)}` (line 438). When the dialog's confirm/cancel buttons are clicked, the event bubbles up through React's synthetic event system to the parent, triggering `openEditor` and switching to editor mode — masking the successful deletion.
+### Fases Concluídas
 
-### Changes (single file: `src/pages/painel/LojaCategorias.tsx`)
+| Fase | Microsserviço | Escopos Migrados | Status |
+|---|---|---|---|
+| SF-1 | `api/midia.js` | midias, midia, upload, mux-upload, mux-status, mux-delete | ✅ |
+| SF-2 | `api/fretes.js` | fretes, frete, fretes-publico, calcular-frete | ✅ |
+| SF-3 | `api/assinaturas.js` | stripe-checkout, stripe-portal, stripe-webhook, cron-taxas, pagar-taxas-manual | ✅ |
+| SF-4 | `api/gateways.js` | gateways-disponiveis, gateway-loja, salvar-gateway, desconectar-gateway, appmax-connect, appmax-install, appmax-webhook | ✅ |
+| SF-5 | `api/marketing.js` | cupons, cupom, cupom-publico, cupons-popup, leads, lead, lead-newsletter, leads-import, leads-export, pixels, pixel | ✅ |
+| SF-5 | `api/storefront.js` | tema, paginas, pagina, pagina-publica, categorias-publico, global-domain, category-products | ✅ |
+| **Final** | **`api/loja-extras.js` DELETADO** | — | ✅ |
 
-**Step 1 — Restructure `renderCategory` (lines 435-468)**
+### Correções Aplicadas na Revisão
 
-Split the clickable row into two zones:
-- Left zone (flex-1): category name + badge + edit button → triggers `openEditor`
-- Right zone: AlertDialog with delete button → fully isolated from parent click
+- URL do webhook Stripe em `AdminIntegracoes.tsx`: `/api/loja-extras?scope=stripe-webhook` → `/api/assinaturas?scope=stripe-webhook` ✅
+- Frontend `saas-api.ts`: Todas as 26+ referências redirecionadas para os novos microsserviços ✅
+- `vercel.json`: Rewrite do loja-extras removido, marketing + storefront adicionados ✅
+- `README.md`: Documentação completamente atualizada com arquitetura de 17 microsserviços ✅
 
-```text
-┌─────────────────────────────────────────────────┐
-│ [flex items-center]                             │
-│  ┌──────────────────────────────┐ ┌───────────┐│
-│  │ onClick={openEditor}  flex-1 │ │ Actions   ││
-│  │ icon + name + badge + edit   │ │ AlertDlg  ││
-│  └──────────────────────────────┘ └───────────┘│
-└─────────────────────────────────────────────────┘
+### Strangler Fig 2 — Decomposição de `api/pedidos.js` ✅ COMPLETA
+
+O monólito `api/pedidos.js` (567 linhas) foi decomposto em 4 microsserviços + core reduzido (~270 linhas).
+
+| Microsserviço | Escopos Migrados | Permissão |
+|---|---|---|
+| `api/crm.js` | clientes, cliente, criar-cliente, redefinir-senha-cliente | Autenticado |
+| `api/carrinhos.js` | carrinho (POST/PATCH), carrinhos (GET) | Público + Autenticado |
+| `api/etiquetas.js` | gerar-etiqueta, cancelar-etiqueta | Autenticado |
+| `api/relatorios.js` | relatorios | Autenticado |
+| `api/pedidos.js` (core) | pedido (POST público, GET/PATCH auth), pedidos (GET auth) | Misto |
+
+### Arquitetura Final (21 Serverless Functions)
+
+```
+api/
+├── admins.js           # Admin
+├── assinaturas.js      # Stripe (SF-3)
+├── auth-action.ts      # Autenticação
+├── carrinhos.js        # Carrinhos Abandonados (SF2-2)
+├── categorias.js       # Categorias
+├── cliente-auth.js     # Auth clientes
+├── crm.js              # CRM/Clientes (SF2-1)
+├── etiquetas.js        # Fulfillment/Etiquetas (SF2-3)
+├── fretes.js           # Logística (SF-2)
+├── gateways.js         # Pagamentos (SF-4)
+├── lojas.js            # Lojas
+├── lojista.js          # Perfil lojista
+├── marketing.js        # Cupons+Leads+Pixels (SF-5)
+├── midia.js            # Bunny.net+Mux (SF-1)
+├── pedidos.js          # Core Checkout+Pedidos
+├── process-payment.js  # Processamento
+├── products.ts         # Produtos
+├── relatorios.js       # Relatórios (SF2-4)
+├── settings.js         # Config globais
+├── storefront.js       # Temas+Páginas+Vitrine (SF-5)
+└── tracking-webhook.js # Rastreamento
 ```
 
-Remove the `onClick={() => openEditor(cat)}` from the outer `div`. Move category name/badge/edit into a nested clickable `div` with `flex-1`. Keep AlertDialog in a sibling `div` with `onClick={e => e.stopPropagation()}` as extra safety.
+---
 
-**Step 2 — Add `stopPropagation` on AlertDialogContent**
+## Diagnóstico da Cobrança Dupla ✅ RESOLVIDO
 
-Add `onClick={(e) => e.stopPropagation()}` to `AlertDialogContent` to prevent any portal-based bubbling through React's synthetic event tree.
+### Causa raiz
+`auto_advance: true` na criação de invoices manuais causava tentativa duplicada de cobrança pelo Stripe.
 
-**Step 3 — Guard state in onSuccess**
+### Correção aplicada
+`auto_advance: false` em `processarCronTaxas()` e `pagarTaxasManual()` em `lib/services/assinaturas/stripe.js`.
 
-In the `deleteMut.mutate` onSuccess callback, add a guard: store the deleted `cat._id` and ensure `openEditor` won't activate for that ID. The structural separation from Step 1 should prevent this, but the guard provides defense-in-depth.
+---
 
-### Build errors
-The listed build errors are all `node_modules` resolution issues (missing `react`, `react-router-dom`, etc.) — a transient environment problem, not caused by code changes. They will resolve on rebuild.
+## Features Implementadas
 
+### Páginas de Categoria ✅
+- Banner, filtros, ordenação, paginação, layout responsivo configurável
+
+### Construtor de Navegação Visual (Menu Builder) ✅
+- Drag & drop, até 2 níveis de nesting, fallback para categorias ativas
+
+### Shoppertainment — Video Commerce (Mux) ✅
+- Upload direto, polling de status, exclusão com confirmação, layouts stories/carousel/auto
