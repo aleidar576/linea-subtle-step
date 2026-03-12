@@ -722,20 +722,58 @@ const LojaProdutos = () => {
     downloadFile(JSON.stringify(editingProduct, null, 2), `produto-${editingProduct.name || 'novo'}.json`, 'application/json');
   };
 
+  // Normalize raw JSON text: fix newlines in strings, replace inner double quotes with single
+  const normalizeJsonText = (raw: string): string => {
+    return raw
+      .replace(/^\uFEFF/, '')
+      // Step 1: collapse multiline strings (URLs with newlines etc)
+      .replace(/"((?:\\.|[^"\\])*)"/g, (_match, content) => {
+        let cleaned = String(content)
+          .replace(/\r?\n+/g, ' ')
+          .replace(/\t+/g, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        // Step 2: replace unescaped double quotes inside the value with single quotes
+        cleaned = cleaned.replace(/"/g, "'");
+        return `"${cleaned}"`;
+      });
+  };
+
+  // Live validation when user types/pastes JSON
+  const validateJsonText = (text: string) => {
+    setJsonText(text);
+    if (!text.trim()) { setJsonErrors([]); return; }
+    const errors: string[] = [];
+    try {
+      const normalized = normalizeJsonText(text);
+      const data = JSON.parse(normalized);
+      if (typeof data !== 'object' || Array.isArray(data)) {
+        errors.push('O JSON deve ser um objeto { }, não um array.');
+      } else {
+        if (!data.name) errors.push('Campo "name" é obrigatório.');
+        if (data.price !== undefined && (typeof data.price !== 'number' || data.price < 0)) errors.push('"price" deve ser um número positivo (em centavos).');
+        if (data.image && typeof data.image !== 'string') errors.push('"image" deve ser uma URL (string).');
+        if (data.images && !Array.isArray(data.images)) errors.push('"images" deve ser um array de URLs.');
+      }
+    } catch (err: any) {
+      const msg = err.message || 'JSON inválido';
+      // Extract position info
+      const posMatch = msg.match(/position\s+(\d+)/i);
+      if (posMatch) {
+        const pos = Number(posMatch[1]);
+        const before = text.substring(Math.max(0, pos - 30), pos);
+        const after = text.substring(pos, pos + 30);
+        errors.push(`Erro de sintaxe na posição ${pos}: ...${before}⚠️${after}...`);
+      } else {
+        errors.push(`Erro de sintaxe: ${msg}`);
+      }
+    }
+    setJsonErrors(errors);
+  };
+
   const handleJsonPaste = async () => {
     try {
-      // Normalize malformed multiline strings (common in copied URLs)
-      const normalizedJsonText = jsonText
-        .replace(/^\uFEFF/, '')
-        .replace(/"((?:\\.|[^"\\])*)"/g, (_match, content) => {
-          const cleaned = String(content)
-            .replace(/\r?\n+/g, ' ')
-            .replace(/\t+/g, ' ')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
-          return `"${cleaned}"`;
-        });
-
+      const normalizedJsonText = normalizeJsonText(jsonText);
       const data = JSON.parse(normalizedJsonText);
 
       // Normalize category refs: accept ObjectId OR category name/slug
