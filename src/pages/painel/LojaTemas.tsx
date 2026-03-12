@@ -1533,7 +1533,7 @@ const LojaTemas = () => {
                           <Button variant="ghost" size="icon" onClick={() => removeColuna(colIdx)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                         {col.links.map((link, linkIdx) => {
-                          const linkType = (link as any).tipo || (link.url?.startsWith('/') && !link.url?.startsWith('/http') ? 'pagina' : 'custom');
+                          const linkType = (link as any).tipo || 'pagina';
                           const systemPages = [
                             { value: '/', label: 'Início (Home)' },
                             ...(paginas || []).filter((p: any) => p.is_active).map((p: any) => ({ value: `/pagina/${p.slug}`, label: p.titulo })),
