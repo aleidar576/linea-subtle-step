@@ -131,16 +131,35 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    // Remove category from products (both category_id and category_ids)
+    const mongoose = require('mongoose');
+    const catObjId = new mongoose.Types.ObjectId(id);
+    const catStr = id.toString();
+
+    // Remove category from products - handle both ObjectId and string in category_id
     const moved = await Product.updateMany(
-      { $or: [{ category_id: cat._id }, { category_ids: cat._id }] },
-      { $set: { category_id: null }, $pull: { category_ids: cat._id } }
+      { $or: [
+        { category_id: catObjId },
+        { category_id: catStr },
+        { category_ids: catObjId },
+        { category_ids: catStr },
+      ]},
+      {
+        $pull: { category_ids: { $in: [catObjId, catStr] } },
+      }
     );
-    // Sync category_id from remaining category_ids
+
+    // Now fix category_id: set to null where it matches, then re-sync from category_ids
+    await Product.updateMany(
+      { $or: [{ category_id: catObjId }, { category_id: catStr }] },
+      { $set: { category_id: null } }
+    );
+
+    // Sync category_id from remaining category_ids (where category_id is now null but array has items)
     await Product.updateMany(
       { category_id: null, 'category_ids.0': { $exists: true } },
       [{ $set: { category_id: { $arrayElemAt: ['$category_ids', 0] } } }]
     );
+
     // Move subcategories to uncategorized
     await Category.updateMany({ parent_id: cat._id }, { $set: { parent_id: null } });
     await Category.findByIdAndDelete(id);
