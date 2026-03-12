@@ -1546,7 +1546,7 @@ const LojaTemas = () => {
                                 <Button variant="ghost" size="icon" onClick={() => removeLinkFromColuna(colIdx, linkIdx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                               </div>
                               <div className="flex gap-2 items-center">
-                                <Select value={(link as any).tipo || 'custom'} onValueChange={v => { updateLink(colIdx, linkIdx, 'tipo', v); if (v === 'pagina') updateLink(colIdx, linkIdx, 'url', '/'); else updateLink(colIdx, linkIdx, 'url', ''); }}>
+                                <Select value={(link as any).tipo || 'pagina'} onValueChange={v => { updateLink(colIdx, linkIdx, 'tipo', v); if (v === 'pagina') updateLink(colIdx, linkIdx, 'url', '/'); else updateLink(colIdx, linkIdx, 'url', ''); }}>
                                   <SelectTrigger className="w-[160px] text-xs h-8"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="pagina">Página do Sistema</SelectItem>
