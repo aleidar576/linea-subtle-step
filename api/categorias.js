@@ -142,7 +142,7 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    const mongoose = require('mongoose');
+    
     const catObjId = new mongoose.Types.ObjectId(id);
     const catStr = id.toString();
 
