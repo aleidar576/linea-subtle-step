@@ -315,7 +315,7 @@ module.exports = async function handler(req, res) {
         }
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12000);
+        const timeout = setTimeout(() => controller.abort(), 8000);
 
         try {
           const resp = await fetch(url, {
