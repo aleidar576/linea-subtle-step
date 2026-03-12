@@ -1020,7 +1020,7 @@ ${jsonExampleStr}`;
   // ============ EDITOR MODE ============
   if (mode === 'editor' && editingProduct) {
     return (
-      <div className="bg-muted/30 min-h-screen -m-6">
+      <div className="bg-muted/30 min-h-screen -mx-6 -mb-6">
         {/* ── STICKY HEADER ── */}
         <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border px-6 py-3">
           <div className="flex items-center justify-between">
