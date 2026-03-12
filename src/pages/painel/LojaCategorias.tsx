@@ -29,6 +29,7 @@ interface CatProduct {
   price: number;
   sort_order: number;
   category_id: string | null;
+  category_ids?: string[];
   is_active: boolean;
 }
 
@@ -167,7 +168,7 @@ const LojaCategorias = () => {
     setSavingOrder(true);
     try {
       const items = catProducts.map((p, i) => ({ id: p._id, category_id: selectedCat?._id || null, sort_order: i }));
-      await lojaCategoriesApi.bulkUpdateProducts(items);
+      await lojaCategoriesApi.bulkUpdateProducts(items, 'reorder');
       toast({ title: 'Ordem salva!' });
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
@@ -175,8 +176,12 @@ const LojaCategorias = () => {
   };
 
   const handleRemoveFromCategory = async (productId: string) => {
+    if (!selectedCat) return;
     try {
-      await lojaCategoriesApi.bulkUpdateProducts([{ id: productId, category_id: null, sort_order: 0 }]);
+      await lojaCategoriesApi.bulkUpdateProducts(
+        [{ id: productId, category_id: selectedCat._id, sort_order: 0 }],
+        'remove-from-category'
+      );
       setCatProducts(prev => prev.filter(p => p._id !== productId));
       toast({ title: 'Produto removido da categoria' });
     } catch (err: any) {
@@ -192,16 +197,13 @@ const LojaCategorias = () => {
     setSelectedToAdd(new Set());
     setAddSearch('');
     try {
-      // Get uncategorized products + products from other categories
-      const uncategorized = await lojaCategoriesApi.getCategoryProducts(id, null);
-      // Also get from other categories
-      const otherCats = categories.filter(c => c._id !== selectedCat._id);
-      let otherProducts: CatProduct[] = [];
-      for (const c of otherCats) {
-        const prods = await lojaCategoriesApi.getCategoryProducts(id, c._id);
-        otherProducts = [...otherProducts, ...prods];
-      }
-      setAllProducts([...uncategorized, ...otherProducts]);
+      // Load ALL products from the store via authenticated API
+      const { lojaProductsApi } = await import('@/services/saas-api');
+      const all: CatProduct[] = await lojaProductsApi.list(id);
+      // Filter out products already in this category
+      const currentIds = new Set(catProducts.map(p => p._id));
+      const available = all.filter(p => !currentIds.has(p._id));
+      setAllProducts(available);
     } catch { setAllProducts([]); }
     finally { setLoadingAll(false); }
   };
@@ -213,7 +215,7 @@ const LojaCategorias = () => {
       id: pid, category_id: selectedCat._id, sort_order: maxSort + 1 + i,
     }));
     try {
-      await lojaCategoriesApi.bulkUpdateProducts(items);
+      await lojaCategoriesApi.bulkUpdateProducts(items, 'add-to-category');
       toast({ title: `${items.length} produto(s) adicionado(s)` });
       setAddDialogOpen(false);
       loadCategoryProducts(selectedCat._id);
@@ -359,7 +361,7 @@ const LojaCategorias = () => {
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Remover da categoria?</AlertDialogTitle>
-                              <AlertDialogDescription>O produto será movido para "Sem categoria".</AlertDialogDescription>
+                              <AlertDialogDescription>O produto será removido desta categoria. Se pertencer a outras categorias, continuará nelas.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>

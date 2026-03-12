@@ -725,10 +725,10 @@ export const lojaCategoriesApi = {
     request<{ success: boolean; produtos_movidos: number }>(`/categorias?id=${id}`, { method: 'DELETE' }),
   reorder: (items: Array<{ id: string; ordem: number }>) =>
     request<{ success: boolean }>('/categorias?action=reorder', { method: 'PATCH', body: JSON.stringify({ items }) }),
-  bulkUpdateProducts: (products: Array<{ id: string; category_id: string | null; sort_order: number }>) =>
-    request<{ success: boolean }>('/categorias?action=bulk-update-products', { method: 'PATCH', body: JSON.stringify({ products }) }),
+  bulkUpdateProducts: (products: Array<{ id: string; category_id: string | null; sort_order: number }>, mode?: 'add-to-category' | 'remove-from-category' | 'reorder') =>
+    request<{ success: boolean }>('/categorias?action=bulk-update-products', { method: 'PATCH', body: JSON.stringify({ products, mode }) }),
   getCategoryProducts: (lojaId: string, categoryId: string | null) =>
-    request<Array<{ _id: string; name: string; image: string; price: number; sort_order: number; category_id: string | null; is_active: boolean }>>(
+    request<Array<{ _id: string; name: string; image: string; price: number; sort_order: number; category_id: string | null; category_ids?: string[]; is_active: boolean }>>(
       `/storefront?scope=category-products&loja_id=${lojaId}&category_id=${categoryId || 'null'}`
     ),
 };

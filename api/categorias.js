@@ -160,8 +160,61 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'bulk-update-products') {
-      const { products } = req.body; // [{ id, category_id, sort_order }]
+      const { products, mode } = req.body;
+      // mode: 'add-to-category' | 'remove-from-category' | 'reorder' (legacy: undefined = replace)
       if (!products || !Array.isArray(products)) return res.status(400).json({ error: 'products é obrigatório' });
+
+      if (mode === 'add-to-category') {
+        // Add category to category_ids array (multi-category)
+        const ops = [];
+        for (const p of products) {
+          if (!p.id || !p.category_id) continue;
+          ops.push({
+            updateOne: {
+              filter: { _id: p.id },
+              update: {
+                $addToSet: { category_ids: new mongoose.Types.ObjectId(p.category_id) },
+                $set: { sort_order: p.sort_order ?? 0 },
+              },
+            },
+          });
+        }
+        if (ops.length > 0) await Product.bulkWrite(ops);
+
+        // Sync legacy category_id with first element of category_ids
+        for (const p of products) {
+          if (!p.id) continue;
+          const prod = await Product.findById(p.id).select('category_ids').lean();
+          if (prod && Array.isArray(prod.category_ids) && prod.category_ids.length > 0) {
+            await Product.updateOne({ _id: p.id }, { $set: { category_id: prod.category_ids[0] } });
+          }
+        }
+
+        return res.status(200).json({ success: true });
+      }
+
+      if (mode === 'remove-from-category') {
+        // Remove category from category_ids array
+        for (const p of products) {
+          if (!p.id || !p.category_id) continue;
+          const catObjId = new mongoose.Types.ObjectId(p.category_id);
+          await Product.updateOne(
+            { _id: p.id },
+            { $pull: { category_ids: catObjId } }
+          );
+          // Re-sync legacy category_id
+          const prod = await Product.findById(p.id).select('category_ids').lean();
+          if (prod) {
+            const newPrimary = (Array.isArray(prod.category_ids) && prod.category_ids.length > 0)
+              ? prod.category_ids[0]
+              : null;
+            await Product.updateOne({ _id: p.id }, { $set: { category_id: newPrimary } });
+          }
+        }
+        return res.status(200).json({ success: true });
+      }
+
+      // Legacy / reorder mode: update category_id + sort_order directly
       const ops = products.map(p => ({
         updateOne: {
           filter: { _id: p.id },
