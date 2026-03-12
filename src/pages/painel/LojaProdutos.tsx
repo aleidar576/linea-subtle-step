@@ -579,6 +579,16 @@ const LojaProdutos = () => {
         }
       }
 
+      // === Sanitize protecao_cliente: remove items with empty texto ===
+      if (payload.protecao_cliente) {
+        const validItens = (payload.protecao_cliente.itens || []).filter((item: any) => item.texto?.trim());
+        payload.protecao_cliente = {
+          ...payload.protecao_cliente,
+          itens: validItens,
+          ativo: validItens.length > 0 ? payload.protecao_cliente.ativo : false,
+        };
+      }
+
       // === Save to database ===
       setSaveLabel('Salvando...');
       if (payload._id) {
