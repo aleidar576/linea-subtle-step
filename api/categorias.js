@@ -2,10 +2,12 @@
 // 📂 API: Categorias (CRUD) - Multi-Tenant
 // ============================================
 
+const mongoose = require('mongoose');
 const connectDB = require('../lib/mongodb.js');
 const Category = require('../models/Category.js');
 const Product = require('../models/Product.js');
 const Loja = require('../models/Loja.js');
+const authPkg = require('../lib/auth.js');
 const authPkg = require('../lib/auth.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
@@ -53,7 +55,7 @@ module.exports = async function handler(req, res) {
     const cats = await Category.find({ loja_id }).sort({ ordem: 1 }).lean();
     // Count products per category
     const catIds = cats.map(c => c._id);
-    const mongoose = require('mongoose');
+    
     const lojaObjId = mongoose.Types.ObjectId.createFromHexString(loja_id);
     
     // Count products per category using both category_id and category_ids
@@ -140,7 +142,7 @@ module.exports = async function handler(req, res) {
     const valid = await validateLoja(cat.loja_id.toString());
     if (!valid) return res.status(403).json({ error: 'Sem permissão' });
 
-    const mongoose = require('mongoose');
+    
     const catObjId = new mongoose.Types.ObjectId(id);
     const catStr = id.toString();
 
