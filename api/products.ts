@@ -260,6 +260,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const hasAccess = await validateOwnership(id);
     if (!hasAccess) return res.status(403).json({ error: 'Sem permissão' });
     try {
+      // Sync category_id from category_ids if provided
+      if (Array.isArray(req.body.category_ids)) {
+        req.body.category_id = req.body.category_ids[0] || null;
+      }
+
       // Verificar troca de categoria → recalcular sort_order
       const existing = await Product.findById(id).select('category_id loja_id').lean();
       if (existing && req.body.category_id !== undefined) {

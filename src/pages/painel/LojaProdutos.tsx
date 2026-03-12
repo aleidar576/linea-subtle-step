@@ -348,7 +348,19 @@ const LojaProdutos = () => {
     if (!products) return [];
     return products.filter(p => {
       if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterCat !== 'all' && (filterCat === 'none' ? p.category_id !== null : p.category_id !== filterCat)) return false;
+      if (filterCat !== 'all') {
+        if (filterCat === 'none') {
+          // Show products with no category
+          const hasCategory = p.category_id || (Array.isArray((p as any).category_ids) && (p as any).category_ids.length > 0);
+          if (hasCategory) return false;
+        } else {
+          // Check both category_id and category_ids
+          const catIds: string[] = Array.isArray((p as any).category_ids) && (p as any).category_ids.length > 0
+            ? (p as any).category_ids.map(String)
+            : (p.category_id ? [String(p.category_id)] : []);
+          if (!catIds.includes(filterCat)) return false;
+        }
+      }
       if (filterStatus === 'active' && !p.is_active) return false;
       if (filterStatus === 'inactive' && p.is_active) return false;
       return true;
