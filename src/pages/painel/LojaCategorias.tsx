@@ -197,16 +197,13 @@ const LojaCategorias = () => {
     setSelectedToAdd(new Set());
     setAddSearch('');
     try {
-      // Get uncategorized products + products from other categories
-      const uncategorized = await lojaCategoriesApi.getCategoryProducts(id, null);
-      // Also get from other categories
-      const otherCats = categories.filter(c => c._id !== selectedCat._id);
-      let otherProducts: CatProduct[] = [];
-      for (const c of otherCats) {
-        const prods = await lojaCategoriesApi.getCategoryProducts(id, c._id);
-        otherProducts = [...otherProducts, ...prods];
-      }
-      setAllProducts([...uncategorized, ...otherProducts]);
+      // Load ALL products from the store via authenticated API
+      const { lojaProductsApi } = await import('@/services/saas-api');
+      const all: CatProduct[] = await lojaProductsApi.list(id);
+      // Filter out products already in this category
+      const currentIds = new Set(catProducts.map(p => p._id));
+      const available = all.filter(p => !currentIds.has(p._id));
+      setAllProducts(available);
     } catch { setAllProducts([]); }
     finally { setLoadingAll(false); }
   };
@@ -218,7 +215,7 @@ const LojaCategorias = () => {
       id: pid, category_id: selectedCat._id, sort_order: maxSort + 1 + i,
     }));
     try {
-      await lojaCategoriesApi.bulkUpdateProducts(items);
+      await lojaCategoriesApi.bulkUpdateProducts(items, 'add-to-category');
       toast({ title: `${items.length} produto(s) adicionado(s)` });
       setAddDialogOpen(false);
       loadCategoryProducts(selectedCat._id);
