@@ -315,7 +315,7 @@ module.exports = async function handler(req, res) {
         }
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12000);
+        const timeout = setTimeout(() => controller.abort(), 8000);
 
         try {
           const resp = await fetch(url, {
@@ -357,7 +357,7 @@ module.exports = async function handler(req, res) {
           return { original: url, new_url: `https://${pullZone}/${fileName}` };
         } catch (err) {
           const msg = err.name === 'AbortError'
-            ? 'Timeout: servidor de origem demorou mais de 12s para responder'
+            ? 'Timeout: servidor de origem demorou mais de 8s para responder'
             : `Erro de rede: ${err.message}`;
           return { original: url, new_url: null, error: msg };
         } finally {
