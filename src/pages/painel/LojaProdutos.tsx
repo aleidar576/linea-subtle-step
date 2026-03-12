@@ -2531,7 +2531,7 @@ ${jsonExampleStr}`;
                 <TableHead className="px-4 py-3">Status</TableHead>
                 <TableHead className="px-4 py-3">Estoque</TableHead>
                 <TableHead className="px-4 py-3">Categoria</TableHead>
-                <TableHead className="px-4 py-3">Preço</TableHead>
+                <TableHead className="px-4 py-3 text-right">Preço</TableHead>
                 <TableHead className="w-14 px-4 py-3"></TableHead>
               </TableRow>
             </TableHeader>
