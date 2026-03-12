@@ -14,7 +14,7 @@ function formatPrice(cents: number) {
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  ShieldCheck, Truck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Flame,
+  ShieldCheck, Truck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Flame, Sparkles,
 };
 
 const LojaHome = () => {
