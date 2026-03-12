@@ -1032,6 +1032,13 @@ ${jsonExampleStr}`;
                       <CardTitle className="text-base">Informações Gerais</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {editingProduct.codigo_interno != null && (
+                        <div>
+                          <Label>Código Interno</Label>
+                          <Input value={String(editingProduct.codigo_interno)} disabled className="bg-muted text-muted-foreground cursor-not-allowed" />
+                          <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente pelo sistema. Não pode ser alterado.</p>
+                        </div>
+                      )}
                       <div>
                         <Label>Nome *</Label>
                         <Input placeholder="Nome do produto" value={editingProduct.name || ''} onChange={e => setField('name', e.target.value)} />
