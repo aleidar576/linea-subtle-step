@@ -83,7 +83,7 @@ const DEFAULT_HOMEPAGE: HomepageConfig = {
   setas_fundo_invisivel: false,
   titulo_secao_produtos: 'Mais Vendidos',
   social_proof: { ativo: true, titulo: 'Avaliações dos Clientes', nota_media: 4.9, subtexto: 'Baseado em +11 Milhões de avaliações', comentarios: [] },
-  tarja: { cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' },
+  tarja: { ativo: false, cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' },
   trust_badges: [],
 };
 
