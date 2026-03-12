@@ -207,6 +207,7 @@ export default function MenuBuilder({ value, onChange, categories, pages }: Menu
                 <Select value={selectedRef} onValueChange={setSelectedRef}>
                   <SelectTrigger><SelectValue placeholder="Selecione uma página" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__home__">Início (Home)</SelectItem>
                     {activePages.map(p => (
                       <SelectItem key={p._id} value={p._id}>{p.titulo}</SelectItem>
                     ))}
