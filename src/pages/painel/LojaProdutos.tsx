@@ -858,15 +858,13 @@ const LojaProdutos = () => {
       }
       // Strip codigo_interno from imported data (never import it)
       delete data.codigo_interno;
-      setEditingProduct(prev => prev ? { ...prev, ...data, loja_id: prev.loja_id, _id: prev._id } : prev);
-      setJsonDialogOpen(false);
-      setJsonText('');
-      toast({ title: 'Dados preenchidos com sucesso. Revise e salve o produto.' });
 
-      // === CDN Migration (background) ===
-      if (!id) return;
+      // === STEP 1: Varredura Inteligente — collect all external URLs ===
+      const pullZone = 'cdn.dusking.com.br'; // Our CDN domain
       const allUrls: string[] = [];
       if (data.image) allUrls.push(data.image);
+      if (data.description_image) allUrls.push(data.description_image);
+      if (data.badge_imagem) allUrls.push(data.badge_imagem);
       if (Array.isArray(data.images)) allUrls.push(...data.images);
       if (Array.isArray(data.variacoes)) {
         data.variacoes.forEach((v: any) => { if (v.imagem) allUrls.push(v.imagem); });
@@ -876,72 +874,76 @@ const LojaProdutos = () => {
           if (Array.isArray(r.imagens)) allUrls.push(...r.imagens);
         });
       }
-      const uniqueUrls = [...new Set(allUrls.filter(Boolean))];
-      if (uniqueUrls.length === 0) return;
+      // Filter: only external URLs (not already on our CDN)
+      const externalUrls = [...new Set(
+        allUrls.filter(u => u && /^https?:\/\//i.test(u) && !u.includes(pullZone))
+      )];
 
-      setCdnMigrating(true);
-      toast({ title: `Enviando ${uniqueUrls.length} imagens para CDN...` });
-      try {
-        const result = await midiasApi.uploadExternal(id, uniqueUrls);
-        const urlMap: Record<string, string> = {};
-        let ok = 0;
-        const failures: { url: string; error: string }[] = [];
-        for (const r of result.results) {
-          if (r.new_url && r.new_url !== r.original) {
-            urlMap[r.original] = r.new_url;
-            ok++;
-          } else if (r.new_url === r.original) {
-            // already on CDN
-            ok++;
-          } else {
-            failures.push({ url: r.original, error: (r as any).error || 'Erro desconhecido' });
+      // === STEP 2: CDN Migration (BEFORE saving to state) ===
+      let urlMap: Record<string, string> = {};
+      if (externalUrls.length > 0 && id) {
+        setCdnMigrating(true);
+        toast({ title: `Migrando ${externalUrls.length} imagem(ns) para CDN...` });
+        try {
+          const result = await midiasApi.uploadExternal(id, externalUrls);
+          let ok = 0;
+          const failures: { url: string; error: string }[] = [];
+          for (const r of result.results) {
+            if (r.new_url && r.new_url !== r.original) {
+              urlMap[r.original] = r.new_url;
+              ok++;
+            } else if (r.new_url === r.original) {
+              ok++; // already on CDN
+            } else {
+              failures.push({ url: r.original, error: (r as any).error || 'Erro desconhecido' });
+            }
           }
-        }
-        if (Object.keys(urlMap).length > 0) {
-          setEditingProduct(prev => {
-            if (!prev) return prev;
-            const replace = (u: string) => urlMap[u] || u;
-            const newData = { ...prev };
-            if (newData.image) newData.image = replace(newData.image);
-            if (newData.images) newData.images = newData.images.map(replace);
-            if (newData.variacoes) {
-              newData.variacoes = newData.variacoes.map((v: any) => ({
-                ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem,
-              }));
-            }
-            if (newData.avaliacoes_config?.avaliacoes_manuais) {
-              newData.avaliacoes_config = {
-                ...newData.avaliacoes_config,
-                avaliacoes_manuais: newData.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
-                  ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
-                })),
-              };
-            }
-            return newData;
-          });
-        }
-        if (failures.length > 0) {
-          const detail = failures.map(f => `• ${f.url.slice(0, 60)}…\n  → ${f.error}`).join('\n');
+          if (failures.length > 0) {
+            const detail = failures.map(f => `• ${f.url.slice(0, 60)}…\n  → ${f.error}`).join('\n');
+            toast({
+              title: `CDN: ${ok} OK, ${failures.length} falha(s)`,
+              description: detail.slice(0, 300),
+              variant: 'destructive',
+              duration: 15000,
+            });
+            console.warn('[CDN Migration] Falhas:', failures);
+          } else if (ok > 0) {
+            toast({ title: `✅ ${ok} imagem(ns) migrada(s) para CDN` });
+          }
+        } catch (err: any) {
+          console.error('[CDN Migration]', err);
           toast({
-            title: `CDN: ${ok} OK, ${failures.length} falha(s)`,
-            description: detail.slice(0, 300),
+            title: 'Erro na migração de imagens para CDN',
+            description: err?.message || 'As URLs originais serão mantidas.',
             variant: 'destructive',
-            duration: 15000,
           });
-          console.warn('[CDN Migration] Falhas:', failures);
-        } else {
-          toast({ title: `CDN: ${ok} imagem(ns) migrada(s) com sucesso ✓` });
+        } finally {
+          setCdnMigrating(false);
         }
-      } catch (err: any) {
-        console.error('[CDN Migration]', err);
-        toast({
-          title: 'Erro na migração de imagens para CDN',
-          description: err?.message || 'Verifique o console para detalhes.',
-          variant: 'destructive',
-        });
-      } finally {
-        setCdnMigrating(false);
       }
+
+      // === STEP 3: Troca Final — replace all external URLs with CDN URLs ===
+      const replace = (u: string) => urlMap[u] || u;
+      if (data.image) data.image = replace(data.image);
+      if (data.description_image) data.description_image = replace(data.description_image);
+      if (data.badge_imagem) data.badge_imagem = replace(data.badge_imagem);
+      if (Array.isArray(data.images)) data.images = data.images.map(replace);
+      if (Array.isArray(data.variacoes)) {
+        data.variacoes = data.variacoes.map((v: any) => ({
+          ...v, imagem: v.imagem ? replace(v.imagem) : v.imagem,
+        }));
+      }
+      if (data.avaliacoes_config?.avaliacoes_manuais) {
+        data.avaliacoes_config.avaliacoes_manuais = data.avaliacoes_config.avaliacoes_manuais.map((r: any) => ({
+          ...r, imagens: Array.isArray(r.imagens) ? r.imagens.map(replace) : r.imagens,
+        }));
+      }
+
+      // === STEP 4: Set state with clean CDN URLs ===
+      setEditingProduct(prev => prev ? { ...prev, ...data, loja_id: prev.loja_id, _id: prev._id } : prev);
+      setJsonDialogOpen(false);
+      setJsonText('');
+      toast({ title: 'Dados preenchidos com sucesso. Revise e salve o produto.' });
     } catch {
       toast({
         title: 'JSON inválido para importação',
