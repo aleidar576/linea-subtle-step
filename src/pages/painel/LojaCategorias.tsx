@@ -176,8 +176,12 @@ const LojaCategorias = () => {
   };
 
   const handleRemoveFromCategory = async (productId: string) => {
+    if (!selectedCat) return;
     try {
-      await lojaCategoriesApi.bulkUpdateProducts([{ id: productId, category_id: null, sort_order: 0 }]);
+      await lojaCategoriesApi.bulkUpdateProducts(
+        [{ id: productId, category_id: selectedCat._id, sort_order: 0 }],
+        'remove-from-category'
+      );
       setCatProducts(prev => prev.filter(p => p._id !== productId));
       toast({ title: 'Produto removido da categoria' });
     } catch (err: any) {
