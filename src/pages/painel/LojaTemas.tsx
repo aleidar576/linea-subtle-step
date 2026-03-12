@@ -233,7 +233,7 @@ const LojaTemas = () => {
   const setHp = (partial: Partial<HomepageConfig>) => setHomepage({ ...homepage, ...partial });
   const banners = hp.banners || [];
   const sp = hp.social_proof || { ativo: true, titulo: '', nota_media: 4.9, subtexto: '', imagem_url: '', comentarios: [] as any[] };
-  const tarja = hp.tarja || { cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' };
+  const tarja = hp.tarja || { ativo: false, cor_fundo: '#1a1a2e', titulo: '', subtitulo: '', botao_ativo: false, botao_texto: '', botao_link: '' };
   const badges = hp.trust_badges || [];
   const tarjaTopo = (hp as any).tarja_topo || { ativo: false, texto: '', cor_fundo: '', cor_texto: '#ffffff', negrito: false, fonte: 'inherit', icone: '', icone_ativo: false };
   const destaquesData = (hp as any).destaques || { ativo: false, cor_fundo: '#f5f5f5', cor_texto: '#555555', itens: [] };
