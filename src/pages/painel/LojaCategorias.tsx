@@ -361,7 +361,7 @@ const LojaCategorias = () => {
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Remover da categoria?</AlertDialogTitle>
-                              <AlertDialogDescription>O produto será movido para "Sem categoria".</AlertDialogDescription>
+                              <AlertDialogDescription>O produto será removido desta categoria. Se pertencer a outras categorias, continuará nelas.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
