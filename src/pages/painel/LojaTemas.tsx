@@ -845,7 +845,7 @@ const LojaTemas = () => {
                             }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                           )}
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                           <div>
                             <Label className="text-xs">Título</Label>
                             <Input value={secao.titulo || ''} onChange={e => {
@@ -866,6 +866,31 @@ const LojaTemas = () => {
                               <SelectContent>
                                 <SelectItem value="all">Todos os produtos</SelectItem>
                                 {categories.map(c => <SelectItem key={c._id} value={c._id}>{c.nome}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Ícone</Label>
+                            <Select value={secao.icone || 'Flame'} onValueChange={v => {
+                              const u = [...secoes];
+                              u[idx] = { ...secao, icone: v };
+                              setHp({ secoes_produtos: u } as any);
+                            }}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sem ícone</SelectItem>
+                                <SelectItem value="Flame">🔥 Fogo</SelectItem>
+                                <SelectItem value="Star">⭐ Estrela</SelectItem>
+                                <SelectItem value="Heart">❤️ Coração</SelectItem>
+                                <SelectItem value="Zap">⚡ Raio</SelectItem>
+                                <SelectItem value="Award">🏆 Troféu</SelectItem>
+                                <SelectItem value="ThumbsUp">👍 Curtir</SelectItem>
+                                <SelectItem value="Package">📦 Pacote</SelectItem>
+                                <SelectItem value="ShieldCheck">🛡️ Segurança</SelectItem>
+                                <SelectItem value="Clock">🕐 Relógio</SelectItem>
+                                <SelectItem value="Truck">🚚 Entrega</SelectItem>
+                                <SelectItem value="CreditCard">💳 Cartão</SelectItem>
+                                <SelectItem value="Sparkles">✨ Brilho</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

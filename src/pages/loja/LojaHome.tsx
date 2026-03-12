@@ -273,7 +273,12 @@ const LojaHome = () => {
         <section key={sIdx} className={`py-8 lg:py-12 ${sIdx > 0 ? 'border-t border-border/50' : ''}`}>
           <div className="container">
             <div className="mb-6 flex items-center gap-2">
-              <Flame className="h-5 w-5 text-primary" />
+              {(() => {
+                const iconKey = secao.icone || 'Flame';
+                if (iconKey === 'none') return null;
+                const SectionIcon = ICON_MAP[iconKey] || Flame;
+                return <SectionIcon className="h-5 w-5 text-primary" />;
+              })()}
               <h2 className="text-lg font-bold text-foreground sm:text-xl">
                 {searchQuery && sIdx === 0 ? `Resultados para "${searchQuery}"` : (secao.titulo || 'Produtos')}
               </h2>
