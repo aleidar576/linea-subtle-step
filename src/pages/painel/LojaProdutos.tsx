@@ -872,7 +872,11 @@ const LojaProdutos = () => {
 
 REGRAS CRÍTICAS DE IMAGEM: Analise as URLs das imagens no HTML. Você deve extrair APENAS as imagens de MAIOR resolução. Ignore thumbnails ou ícones (ex: remova parâmetros como '-150x150' ou 'width=100' das URLs se necessário para pegar a imagem original).
 
+REGRAS CRITICAS DE TEXTO: Não traga nenhum código, nem quebra de linha, nem /n, apenas preencha os conteúdos em texto, números ou links, e nunca preencha o SKU.
+
 Retorne APENAS o código JSON válido, sem formatações markdown em volta, pronto para ser parseado.
+
+Vou te enviar daqui pra frente apenas códigos em HTML, vc sempre, sempre, sempre vai ler o código inteiro, analisar as informações conforme as regras acima e preencher o modelo abaixo:
 
 MODELO JSON:
 
