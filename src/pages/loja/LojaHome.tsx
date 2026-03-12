@@ -41,7 +41,7 @@ const LojaHome = () => {
   const destaques = hp.destaques;
 
   // Build sections from new array format or fallback to old format
-  const secoesRaw: Array<{ titulo: string; categoria_id: string }> = hp.secoes_produtos && Array.isArray(hp.secoes_produtos) && hp.secoes_produtos.length > 0
+  const secoesRaw: Array<{ titulo: string; categoria_id: string; icone?: string }> = hp.secoes_produtos && Array.isArray(hp.secoes_produtos) && hp.secoes_produtos.length > 0
     ? hp.secoes_produtos
     : [
         { titulo: hp.titulo_secao_produtos || 'Mais Vendidos', categoria_id: categoriaHomeId || 'all' },
