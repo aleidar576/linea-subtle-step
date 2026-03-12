@@ -67,16 +67,27 @@ export default function MenuBuilder({ value, onChange, categories, pages }: Menu
         })),
       };
     } else if (dialogType === 'page') {
-      const page = pages.find(p => p._id === selectedRef);
-      if (!page) return;
-      newItem = {
-        id: crypto.randomUUID(),
-        type: 'page',
-        reference_id: page._id,
-        label: page.titulo,
-        url: `/pagina/${page.slug}`,
-        children: [],
-      };
+      if (selectedRef === '__home__') {
+        newItem = {
+          id: crypto.randomUUID(),
+          type: 'page',
+          reference_id: '__home__',
+          label: 'Início',
+          url: '/',
+          children: [],
+        };
+      } else {
+        const page = pages.find(p => p._id === selectedRef);
+        if (!page) return;
+        newItem = {
+          id: crypto.randomUUID(),
+          type: 'page',
+          reference_id: page._id,
+          label: page.titulo,
+          url: `/pagina/${page.slug}`,
+          children: [],
+        };
+      }
     } else {
       if (!customLabel.trim() || !customUrl.trim()) return;
       newItem = {
