@@ -884,13 +884,17 @@ const LojaProdutos = () => {
       try {
         const result = await midiasApi.uploadExternal(id, uniqueUrls);
         const urlMap: Record<string, string> = {};
-        let ok = 0, fail = 0;
+        let ok = 0;
+        const failures: { url: string; error: string }[] = [];
         for (const r of result.results) {
           if (r.new_url && r.new_url !== r.original) {
             urlMap[r.original] = r.new_url;
             ok++;
-          } else if (!r.new_url) {
-            fail++;
+          } else if (r.new_url === r.original) {
+            // already on CDN
+            ok++;
+          } else {
+            failures.push({ url: r.original, error: (r as any).error || 'Erro desconhecido' });
           }
         }
         if (Object.keys(urlMap).length > 0) {
@@ -916,10 +920,25 @@ const LojaProdutos = () => {
             return newData;
           });
         }
-        toast({ title: `CDN: ${ok} enviadas${fail > 0 ? `, ${fail} falharam` : ''}` });
-      } catch (err) {
+        if (failures.length > 0) {
+          const detail = failures.map(f => `• ${f.url.slice(0, 60)}…\n  → ${f.error}`).join('\n');
+          toast({
+            title: `CDN: ${ok} OK, ${failures.length} falha(s)`,
+            description: detail.slice(0, 300),
+            variant: 'destructive',
+            duration: 15000,
+          });
+          console.warn('[CDN Migration] Falhas:', failures);
+        } else {
+          toast({ title: `CDN: ${ok} imagem(ns) migrada(s) com sucesso ✓` });
+        }
+      } catch (err: any) {
         console.error('[CDN Migration]', err);
-        toast({ title: 'Algumas imagens não puderam ser migradas para a CDN.', variant: 'destructive' });
+        toast({
+          title: 'Erro na migração de imagens para CDN',
+          description: err?.message || 'Verifique o console para detalhes.',
+          variant: 'destructive',
+        });
       } finally {
         setCdnMigrating(false);
       }
