@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { useLojaProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useToggleProduct } from '@/hooks/useLojaProducts';
 import { useLojaCategories } from '@/hooks/useLojaCategories';
@@ -260,6 +260,7 @@ const BULK_COLUMNS: BulkColumn[] = [
 
 const LojaProdutos = () => {
   const { id } = useParams<{ id: string }>();
+  const [prodSearchParams, setProdSearchParams] = useSearchParams();
   const { data: loja } = useLoja(id);
   const { data: products, isLoading } = useLojaProducts(id);
   const { data: catData } = useLojaCategories(id);
@@ -301,6 +302,21 @@ const LojaProdutos = () => {
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const categories = (catData as any)?.categories || catData || [];
+
+  // Open product editor from URL query param (GlobalSearch integration)
+  useEffect(() => {
+    const produtoParam = prodSearchParams.get('produto');
+    if (produtoParam && products && Array.isArray(products)) {
+      const found = products.find((p: LojaProduct) => p._id === produtoParam);
+      if (found) {
+        setEditingProduct(found);
+        setMode('editor');
+        setActiveTab('basico');
+      }
+      // Clean URL to prevent re-opening on refresh
+      setProdSearchParams({}, { replace: true });
+    }
+  }, [prodSearchParams, products, setProdSearchParams]);
 
   // Load fretes da loja
   const { data: fretesLoja = [] } = useFretes(id);

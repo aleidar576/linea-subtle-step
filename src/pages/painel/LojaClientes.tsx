@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { useClientes, useUpdateCliente } from '@/hooks/useClientes';
 import { Users, Download, Search, Mail, Edit2, Plus, UserPlus } from 'lucide-react';
@@ -23,8 +23,18 @@ const LojaClientes = () => {
   const { data: loja } = useLoja(id);
   const qc = useQueryClient();
 
+  const [clienteSearchParams, setClienteSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const { data: clientes = [], isLoading } = useClientes(id, search || undefined);
+
+  // Apply search from URL query param (GlobalSearch integration)
+  useEffect(() => {
+    const searchParam = clienteSearchParams.get('search');
+    if (searchParam) {
+      setSearch(searchParam);
+      setClienteSearchParams({}, { replace: true });
+    }
+  }, [clienteSearchParams, setClienteSearchParams]);
   const updateCliente = useUpdateCliente();
 
   const [editingCliente, setEditingCliente] = useState<ClienteData | null>(null);

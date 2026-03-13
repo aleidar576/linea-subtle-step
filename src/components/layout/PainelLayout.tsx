@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
 import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
 import { ContentTransition } from '@/components/PageTransition';
+import GlobalSearch from '@/components/layout/GlobalSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -300,6 +301,17 @@ const PainelLayout = () => {
 
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
+        {/* Global Search */}
+        {(() => {
+          const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
+          const activeLojaId = lojaMatch ? lojaMatch[1] : null;
+          return (
+            <div className="mb-4">
+              <GlobalSearch lojaId={activeLojaId} />
+            </div>
+          );
+        })()}
+
         {/* Banner: Mensalidade past_due */}
         {lojistaProfile?.subscription_status === 'past_due' && (() => {
           const toleranciaGlobal = diasToleranciaInadimplencia;
