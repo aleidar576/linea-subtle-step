@@ -53,6 +53,7 @@ const LojaSchema = new mongoose.Schema({
     },
     checkout_config: { type: mongoose.Schema.Types.Mixed, default: null },
     modo_orcamento: { type: Boolean, default: false },
+    whatsapp_orcamento: { type: String, default: '' },
     empresa: {
       tipo_documento: { type: String, default: '' },
       documento: { type: String, default: '' },

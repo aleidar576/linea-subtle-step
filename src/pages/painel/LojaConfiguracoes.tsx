@@ -126,19 +126,34 @@ const LojaConfiguracoes = () => {
             <div className="min-w-0">
               <p className="text-sm font-medium">Ativar Modo Orçamento</p>
               <p className="text-xs text-muted-foreground">
-                Substitui o botão de compra por um redirecionamento para o WhatsApp da loja. Requer um número de WhatsApp cadastrado.
+                Substitui o botão de compra por um redirecionamento para o WhatsApp. Requer o número abaixo preenchido.
               </p>
-              {!hasWhatsapp && (
-                <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
-                  <AlertTriangle className="h-3 w-3 shrink-0" /> Cadastre o WhatsApp no Perfil da Loja primeiro.
-                </p>
-              )}
             </div>
             <Switch
               checked={modoOrcamento}
               onCheckedChange={setModoOrcamento}
-              disabled={!hasWhatsapp}
+              disabled={!hasWhatsappOrcamento}
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">WhatsApp para Orçamentos</label>
+            <Input
+              value={whatsappOrcamento}
+              onChange={e => {
+                setWhatsappOrcamento(e.target.value);
+                if (!e.target.value.trim()) setModoOrcamento(false);
+              }}
+              placeholder="5511999999999"
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Número exclusivo para receber orçamentos (diferente do WhatsApp flutuante).
+            </p>
+            {!hasWhatsappOrcamento && modoOrcamento && (
+              <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
+                <AlertTriangle className="h-3 w-3 shrink-0" /> Preencha o número para ativar o modo.
+              </p>
+            )}
           </div>
         </div>
 

@@ -53,7 +53,7 @@ const BlockDivider = () => <div className="border-b-8 border-muted/40" />;
 
 const LojaProduto = () => {
   const { productSlug } = useParams<{ productSlug: string }>();
-  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig, modoOrcamento, whatsappNumero } = useLoja();
+  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig, modoOrcamento, whatsappOrcamento } = useLoja();
   const { data: product, isLoading } = useLojaPublicaProduct(lojaId, productSlug);
   const { data: fretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allProducts = [] } = useLojaPublicaProducts(lojaId);
