@@ -14,7 +14,7 @@ import PedidoResumoCard from './PedidoResumoCard';
 import PedidoPagamentoCard from './PedidoPagamentoCard';
 import PedidoLogisticaCard from './PedidoLogisticaCard';
 
-import { usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta } from '@/hooks/usePedidos';
+import { usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta, useSyncAppmax } from '@/hooks/usePedidos';
 import { lojaPublicaApi } from '@/services/saas-api';
 import type { Pedido, Loja } from '@/services/saas-api';
 

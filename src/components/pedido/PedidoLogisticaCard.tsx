@@ -141,6 +141,20 @@ export default function PedidoLogisticaCard({
           </a>
         )}
 
+        {/* Appmax Retry */}
+        {pedido.rastreio && (pedido as any).appmax_sync_status === 'error' && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1.5"
+            onClick={onSyncAppmax}
+            disabled={syncAppmaxLoading}
+          >
+            {syncAppmaxLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>⚠️</>}
+            Falha na Appmax - Tentar Novamente
+          </Button>
+        )}
+
         {/* Melhor Envio Section */}
         {isMEActive && (
           <div className="bg-muted/50 border border-border rounded-lg p-4">
