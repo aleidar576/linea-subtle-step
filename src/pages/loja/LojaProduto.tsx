@@ -961,7 +961,7 @@ const LojaProduto = () => {
 
               <div className="flex gap-2 pt-2">
                 <button onClick={() => { if (!validateVariations()) return; handleAddToCart(); setDrawerOpen(false); }} className="flex-1 bg-secondary text-foreground font-semibold rounded-full py-3 text-sm text-center">
-                  Adicionar ao carrinho
+                  {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
                 </button>
                 <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
                   {modoOrcamento ? (

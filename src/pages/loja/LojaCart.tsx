@@ -216,7 +216,7 @@ const LojaCart = () => {
               )}
             </div>
 
-            <h2 className="text-lg font-bold text-foreground">Resumo do Pedido</h2>
+            <h2 className="text-lg font-bold text-foreground">{lojaCtx.modoOrcamento ? 'Resumo do Orçamento' : 'Resumo do Pedido'}</h2>
             <div className="space-y-2 border-b border-border pb-4">
               {items.map(item => (
                 <div key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}`} className="flex justify-between text-sm">
