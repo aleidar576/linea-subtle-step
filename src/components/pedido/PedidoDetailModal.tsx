@@ -73,6 +73,8 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   useEffect(() => {
     if (pedido) {
       setRastreioInput(pedido.rastreio || '');
+      setTransportadoraInput(pedido.transportadora || 'Correios');
+      setRastreioUrlInput(pedido.rastreio_url || '');
       setObsInput(pedido.observacoes_internas || '');
     }
   }, [pedido?._id]);
