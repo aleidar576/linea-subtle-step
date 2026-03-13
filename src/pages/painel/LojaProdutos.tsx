@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { useLojaProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useToggleProduct } from '@/hooks/useLojaProducts';
 import { useLojaCategories } from '@/hooks/useLojaCategories';
