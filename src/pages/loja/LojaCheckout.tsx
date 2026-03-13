@@ -1133,25 +1133,25 @@ const LojaCheckout = () => {
                             key={option.id}
                             type="button"
                             onClick={() => setSelectedFrete(option)}
-                            className={`w-full flex items-center gap-5 p-5 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/50'}`}
+                            className={`w-full flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/50'}`}
                           >
                             <div className="shrink-0">
                               {isSelected ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />}
                             </div>
-                            <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center p-2 border rounded-lg bg-white overflow-hidden">
+                            <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center p-1.5 sm:p-2 border rounded-lg bg-white overflow-hidden">
                               {option.picture ? (
                                 <img src={option.picture} alt={option.name} className="max-w-full max-h-full object-contain" />
                               ) : (
-                                <Truck className="h-6 w-6 text-muted-foreground" />
+                                <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                               )}
                             </div>
-                            <div className="text-left flex-1 min-w-0">
-                              <p className="text-base font-semibold text-foreground">{option.name}</p>
+                            <div className="text-left flex-1 min-w-0 flex flex-col">
+                              <p className="font-semibold text-foreground truncate">{option.name}</p>
                               {option.delivery_time > 0 && (
-                                <p className="text-sm text-muted-foreground mt-0.5">Chega em até {option.delivery_time} dias úteis</p>
+                                <p className="text-sm text-muted-foreground leading-tight mt-0.5">Chega em até {option.delivery_time} dias úteis</p>
                               )}
                             </div>
-                            <span className={`text-base shrink-0 ${option.price === 0 ? 'text-emerald-600 font-bold' : 'font-bold text-foreground'}`}>
+                            <span className={`text-sm sm:text-base shrink-0 ml-auto text-right ${option.price === 0 ? 'text-emerald-600 font-bold' : 'font-bold text-foreground'}`}>
                               {option.price === 0 ? 'Grátis' : formatPrice(option.price)}
                             </span>
                           </button>
