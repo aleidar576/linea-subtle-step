@@ -59,6 +59,8 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   const cancelarEtiqueta = useCancelarEtiqueta();
 
   const [rastreioInput, setRastreioInput] = useState('');
+  const [transportadoraInput, setTransportadoraInput] = useState('Correios');
+  const [rastreioUrlInput, setRastreioUrlInput] = useState('');
   const [obsInput, setObsInput] = useState('');
   const obsDebounceRef = useRef<NodeJS.Timeout>();
 
