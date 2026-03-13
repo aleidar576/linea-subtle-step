@@ -762,6 +762,8 @@ export interface Pedido {
   cliente: { nome: string; email: string; telefone: string; cpf: string };
   endereco: { cep: string; rua: string; numero: string; complemento: string; bairro: string; cidade: string; estado: string } | null;
   rastreio: string | null;
+  transportadora: string | null;
+  rastreio_url: string | null;
   observacoes_internas: string;
   utms: Record<string, string>;
   criado_em: string;
@@ -828,8 +830,8 @@ export const pedidosApi = {
   },
   getById: (id: string) => request<Pedido>(`/pedidos?scope=pedido&id=${id}`),
   create: (data: any) => publicPostRequest<Pedido>('/pedidos?scope=pedido', data),
-  addRastreio: (id: string, codigo: string) =>
-    request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=rastreio`, { method: 'PATCH', body: JSON.stringify({ codigo }) }),
+  addRastreio: (id: string, codigo: string, transportadora?: string, rastreio_url?: string) =>
+    request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=rastreio`, { method: 'PATCH', body: JSON.stringify({ codigo, transportadora, rastreio_url }) }),
   addObservacao: (id: string, texto: string) =>
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=observacao`, { method: 'PATCH', body: JSON.stringify({ texto }) }),
   alterarStatus: (id: string, status: string) =>

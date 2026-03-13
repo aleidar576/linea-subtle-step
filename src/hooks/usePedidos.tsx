@@ -28,7 +28,8 @@ export function useCarrinhosAbandonados(lojaId: string | undefined) {
 export function useAddRastreio() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, codigo }: { id: string; codigo: string }) => pedidosApi.addRastreio(id, codigo),
+    mutationFn: ({ id, codigo, transportadora, rastreio_url }: { id: string; codigo: string; transportadora?: string; rastreio_url?: string }) =>
+      pedidosApi.addRastreio(id, codigo, transportadora, rastreio_url),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['pedido', vars.id] });
       qc.invalidateQueries({ queryKey: ['pedidos'] });

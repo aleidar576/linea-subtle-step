@@ -52,6 +52,8 @@ const PedidoSchema = new mongoose.Schema({
     default: null,
   },
   rastreio: { type: String, default: null },
+  transportadora: { type: String, default: 'Correios' },
+  rastreio_url: { type: String, default: null },
   observacoes_internas: { type: String, default: '' },
   frete_id: { type: String, default: null },
   frete_nome: { type: String, default: null },

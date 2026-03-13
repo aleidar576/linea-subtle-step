@@ -59,6 +59,8 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   const cancelarEtiqueta = useCancelarEtiqueta();
 
   const [rastreioInput, setRastreioInput] = useState('');
+  const [transportadoraInput, setTransportadoraInput] = useState('Correios');
+  const [rastreioUrlInput, setRastreioUrlInput] = useState('');
   const [obsInput, setObsInput] = useState('');
   const obsDebounceRef = useRef<NodeJS.Timeout>();
 
@@ -71,6 +73,8 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   useEffect(() => {
     if (pedido) {
       setRastreioInput(pedido.rastreio || '');
+      setTransportadoraInput(pedido.transportadora || 'Correios');
+      setRastreioUrlInput(pedido.rastreio_url || '');
       setObsInput(pedido.observacoes_internas || '');
     }
   }, [pedido?._id]);
@@ -85,7 +89,12 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
 
   const handleSaveRastreio = () => {
     if (!pedidoId || !rastreioInput.trim()) return;
-    addRastreio.mutate({ id: pedidoId, codigo: rastreioInput.trim() }, {
+    addRastreio.mutate({
+      id: pedidoId,
+      codigo: rastreioInput.trim(),
+      transportadora: transportadoraInput,
+      rastreio_url: transportadoraInput === 'Outra' ? rastreioUrlInput.trim() || undefined : undefined,
+    }, {
       onSuccess: () => toast.success('Rastreio salvo e cliente notificado!'),
       onError: (e: any) => toast.error(e.message),
     });
@@ -200,6 +209,10 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                     pedido={pedido}
                     rastreioInput={rastreioInput}
                     onRastreioChange={setRastreioInput}
+                    transportadoraInput={transportadoraInput}
+                    onTransportadoraChange={setTransportadoraInput}
+                    rastreioUrlInput={rastreioUrlInput}
+                    onRastreioUrlChange={setRastreioUrlInput}
                     onSaveRastreio={handleSaveRastreio}
                     rastreioLoading={addRastreio.isPending}
                     isMEActive={isMEActive}
