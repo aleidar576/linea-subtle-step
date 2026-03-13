@@ -23,8 +23,18 @@ const LojaClientes = () => {
   const { data: loja } = useLoja(id);
   const qc = useQueryClient();
 
+  const [clienteSearchParams, setClienteSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const { data: clientes = [], isLoading } = useClientes(id, search || undefined);
+
+  // Apply search from URL query param (GlobalSearch integration)
+  useEffect(() => {
+    const searchParam = clienteSearchParams.get('search');
+    if (searchParam) {
+      setSearch(searchParam);
+      setClienteSearchParams({}, { replace: true });
+    }
+  }, [clienteSearchParams, setClienteSearchParams]);
   const updateCliente = useUpdateCliente();
 
   const [editingCliente, setEditingCliente] = useState<ClienteData | null>(null);

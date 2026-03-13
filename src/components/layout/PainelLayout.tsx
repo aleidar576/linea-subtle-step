@@ -301,6 +301,17 @@ const PainelLayout = () => {
 
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
+        {/* Global Search */}
+        {(() => {
+          const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
+          const activeLojaId = lojaMatch ? lojaMatch[1] : null;
+          return (
+            <div className="mb-4">
+              <GlobalSearch lojaId={activeLojaId} />
+            </div>
+          );
+        })()}
+
         {/* Banner: Mensalidade past_due */}
         {lojistaProfile?.subscription_status === 'past_due' && (() => {
           const toleranciaGlobal = diasToleranciaInadimplencia;

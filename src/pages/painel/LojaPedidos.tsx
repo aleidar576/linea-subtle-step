@@ -67,7 +67,18 @@ const LojaPedidos = () => {
   const { data: carrinhos = [] } = useCarrinhosAbandonados(id);
 
   // Detail modal
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
+
+  // Open pedido from URL query param (GlobalSearch integration)
+  useEffect(() => {
+    const pedidoParam = searchParams.get('pedido');
+    if (pedidoParam) {
+      setSelectedPedidoId(pedidoParam);
+      // Clean URL to prevent re-opening on refresh
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Abandoned cart detail (keeps Sheet)
   const [selectedCarrinho, setSelectedCarrinho] = useState<CarrinhoAbandonado | null>(null);
