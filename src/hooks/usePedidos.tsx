@@ -93,3 +93,18 @@ export function useUpdatePedidoDados() {
     },
   });
 }
+
+export function useSyncAppmax() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pedidosApi.syncAppmax(id),
+    onSuccess: (_, id) => {
+      toast.success('Sincronizado com a Appmax com sucesso!');
+      qc.invalidateQueries({ queryKey: ['pedido', id] });
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+    onError: () => {
+      toast.error('A Appmax recusou a sincronização novamente.');
+    },
+  });
+}
