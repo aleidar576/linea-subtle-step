@@ -213,8 +213,6 @@ function jsonExample(): Partial<LojaProduct> {
     protecao_cliente: { ativo: false, itens: [] },
     pessoas_vendo: { ativo: false, min: 10, max: 50 },
     cross_sell: { modo: 'aleatorio', categoria_manual_id: null },
-    videos: [],
-    video_layout: 'auto',
     dimensoes: { peso: 0, altura: 0, largura: 0, comprimento: 0 },
   };
 }
