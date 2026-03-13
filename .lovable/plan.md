@@ -1,86 +1,112 @@
-# Plano de Evolução — PANDORA SaaS
 
-## Strangler Fig — Decomposição do Monólito ✅ COMPLETA
 
-O monólito `api/loja-extras.js` (408+ linhas) foi completamente decomposto em 6 microsserviços especializados usando o padrão **Strangler Fig**. O arquivo original foi deletado.
+# Plano: Sync Rastreio Appmax + Feedback UX Inteligente
 
-### Fases Concluídas
-
-| Fase | Microsserviço | Escopos Migrados | Status |
-|---|---|---|---|
-| SF-1 | `api/midia.js` | midias, midia, upload, mux-upload, mux-status, mux-delete | ✅ |
-| SF-2 | `api/fretes.js` | fretes, frete, fretes-publico, calcular-frete | ✅ |
-| SF-3 | `api/assinaturas.js` | stripe-checkout, stripe-portal, stripe-webhook, cron-taxas, pagar-taxas-manual | ✅ |
-| SF-4 | `api/gateways.js` | gateways-disponiveis, gateway-loja, salvar-gateway, desconectar-gateway, appmax-connect, appmax-install, appmax-webhook | ✅ |
-| SF-5 | `api/marketing.js` | cupons, cupom, cupom-publico, cupons-popup, leads, lead, lead-newsletter, leads-import, leads-export, pixels, pixel | ✅ |
-| SF-5 | `api/storefront.js` | tema, paginas, pagina, pagina-publica, categorias-publico, global-domain, category-products | ✅ |
-| **Final** | **`api/loja-extras.js` DELETADO** | — | ✅ |
-
-### Correções Aplicadas na Revisão
-
-- URL do webhook Stripe em `AdminIntegracoes.tsx`: `/api/loja-extras?scope=stripe-webhook` → `/api/assinaturas?scope=stripe-webhook` ✅
-- Frontend `saas-api.ts`: Todas as 26+ referências redirecionadas para os novos microsserviços ✅
-- `vercel.json`: Rewrite do loja-extras removido, marketing + storefront adicionados ✅
-- `README.md`: Documentação completamente atualizada com arquitetura de 17 microsserviços ✅
-
-### Strangler Fig 2 — Decomposição de `api/pedidos.js` ✅ COMPLETA
-
-O monólito `api/pedidos.js` (567 linhas) foi decomposto em 4 microsserviços + core reduzido (~270 linhas).
-
-| Microsserviço | Escopos Migrados | Permissão |
-|---|---|---|
-| `api/crm.js` | clientes, cliente, criar-cliente, redefinir-senha-cliente | Autenticado |
-| `api/carrinhos.js` | carrinho (POST/PATCH), carrinhos (GET) | Público + Autenticado |
-| `api/etiquetas.js` | gerar-etiqueta, cancelar-etiqueta | Autenticado |
-| `api/relatorios.js` | relatorios | Autenticado |
-| `api/pedidos.js` (core) | pedido (POST público, GET/PATCH auth), pedidos (GET auth) | Misto |
-
-### Arquitetura Final (21 Serverless Functions)
-
-```
-api/
-├── admins.js           # Admin
-├── assinaturas.js      # Stripe (SF-3)
-├── auth-action.ts      # Autenticação
-├── carrinhos.js        # Carrinhos Abandonados (SF2-2)
-├── categorias.js       # Categorias
-├── cliente-auth.js     # Auth clientes
-├── crm.js              # CRM/Clientes (SF2-1)
-├── etiquetas.js        # Fulfillment/Etiquetas (SF2-3)
-├── fretes.js           # Logística (SF-2)
-├── gateways.js         # Pagamentos (SF-4)
-├── lojas.js            # Lojas
-├── lojista.js          # Perfil lojista
-├── marketing.js        # Cupons+Leads+Pixels (SF-5)
-├── midia.js            # Bunny.net+Mux (SF-1)
-├── pedidos.js          # Core Checkout+Pedidos
-├── process-payment.js  # Processamento
-├── products.ts         # Produtos
-├── relatorios.js       # Relatórios (SF2-4)
-├── settings.js         # Config globais
-├── storefront.js       # Temas+Páginas+Vitrine (SF-5)
-└── tracking-webhook.js # Rastreamento
-```
+## Arquivos modificados: 2
 
 ---
 
-## Diagnóstico da Cobrança Dupla ✅ RESOLVIDO
+## 1. Backend — `api/pedidos.js`
 
-### Causa raiz
-`auto_advance: true` na criação de invoices manuais causava tentativa duplicada de cobrança pelo Stripe.
+### 1a. Import do Lojista (linha 22, após `Loja`)
 
-### Correção aplicada
-`auto_advance: false` em `processarCronTaxas()` e `pagarTaxasManual()` em `lib/services/assinaturas/stripe.js`.
+```js
+const Lojista = require('../models/Lojista.js');
+```
+
+### 1b. Bloco Appmax + flag de erro (linhas 235-237)
+
+Substituir:
+```js
+      }
+
+      return res.status(200).json(pedido);
+```
+
+Por:
+```js
+      }
+
+      // === SYNC RASTREIO → APPMAX (liberação de saldo) ===
+      let appmaxError = null;
+      if (pedido.pagamento?.appmax_order_id) {
+        try {
+          const lojaDoc = await Loja.findById(pedido.loja_id).lean();
+          const lojistaDoc = lojaDoc ? await Lojista.findById(lojaDoc.lojista_id).lean() : null;
+          if (lojistaDoc?.gateway_ativo === 'appmax') {
+            const appmaxConfig = lojistaDoc.gateways_config?.appmax;
+            const token = appmaxConfig?.access_token;
+            const apiUrl = appmaxConfig?.apiUrl || 'https://api.appmax.com.br';
+            if (token) {
+              const appmaxRes = await fetch(`${apiUrl}/v1/orders/shipping-tracking-code`, {
+                method: 'POST',
+                headers: {
+                  'accept': 'application/json',
+                  'content-type': 'application/json',
+                  'access-token': token,
+                },
+                body: JSON.stringify({
+                  order_id: Number(pedido.pagamento.appmax_order_id),
+                  shipping_tracking_code: codigo,
+                }),
+              });
+              console.log('[APPMAX-RASTREIO] Status:', appmaxRes.status, '| Order:', pedido.pagamento.appmax_order_id);
+              if (!appmaxRes.ok) {
+                appmaxError = 'Falha na comunicação com a Appmax';
+              }
+            }
+          }
+        } catch (appmaxErr) {
+          console.error('[APPMAX-RASTREIO] Erro:', appmaxErr.message);
+          appmaxError = 'Falha na comunicação com a Appmax';
+        }
+      }
+
+      const pedidoObj = typeof pedido.toObject === 'function' ? pedido.toObject() : pedido;
+      return res.status(200).json({ ...pedidoObj, appmax_error: appmaxError });
+```
+
+**Garantias**: O `return 200` sempre acontece. A flag `appmax_error` é `null` (sucesso) ou string (falha). Pedidos sem Appmax retornam `appmax_error: null`.
 
 ---
 
-## Features Implementadas
+## 2. Frontend — `src/components/pedido/PedidoDetailModal.tsx`
 
-### Páginas de Categoria ✅
-- Banner, filtros, ordenação, paginação, layout responsivo configurável
+### Linhas 90-101 — `handleSaveRastreio`
 
-### Construtor de Navegação Visual (Menu Builder) ✅
-- Drag & drop, até 2 níveis de nesting, fallback para categorias ativas
+Substituir o `onSuccess` atual:
+```tsx
+onSuccess: () => toast.success('Rastreio salvo e cliente notificado!'),
+```
 
-### Shoppertainment — Video Commerce (Mux) ✅
-- Upload direto, polling de status, exclusão com confirmação, layouts stories/carousel/auto
+Por:
+```tsx
+onSuccess: (data: any) => {
+  if (data?.appmax_error) {
+    toast.warning('Rastreio salvo e email enviado! ⚠️ Porém, houve falha ao avisar a Appmax.');
+  } else {
+    toast.success('Rastreio salvo e cliente notificado!');
+  }
+},
+```
+
+Usa `toast.warning` do Sonner (já importado via `import { toast } from 'sonner'` na linha 8), que renderiza com ícone amarelo nativamente — sem imports extras.
+
+---
+
+## Fluxo final da rota `action === 'rastreio'`
+
+```text
+1. Validar código
+2. Salvar no banco
+3. Enviar email (try/catch isolado)
+4. Sync Appmax (try/catch isolado) → captura flag
+5. return 200 com { ...pedido, appmax_error }
+```
+
+| Cenário | Toast no frontend |
+|---|---|
+| Sem Appmax / Appmax OK | ✅ Verde: "Rastreio salvo e cliente notificado!" |
+| Appmax falhou | ⚠️ Amarelo: "Rastreio salvo e email enviado! ⚠️ Porém, houve falha ao avisar a Appmax." |
+| Ambos os casos | Modal fecha, tela atualiza normalmente |
+
