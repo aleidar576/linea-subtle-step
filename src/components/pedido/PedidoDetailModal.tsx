@@ -57,6 +57,7 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   const alterarStatus = useAlterarStatus();
   const gerarEtiqueta = useGerarEtiqueta();
   const cancelarEtiqueta = useCancelarEtiqueta();
+  const syncAppmax = useSyncAppmax();
 
   const [rastreioInput, setRastreioInput] = useState('');
   const [transportadoraInput, setTransportadoraInput] = useState('Correios');
