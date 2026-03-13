@@ -260,6 +260,7 @@ const BULK_COLUMNS: BulkColumn[] = [
 
 const LojaProdutos = () => {
   const { id } = useParams<{ id: string }>();
+  const [prodSearchParams, setProdSearchParams] = useSearchParams();
   const { data: loja } = useLoja(id);
   const { data: products, isLoading } = useLojaProducts(id);
   const { data: catData } = useLojaCategories(id);
