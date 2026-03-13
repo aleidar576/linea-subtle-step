@@ -873,19 +873,28 @@ const LojaProduto = () => {
             <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center">
               Adicionar ao carrinho
             </button>
-            <button onClick={() => hasVariations ? openDrawer('buy') : handleBuyNow()} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex flex-col items-center justify-center leading-tight">
-              <span className="text-sm">Comprar agora</span>
-              {(() => {
-                const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
-                if (!btnCfg.ativo) return null;
-                if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
-                if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
-                  const opts = calculateAppmaxInstallments(product.price, installmentConfig);
-                  const last = opts[opts.length - 1];
-                  if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
-                }
-                return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
-              })()}
+            <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
+              {modoOrcamento ? (
+                <>
+                  <MessageCircle className="h-4 w-4 shrink-0" />
+                  <span className="text-sm">Orçar agora</span>
+                </>
+              ) : (
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-sm">Comprar agora</span>
+                  {(() => {
+                    const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
+                    if (!btnCfg.ativo) return null;
+                    if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
+                    if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
+                      const opts = calculateAppmaxInstallments(product.price, installmentConfig);
+                      const last = opts[opts.length - 1];
+                      if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
+                    }
+                    return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
+                  })()}
+                </span>
+              )}
             </button>
           </div>
 
