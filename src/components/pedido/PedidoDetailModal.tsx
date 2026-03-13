@@ -209,6 +209,10 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                     pedido={pedido}
                     rastreioInput={rastreioInput}
                     onRastreioChange={setRastreioInput}
+                    transportadoraInput={transportadoraInput}
+                    onTransportadoraChange={setTransportadoraInput}
+                    rastreioUrlInput={rastreioUrlInput}
+                    onRastreioUrlChange={setRastreioUrlInput}
                     onSaveRastreio={handleSaveRastreio}
                     rastreioLoading={addRastreio.isPending}
                     isMEActive={isMEActive}

@@ -192,10 +192,14 @@ module.exports = async function handler(req, res) {
     if (!loja) return res.status(403).json({ error: 'Acesso negado' });
 
     if (action === 'rastreio') {
-      const { codigo } = req.body;
+      const { codigo, transportadora, rastreio_url } = req.body;
       if (!codigo) return res.status(400).json({ error: 'Código de rastreio obrigatório' });
       pedido.rastreio = codigo;
+      pedido.transportadora = transportadora || 'Correios';
+      pedido.rastreio_url = transportadora === 'Outra' ? (rastreio_url || null) : null;
       await pedido.save();
+
+      const trackingUrl = getTrackingUrl(pedido.transportadora, codigo, pedido.rastreio_url);
 
       if (pedido.cliente?.email) {
         try {
@@ -207,6 +211,8 @@ module.exports = async function handler(req, res) {
               nome: pedido.cliente.nome,
               numero_pedido: pedido.numero,
               codigo_rastreio: codigo,
+              transportadora: pedido.transportadora,
+              tracking_url: trackingUrl,
               branding,
             }),
           });

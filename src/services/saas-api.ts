@@ -830,8 +830,8 @@ export const pedidosApi = {
   },
   getById: (id: string) => request<Pedido>(`/pedidos?scope=pedido&id=${id}`),
   create: (data: any) => publicPostRequest<Pedido>('/pedidos?scope=pedido', data),
-  addRastreio: (id: string, codigo: string) =>
-    request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=rastreio`, { method: 'PATCH', body: JSON.stringify({ codigo }) }),
+  addRastreio: (id: string, codigo: string, transportadora?: string, rastreio_url?: string) =>
+    request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=rastreio`, { method: 'PATCH', body: JSON.stringify({ codigo, transportadora, rastreio_url }) }),
   addObservacao: (id: string, texto: string) =>
     request<Pedido>(`/pedidos?scope=pedido&id=${id}&action=observacao`, { method: 'PATCH', body: JSON.stringify({ texto }) }),
   alterarStatus: (id: string, status: string) =>
