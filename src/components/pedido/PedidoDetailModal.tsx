@@ -89,7 +89,12 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
 
   const handleSaveRastreio = () => {
     if (!pedidoId || !rastreioInput.trim()) return;
-    addRastreio.mutate({ id: pedidoId, codigo: rastreioInput.trim() }, {
+    addRastreio.mutate({
+      id: pedidoId,
+      codigo: rastreioInput.trim(),
+      transportadora: transportadoraInput,
+      rastreio_url: transportadoraInput === 'Outra' ? rastreioUrlInput.trim() || undefined : undefined,
+    }, {
       onSuccess: () => toast.success('Rastreio salvo e cliente notificado!'),
       onError: (e: any) => toast.error(e.message),
     });
