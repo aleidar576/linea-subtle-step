@@ -251,7 +251,7 @@ const LojaProduto = () => {
     if (!validateVariations()) return;
     for (let i = 0; i < quantity; i++) addToCart(cartProduct as any, selectedSize, selectedColor);
     firePixelEvent('AddToCart', { content_id: product.product_id, content_name: product.name, value: (product.price * quantity) / 100, currency: 'BRL', num_items: quantity });
-    toast.success('Adicionado ao carrinho!');
+    toast.success(modoOrcamento ? 'Adicionado ao orçamento!' : 'Adicionado ao carrinho!');
   };
 
   const handleBuyNow = () => {
