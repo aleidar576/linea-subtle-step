@@ -30,7 +30,7 @@ const LojaCart = () => {
   const lojaCtx = useLoja();
 
   useEffect(() => {
-    const parts = ['Carrinho', lojaCtx.nomeExibicao];
+    const parts = [lojaCtx.modoOrcamento ? 'Orçamento' : 'Carrinho', lojaCtx.nomeExibicao];
     if (lojaCtx.slogan) parts.push(lojaCtx.slogan);
     document.title = parts.join(' · ');
   }, [lojaCtx.nomeExibicao, lojaCtx.slogan]);
