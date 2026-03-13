@@ -40,6 +40,8 @@ const NAV_INDEX: NavEntry[] = [
 
   // Loja Virtual
   { title: 'Temas', subtitle: 'Loja Virtual → Temas', group: 'Loja Virtual', path: '/temas', icon: LayoutTemplate, keywords: ['tema', 'layout', 'design', 'visual'] },
+  { title: 'Banners e Destaques', subtitle: 'Loja Virtual → Temas → Banners', group: 'Loja Virtual', path: '/temas', icon: Image, keywords: ['banner', 'carrossel', 'imagens', 'slideshow', 'destaque'] },
+  { title: 'Cabeçalho da Loja', subtitle: 'Loja Virtual → Temas → Cabeçalho', group: 'Loja Virtual', path: '/temas', icon: LayoutTemplate, keywords: ['header', 'cabeçalho', 'logo', 'menu', 'navegação'] },
   { title: 'Páginas', subtitle: 'Loja Virtual → Páginas', group: 'Loja Virtual', path: '/paginas', icon: FileText, keywords: ['pagina', 'page', 'sobre', 'politica'] },
   { title: 'Conteúdo', subtitle: 'Loja Virtual → Conteúdo', group: 'Loja Virtual', path: '/conteudo', icon: Image, keywords: ['conteudo', 'banner', 'homepage', 'slider'] },
 
