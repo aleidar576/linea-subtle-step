@@ -762,6 +762,8 @@ export interface Pedido {
   cliente: { nome: string; email: string; telefone: string; cpf: string };
   endereco: { cep: string; rua: string; numero: string; complemento: string; bairro: string; cidade: string; estado: string } | null;
   rastreio: string | null;
+  transportadora: string | null;
+  rastreio_url: string | null;
   observacoes_internas: string;
   utms: Record<string, string>;
   criado_em: string;
