@@ -93,7 +93,7 @@ const LojaCart = () => {
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-secondary">
           <ShoppingBag className="h-10 w-10 text-muted-foreground" />
         </div>
-        <h1 className="mt-6 text-xl font-bold text-foreground">Seu carrinho está vazio</h1>
+        <h1 className="mt-6 text-xl font-bold text-foreground">{lojaCtx.modoOrcamento ? 'Seu orçamento está vazio' : 'Seu carrinho está vazio'}</h1>
         <p className="mt-2 text-sm text-muted-foreground">Adicione produtos para continuar</p>
         <Button asChild className="mt-6 rounded-full"><Link to="/">Ver Produtos</Link></Button>
       </div>
