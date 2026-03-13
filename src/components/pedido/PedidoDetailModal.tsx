@@ -227,6 +227,8 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                     onCancelarEtiqueta={handleCancelarEtiqueta}
                     gerarLoading={gerarEtiqueta.isPending}
                     cancelarLoading={cancelarEtiqueta.isPending}
+                    onSyncAppmax={() => pedido._id && syncAppmax.mutate(pedido._id)}
+                    syncAppmaxLoading={syncAppmax.isPending}
                   />
 
                   {/* Observações Internas */}
