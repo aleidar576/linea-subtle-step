@@ -33,6 +33,7 @@ const LojaConfiguracoes = () => {
     if (!loja) return;
     setExigirCadastro(loja.configuracoes?.exigir_cadastro_cliente ?? false);
     setModoOrcamento(loja.configuracoes?.modo_orcamento ?? false);
+    setWhatsappOrcamento(loja.configuracoes?.whatsapp_orcamento || '');
     setDominioCustomizado(loja.dominio_customizado || '');
   }, [loja]);
 
