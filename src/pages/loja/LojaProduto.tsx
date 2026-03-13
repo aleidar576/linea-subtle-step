@@ -870,8 +870,13 @@ const LojaProduto = () => {
                 {!chatOpen && <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary" />}
               </button>
             )}
-            <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center">
-              {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
+            <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center leading-tight flex items-center justify-center">
+              {modoOrcamento ? (
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-xs">Adicionar ao</span>
+                  <span className="text-sm">Orçamento</span>
+                </span>
+              ) : 'Adicionar ao carrinho'}
             </button>
             <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
               {modoOrcamento ? (
