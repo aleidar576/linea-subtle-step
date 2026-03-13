@@ -263,6 +263,35 @@ const LojaProduto = () => {
   };
 
   const openDrawer = (mode: 'buy' | 'cart') => { setDrawerMode(mode); setDrawerOpen(true); };
+
+  // === Modo Orçamento: lógica centralizada ===
+  const executeSingleQuote = () => {
+    const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank');
+    setShowQuoteModal(false);
+  };
+
+  const executeCombinedQuote = () => {
+    const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    const currentItem = { name: product.name, quantity, variation: variation || undefined };
+    const cartItems = items.map(i => ({
+      name: i.product.name,
+      quantity: i.quantity,
+      variation: [i.selectedSize, i.selectedColor].filter(Boolean).join(' / ') || undefined,
+    }));
+    const allItems = [...cartItems, currentItem];
+    window.open(generateCartQuoteLink(whatsappOrcamento, allItems), '_blank');
+    setShowQuoteModal(false);
+  };
+
+  const handleQuoteClick = () => {
+    if (!validateVariations()) return;
+    if (items.length > 0) {
+      setShowQuoteModal(true);
+    } else {
+      executeSingleQuote();
+    }
+  };
   const handleCartAction = () => { hasVariations ? openDrawer('cart') : handleAddToCart(); };
 
   // Open lightbox for a single image (variation zoom)
