@@ -40,6 +40,8 @@ const NAV_INDEX: NavEntry[] = [
 
   // Loja Virtual
   { title: 'Temas', subtitle: 'Loja Virtual → Temas', group: 'Loja Virtual', path: '/temas', icon: LayoutTemplate, keywords: ['tema', 'layout', 'design', 'visual'] },
+  { title: 'Banners e Destaques', subtitle: 'Loja Virtual → Temas → Banners', group: 'Loja Virtual', path: '/temas', icon: Image, keywords: ['banner', 'carrossel', 'imagens', 'slideshow', 'destaque'] },
+  { title: 'Cabeçalho da Loja', subtitle: 'Loja Virtual → Temas → Cabeçalho', group: 'Loja Virtual', path: '/temas', icon: LayoutTemplate, keywords: ['header', 'cabeçalho', 'logo', 'menu', 'navegação'] },
   { title: 'Páginas', subtitle: 'Loja Virtual → Páginas', group: 'Loja Virtual', path: '/paginas', icon: FileText, keywords: ['pagina', 'page', 'sobre', 'politica'] },
   { title: 'Conteúdo', subtitle: 'Loja Virtual → Conteúdo', group: 'Loja Virtual', path: '/conteudo', icon: Image, keywords: ['conteudo', 'banner', 'homepage', 'slider'] },
 
@@ -50,10 +52,14 @@ const NAV_INDEX: NavEntry[] = [
 
   // Administração
   { title: 'Perfil da Loja', subtitle: 'Administração → Perfil da Loja', group: 'Administração', path: '/perfil-loja', icon: Store, keywords: ['perfil', 'nome', 'logo', 'endereco', 'loja'] },
+  { title: 'Endereço de Origem', subtitle: 'Administração → Perfil da Loja → Endereço', group: 'Administração', path: '/perfil-loja', icon: Truck, keywords: ['cep', 'rua', 'origem', 'remetente', 'endereco origem'] },
   { title: 'Fretes', subtitle: 'Administração → Fretes', group: 'Administração', path: '/fretes', icon: Truck, keywords: ['frete', 'envio', 'entrega', 'correios', 'melhor envio'] },
   { title: 'Gateways', subtitle: 'Administração → Gateways de Pagamento', group: 'Administração', path: '/gateways', icon: CreditCard, keywords: ['gateway', 'pagamento', 'pix', 'cartao', 'appmax', 'sealpay'] },
   { title: 'Integrações', subtitle: 'Administração → Integrações', group: 'Administração', path: '/integracoes', icon: Code, keywords: ['integracao', 'api', 'webhook'] },
   { title: 'Configurações', subtitle: 'Administração → Configurações Gerais', group: 'Administração', path: '/configuracoes', icon: Settings, keywords: ['configuracao', 'dominio', 'orcamento', 'config'] },
+  { title: 'Modo Orçamento', subtitle: 'Administração → Configurações → Orçamento', group: 'Administração', path: '/configuracoes', icon: Settings, keywords: ['orcamento', 'whatsapp', 'orçar', 'budget'] },
+  { title: 'Domínio', subtitle: 'Administração → Configurações → Domínio', group: 'Administração', path: '/configuracoes', icon: Settings, keywords: ['dominio', 'url', 'site', 'cname', 'dns'] },
+  { title: 'Endereço Interno', subtitle: 'Administração → Configurações → Subdomínio', group: 'Administração', path: '/configuracoes', icon: Settings, keywords: ['subdominio', 'endereço interno', 'link interno'] },
 
   // Conta (absolute routes)
   { title: 'Meu Perfil', subtitle: 'Conta → Dados do Lojista', group: 'Conta', path: '/painel/perfil', icon: User, keywords: ['meu perfil', 'senha', 'minha conta'], absolute: true },
