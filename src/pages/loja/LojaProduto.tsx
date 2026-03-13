@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Check, Clock, Flame, ChevronLeft, ChevronRight, ShieldCheck, Minus, Plus, Share2, Home, MessageCircle, X, Maximize2, ChevronDown } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
-import { generateProductQuoteLink } from '@/lib/utils';
+import { generateProductQuoteLink, generateCartQuoteLink } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { calculateAppmaxInstallments } from '@/utils/installments';
 import { useLojaPublicaProduct, useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';
 import { useCart } from '@/contexts/CartContext';
@@ -57,7 +58,7 @@ const LojaProduto = () => {
   const { data: product, isLoading } = useLojaPublicaProduct(lojaId, productSlug);
   const { data: fretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allProducts = [] } = useLojaPublicaProducts(lojaId);
-  const { addToCart, totalItems } = useCart();
+  const { addToCart, totalItems, items } = useCart();
   const navigate = useNavigate();
 
   const [currentImage, setCurrentImage] = useState(0);
@@ -77,6 +78,7 @@ const LojaProduto = () => {
   const [globalTimeLeft, setGlobalTimeLeft] = useState<{ h: number; m: number; s: number } | null>(null);
   const [variationError, setVariationError] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // Thumbnail auto-scroll refs
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -261,6 +263,35 @@ const LojaProduto = () => {
   };
 
   const openDrawer = (mode: 'buy' | 'cart') => { setDrawerMode(mode); setDrawerOpen(true); };
+
+  // === Modo Orçamento: lógica centralizada ===
+  const executeSingleQuote = () => {
+    const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank');
+    setShowQuoteModal(false);
+  };
+
+  const executeCombinedQuote = () => {
+    const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    const currentItem = { name: product.name, quantity, variation: variation || undefined };
+    const cartItems = items.map(i => ({
+      name: i.product.name,
+      quantity: i.quantity,
+      variation: [i.selectedSize, i.selectedColor].filter(Boolean).join(' / ') || undefined,
+    }));
+    const allItems = [...cartItems, currentItem];
+    window.open(generateCartQuoteLink(whatsappOrcamento, allItems), '_blank');
+    setShowQuoteModal(false);
+  };
+
+  const handleQuoteClick = () => {
+    if (!validateVariations()) return;
+    if (items.length > 0) {
+      setShowQuoteModal(true);
+    } else {
+      executeSingleQuote();
+    }
+  };
   const handleCartAction = () => { hasVariations ? openDrawer('cart') : handleAddToCart(); };
 
   // Open lightbox for a single image (variation zoom)
@@ -563,11 +594,7 @@ const LojaProduto = () => {
                 {modoOrcamento ? (
                   <Button
                     className="flex-1 gap-2 rounded-full font-bold"
-                    onClick={() => {
-                      if (!validateVariations()) return;
-                      const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
-                      window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank');
-                    }}
+                    onClick={handleQuoteClick}
                   >
                     <MessageCircle className="h-4 w-4" /> Orçar agora
                   </Button>
@@ -878,7 +905,7 @@ const LojaProduto = () => {
                 </span>
               ) : 'Adicionar ao carrinho'}
             </button>
-            <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
+            <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? handleQuoteClick() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
               {modoOrcamento ? (
                 <>
                   <MessageCircle className="h-4 w-4 shrink-0" />
@@ -968,7 +995,7 @@ const LojaProduto = () => {
                 <button onClick={() => { if (!validateVariations()) return; handleAddToCart(); setDrawerOpen(false); }} className="flex-1 bg-secondary text-foreground font-semibold rounded-full py-3 text-sm text-center">
                   {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
                 </button>
-                <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
+                <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { handleQuoteClick(); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
                   {modoOrcamento ? (
                     <>
                       <MessageCircle className="h-4 w-4 shrink-0" />
@@ -995,6 +1022,26 @@ const LojaProduto = () => {
             </div>
           </DrawerContent>
         </Drawer>
+
+        <AlertDialog open={showQuoteModal} onOpenChange={setShowQuoteModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Adicionar ao seu orçamento atual?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você já tem outros itens separados. Deseja enviar todos eles juntos
+                para o nosso WhatsApp ou orçar apenas este produto?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={executeSingleQuote}>
+                Apenas este produto
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={executeCombinedQuote}>
+                Enviar todos juntos
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
