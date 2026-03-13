@@ -566,7 +566,7 @@ const LojaProduto = () => {
                     onClick={() => {
                       if (!validateVariations()) return;
                       const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
-                      window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank');
+                      window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank');
                     }}
                   >
                     <MessageCircle className="h-4 w-4" /> Orçar agora
