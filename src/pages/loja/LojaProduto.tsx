@@ -594,11 +594,7 @@ const LojaProduto = () => {
                 {modoOrcamento ? (
                   <Button
                     className="flex-1 gap-2 rounded-full font-bold"
-                    onClick={() => {
-                      if (!validateVariations()) return;
-                      const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
-                      window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank');
-                    }}
+                    onClick={handleQuoteClick}
                   >
                     <MessageCircle className="h-4 w-4" /> Orçar agora
                   </Button>
