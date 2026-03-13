@@ -65,6 +65,7 @@ const PedidoSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null,
   },
+  appmax_sync_status: { type: String, enum: ['success', 'error', 'pending'], default: null },
   utms: { type: mongoose.Schema.Types.Mixed, default: {} },
   criado_em: { type: Date, default: () => new Date() },
   atualizado_em: { type: Date, default: () => new Date() },

@@ -37,6 +37,8 @@ interface Props {
   onCancelarEtiqueta: () => void;
   gerarLoading: boolean;
   cancelarLoading: boolean;
+  onSyncAppmax?: () => void;
+  syncAppmaxLoading?: boolean;
 }
 
 export default function PedidoLogisticaCard({
@@ -54,6 +56,8 @@ export default function PedidoLogisticaCard({
   onCancelarEtiqueta,
   gerarLoading,
   cancelarLoading,
+  onSyncAppmax,
+  syncAppmaxLoading,
 }: Props) {
   const trackingUrl = rastreioInput.trim()
     ? getTrackingUrl(transportadoraInput, rastreioInput.trim(), rastreioUrlInput.trim() || undefined)
@@ -135,6 +139,20 @@ export default function PedidoLogisticaCard({
             <ExternalLink className="h-3 w-3" />
             Rastrear encomenda
           </a>
+        )}
+
+        {/* Appmax Retry */}
+        {pedido.rastreio && (pedido as any).appmax_sync_status === 'error' && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1.5"
+            onClick={onSyncAppmax}
+            disabled={syncAppmaxLoading}
+          >
+            {syncAppmaxLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>⚠️</>}
+            Falha na Appmax - Tentar Novamente
+          </Button>
         )}
 
         {/* Melhor Envio Section */}

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { pedidosApi, carrinhosApi } from '@/services/saas-api';
+import { toast } from 'sonner';
 
 export function usePedidos(lojaId: string | undefined, filters?: { status?: string; search?: string; page?: number; per_page?: number }) {
   return useQuery({
@@ -89,6 +90,21 @@ export function useUpdatePedidoDados() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['pedido', vars.id] });
       qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+  });
+}
+
+export function useSyncAppmax() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pedidosApi.syncAppmax(id),
+    onSuccess: (_, id) => {
+      toast.success('Sincronizado com a Appmax com sucesso!');
+      qc.invalidateQueries({ queryKey: ['pedido', id] });
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+    onError: () => {
+      toast.error('A Appmax recusou a sincronização novamente.');
     },
   });
 }

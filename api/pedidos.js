@@ -259,19 +259,75 @@ module.exports = async function handler(req, res) {
                 }),
               });
               console.log('[APPMAX-RASTREIO] Status:', appmaxRes.status, '| Order:', pedido.pagamento.appmax_order_id);
-              if (!appmaxRes.ok) {
+              if (appmaxRes.ok) {
+                pedido.appmax_sync_status = 'success';
+              } else {
+                pedido.appmax_sync_status = 'error';
                 appmaxError = 'Falha na comunicação com a Appmax';
               }
             }
           }
         } catch (appmaxErr) {
           console.error('[APPMAX-RASTREIO] Erro:', appmaxErr.message);
+          pedido.appmax_sync_status = 'error';
           appmaxError = 'Falha na comunicação com a Appmax';
         }
       }
 
+      if (pedido.appmax_sync_status) {
+        await pedido.save();
+      }
+
       const pedidoObj = typeof pedido.toObject === 'function' ? pedido.toObject() : pedido;
       return res.status(200).json({ ...pedidoObj, appmax_error: appmaxError });
+    }
+
+    // === RETRY SYNC APPMAX ===
+    if (action === 'sync-appmax') {
+      if (!pedido.rastreio) return res.status(400).json({ error: 'Pedido não possui código de rastreio' });
+      if (!pedido.pagamento?.appmax_order_id) return res.status(400).json({ error: 'Pedido não possui ID Appmax' });
+
+      let syncError = null;
+      try {
+        const lojaDoc = await Loja.findById(pedido.loja_id).lean();
+        const lojistaDoc = lojaDoc ? await Lojista.findById(lojaDoc.lojista_id).lean() : null;
+        if (!lojistaDoc || lojistaDoc.gateway_ativo !== 'appmax') {
+          return res.status(400).json({ error: 'Gateway Appmax não está ativo' });
+        }
+        const appmaxConfig = lojistaDoc.gateways_config?.appmax;
+        const token = appmaxConfig?.access_token;
+        const apiUrl = appmaxConfig?.apiUrl || 'https://api.appmax.com.br';
+        if (!token) return res.status(400).json({ error: 'Token Appmax não configurado' });
+
+        const appmaxRes = await fetch(`${apiUrl}/v1/orders/shipping-tracking-code`, {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'access-token': token,
+          },
+          body: JSON.stringify({
+            order_id: Number(pedido.pagamento.appmax_order_id),
+            shipping_tracking_code: pedido.rastreio,
+          }),
+        });
+        console.log('[APPMAX-RETRY] Status:', appmaxRes.status, '| Order:', pedido.pagamento.appmax_order_id);
+
+        if (appmaxRes.ok) {
+          pedido.appmax_sync_status = 'success';
+          await pedido.save();
+          return res.status(200).json({ success: true, pedido });
+        } else {
+          syncError = `Appmax retornou status ${appmaxRes.status}`;
+        }
+      } catch (err) {
+        console.error('[APPMAX-RETRY] Erro:', err.message);
+        syncError = err.message;
+      }
+
+      pedido.appmax_sync_status = 'error';
+      await pedido.save();
+      return res.status(400).json({ error: syncError || 'Falha na Appmax' });
     }
 
     if (action === 'observacao') {

@@ -14,7 +14,7 @@ import PedidoResumoCard from './PedidoResumoCard';
 import PedidoPagamentoCard from './PedidoPagamentoCard';
 import PedidoLogisticaCard from './PedidoLogisticaCard';
 
-import { usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta } from '@/hooks/usePedidos';
+import { usePedido, useAddRastreio, useAddObservacao, useAlterarStatus, useGerarEtiqueta, useCancelarEtiqueta, useSyncAppmax } from '@/hooks/usePedidos';
 import { lojaPublicaApi } from '@/services/saas-api';
 import type { Pedido, Loja } from '@/services/saas-api';
 
@@ -57,6 +57,7 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
   const alterarStatus = useAlterarStatus();
   const gerarEtiqueta = useGerarEtiqueta();
   const cancelarEtiqueta = useCancelarEtiqueta();
+  const syncAppmax = useSyncAppmax();
 
   const [rastreioInput, setRastreioInput] = useState('');
   const [transportadoraInput, setTransportadoraInput] = useState('Correios');
@@ -226,6 +227,8 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
                     onCancelarEtiqueta={handleCancelarEtiqueta}
                     gerarLoading={gerarEtiqueta.isPending}
                     cancelarLoading={cancelarEtiqueta.isPending}
+                    onSyncAppmax={() => pedido._id && syncAppmax.mutate(pedido._id)}
+                    syncAppmaxLoading={syncAppmax.isPending}
                   />
 
                   {/* Observações Internas */}
