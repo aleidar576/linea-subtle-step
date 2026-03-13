@@ -78,6 +78,7 @@ const LojaProduto = () => {
   const [globalTimeLeft, setGlobalTimeLeft] = useState<{ h: number; m: number; s: number } | null>(null);
   const [variationError, setVariationError] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // Thumbnail auto-scroll refs
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
