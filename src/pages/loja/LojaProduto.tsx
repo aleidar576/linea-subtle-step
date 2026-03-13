@@ -58,7 +58,7 @@ const LojaProduto = () => {
   const { data: product, isLoading } = useLojaPublicaProduct(lojaId, productSlug);
   const { data: fretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allProducts = [] } = useLojaPublicaProducts(lojaId);
-  const { addToCart, totalItems } = useCart();
+  const { addToCart, totalItems, items } = useCart();
   const navigate = useNavigate();
 
   const [currentImage, setCurrentImage] = useState(0);
