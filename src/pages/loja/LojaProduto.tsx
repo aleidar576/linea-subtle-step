@@ -1022,6 +1022,26 @@ const LojaProduto = () => {
             </div>
           </DrawerContent>
         </Drawer>
+
+        <AlertDialog open={showQuoteModal} onOpenChange={setShowQuoteModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Adicionar ao seu orçamento atual?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você já tem outros itens separados. Deseja enviar todos eles juntos
+                para o nosso WhatsApp ou orçar apenas este produto?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={executeSingleQuote}>
+                Apenas este produto
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={executeCombinedQuote}>
+                Enviar todos juntos
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
