@@ -55,6 +55,7 @@ interface LojaContextType {
   installmentConfig: { max_installments: number; free_installments: number; interest_rate_pp: number } | null;
   categoriaConfig: CategoriaConfig | null;
   menuPrincipal: MenuItemConfig[];
+  modoOrcamento: boolean;
   isLoading: boolean;
   notFound: boolean;
 }
