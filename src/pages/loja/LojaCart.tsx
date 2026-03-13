@@ -30,7 +30,7 @@ const LojaCart = () => {
   const lojaCtx = useLoja();
 
   useEffect(() => {
-    const parts = ['Carrinho', lojaCtx.nomeExibicao];
+    const parts = [lojaCtx.modoOrcamento ? 'Orçamento' : 'Carrinho', lojaCtx.nomeExibicao];
     if (lojaCtx.slogan) parts.push(lojaCtx.slogan);
     document.title = parts.join(' · ');
   }, [lojaCtx.nomeExibicao, lojaCtx.slogan]);
@@ -93,7 +93,7 @@ const LojaCart = () => {
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-secondary">
           <ShoppingBag className="h-10 w-10 text-muted-foreground" />
         </div>
-        <h1 className="mt-6 text-xl font-bold text-foreground">Seu carrinho está vazio</h1>
+        <h1 className="mt-6 text-xl font-bold text-foreground">{lojaCtx.modoOrcamento ? 'Seu orçamento está vazio' : 'Seu carrinho está vazio'}</h1>
         <p className="mt-2 text-sm text-muted-foreground">Adicione produtos para continuar</p>
         <Button asChild className="mt-6 rounded-full"><Link to="/">Ver Produtos</Link></Button>
       </div>
@@ -115,7 +115,7 @@ const LojaCart = () => {
       )}
 
       <div className="container py-6 lg:py-10">
-        <h1 className="text-xl font-bold text-foreground sm:text-2xl">Seu Carrinho ({items.length} {items.length === 1 ? 'item' : 'itens'})</h1>
+        <h1 className="text-xl font-bold text-foreground sm:text-2xl">{lojaCtx.modoOrcamento ? 'Seu Orçamento' : 'Seu Carrinho'} ({items.length} {items.length === 1 ? 'item' : 'itens'})</h1>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-3">
@@ -216,7 +216,7 @@ const LojaCart = () => {
               )}
             </div>
 
-            <h2 className="text-lg font-bold text-foreground">Resumo do Pedido</h2>
+            <h2 className="text-lg font-bold text-foreground">{lojaCtx.modoOrcamento ? 'Resumo do Orçamento' : 'Resumo do Pedido'}</h2>
             <div className="space-y-2 border-b border-border pb-4">
               {items.map(item => (
                 <div key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}`} className="flex justify-between text-sm">

@@ -251,7 +251,7 @@ const LojaProduto = () => {
     if (!validateVariations()) return;
     for (let i = 0; i < quantity; i++) addToCart(cartProduct as any, selectedSize, selectedColor);
     firePixelEvent('AddToCart', { content_id: product.product_id, content_name: product.name, value: (product.price * quantity) / 100, currency: 'BRL', num_items: quantity });
-    toast.success('Adicionado ao carrinho!');
+    toast.success(modoOrcamento ? 'Adicionado ao orçamento!' : 'Adicionado ao carrinho!');
   };
 
   const handleBuyNow = () => {
@@ -558,7 +558,7 @@ const LojaProduto = () => {
               )}
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1 gap-2 rounded-full" onClick={handleAddToCart}>
-                  <ShoppingCart className="h-4 w-4" /> Adicionar ao carrinho
+                  <ShoppingCart className="h-4 w-4" /> {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
                 </Button>
                 {modoOrcamento ? (
                   <Button
@@ -871,7 +871,7 @@ const LojaProduto = () => {
               </button>
             )}
             <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center">
-              Adicionar ao carrinho
+              {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
             </button>
             <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
               {modoOrcamento ? (
@@ -961,7 +961,7 @@ const LojaProduto = () => {
 
               <div className="flex gap-2 pt-2">
                 <button onClick={() => { if (!validateVariations()) return; handleAddToCart(); setDrawerOpen(false); }} className="flex-1 bg-secondary text-foreground font-semibold rounded-full py-3 text-sm text-center">
-                  Adicionar ao carrinho
+                  {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
                 </button>
                 <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
                   {modoOrcamento ? (
