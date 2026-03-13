@@ -37,6 +37,8 @@ interface Props {
   onCancelarEtiqueta: () => void;
   gerarLoading: boolean;
   cancelarLoading: boolean;
+  onSyncAppmax?: () => void;
+  syncAppmaxLoading?: boolean;
 }
 
 export default function PedidoLogisticaCard({
@@ -54,6 +56,8 @@ export default function PedidoLogisticaCard({
   onCancelarEtiqueta,
   gerarLoading,
   cancelarLoading,
+  onSyncAppmax,
+  syncAppmaxLoading,
 }: Props) {
   const trackingUrl = rastreioInput.trim()
     ? getTrackingUrl(transportadoraInput, rastreioInput.trim(), rastreioUrlInput.trim() || undefined)
