@@ -940,8 +940,10 @@ const LojaProdutos = () => {
         data.images = [...new Set(currentImages)];
         if (!data.image && data.images.length > 0) data.image = data.images[0];
       }
-      // Strip codigo_interno from imported data (never import it)
+      // Strip fields that must never be imported
       delete data.codigo_interno;
+      delete data.videos;
+      delete data.video_layout;
 
       // Unify image + images: ensure main image is always in the gallery
       const imagesFromJson = Array.isArray(data.images) ? data.images : [];
