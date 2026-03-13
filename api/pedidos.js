@@ -20,6 +20,7 @@ const Pedido = require('../models/Pedido.js');
 const CarrinhoAbandonado = require('../models/CarrinhoAbandonado.js');
 const Cliente = require('../models/Cliente.js');
 const Loja = require('../models/Loja.js');
+const Lojista = require('../models/Lojista.js');
 const authPkg = require('../lib/auth.js');
 const { sendEmail, getBranding, emailRastreioHtml } = require('../lib/email.js');
 
@@ -234,7 +235,43 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      return res.status(200).json(pedido);
+      // === SYNC RASTREIO → APPMAX (liberação de saldo) ===
+      let appmaxError = null;
+      if (pedido.pagamento?.appmax_order_id) {
+        try {
+          const lojaDoc = await Loja.findById(pedido.loja_id).lean();
+          const lojistaDoc = lojaDoc ? await Lojista.findById(lojaDoc.lojista_id).lean() : null;
+          if (lojistaDoc?.gateway_ativo === 'appmax') {
+            const appmaxConfig = lojistaDoc.gateways_config?.appmax;
+            const token = appmaxConfig?.access_token;
+            const apiUrl = appmaxConfig?.apiUrl || 'https://api.appmax.com.br';
+            if (token) {
+              const appmaxRes = await fetch(`${apiUrl}/v1/orders/shipping-tracking-code`, {
+                method: 'POST',
+                headers: {
+                  'accept': 'application/json',
+                  'content-type': 'application/json',
+                  'access-token': token,
+                },
+                body: JSON.stringify({
+                  order_id: Number(pedido.pagamento.appmax_order_id),
+                  shipping_tracking_code: codigo,
+                }),
+              });
+              console.log('[APPMAX-RASTREIO] Status:', appmaxRes.status, '| Order:', pedido.pagamento.appmax_order_id);
+              if (!appmaxRes.ok) {
+                appmaxError = 'Falha na comunicação com a Appmax';
+              }
+            }
+          }
+        } catch (appmaxErr) {
+          console.error('[APPMAX-RASTREIO] Erro:', appmaxErr.message);
+          appmaxError = 'Falha na comunicação com a Appmax';
+        }
+      }
+
+      const pedidoObj = typeof pedido.toObject === 'function' ? pedido.toObject() : pedido;
+      return res.status(200).json({ ...pedidoObj, appmax_error: appmaxError });
     }
 
     if (action === 'observacao') {
