@@ -55,6 +55,7 @@ const LojaConfiguracoes = () => {
           configuracoes: {
             exigir_cadastro_cliente: exigirCadastro,
             modo_orcamento: modoOrcamento,
+            whatsapp_orcamento: whatsappOrcamento,
           },
         } as any,
       });
