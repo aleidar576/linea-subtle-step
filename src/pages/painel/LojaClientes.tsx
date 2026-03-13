@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { useClientes, useUpdateCliente } from '@/hooks/useClientes';
 import { Users, Download, Search, Mail, Edit2, Plus, UserPlus } from 'lucide-react';
