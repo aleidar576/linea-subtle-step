@@ -981,6 +981,8 @@ REGRAS CRÍTICAS DE IMAGEM: Analise as URLs das imagens no HTML. Você deve extr
 
 REGRAS CRITICAS DE TEXTO: Não traga nenhum código, nem quebra de linha, nem /n, apenas preencha os conteúdos em texto, números ou links, e nunca preencha o SKU.
 
+NUNCA inclua campos de vídeo (videos, video_layout, playback_id, asset_id) no JSON. Vídeos são gerenciados exclusivamente pelo painel.
+
 Retorne APENAS o código JSON válido, sem formatações markdown em volta, pronto para ser parseado.
 
 Nunca use aspas dupla dentro de títulos, textos e categorias, as aspas duplas são exclusivas da formatação json
