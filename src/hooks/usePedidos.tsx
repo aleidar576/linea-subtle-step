@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { pedidosApi, carrinhosApi } from '@/services/saas-api';
+import { toast } from 'sonner';
 
 export function usePedidos(lojaId: string | undefined, filters?: { status?: string; search?: string; page?: number; per_page?: number }) {
   return useQuery({
