@@ -305,6 +305,7 @@ const PainelLayout = () => {
         {(() => {
           const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
           const activeLojaId = lojaMatch ? lojaMatch[1] : null;
+          if (!activeLojaId) return null;
           return (
             <div className="mb-4">
               <GlobalSearch lojaId={activeLojaId} />
