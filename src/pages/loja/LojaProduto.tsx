@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Check, Clock, Flame, ChevronLeft, ChevronRight, ShieldCheck, Minus, Plus, Share2, Home, MessageCircle, X, Maximize2, ChevronDown } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
+import { generateProductQuoteLink } from '@/lib/utils';
 import { calculateAppmaxInstallments } from '@/utils/installments';
 import { useLojaPublicaProduct, useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';
 import { useCart } from '@/contexts/CartContext';
