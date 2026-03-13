@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Flame, Shield, Truck, ShieldCheck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Ticket, ChevronDown, Tag, Loader2 } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Flame, Shield, Truck, ShieldCheck, CreditCard, Zap, Star, Heart, Lock, Award, CheckCircle, ThumbsUp, Clock, Package, Ticket, ChevronDown, Tag, Loader2, MessageCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useLoja } from '@/contexts/LojaContext';
 import { cuponsApi } from '@/services/saas-api';
 import { toast } from 'sonner';
+import { generateCartQuoteLink } from '@/lib/utils';
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -234,7 +235,25 @@ const LojaCart = () => {
                 <span className="text-2xl font-bold text-primary">{formatPrice(totalPrice)}</span>
               </div>
             </div>
-            <Button asChild size="lg" className="w-full gap-2 rounded-full font-bold"><Link to="/checkout">Finalizar Compra <ArrowRight className="h-4 w-4" /></Link></Button>
+            {lojaCtx.modoOrcamento ? (
+              <Button
+                size="lg"
+                className="w-full gap-2 rounded-full font-bold flex items-center justify-center"
+                onClick={() => {
+                  const cartItems = items.map(item => ({
+                    name: item.product.name,
+                    quantity: item.quantity,
+                    variation: [item.selectedSize, item.selectedColor].filter(Boolean).join(' / ') || undefined,
+                  }));
+                  window.open(generateCartQuoteLink(lojaCtx.whatsappNumero, cartItems), '_blank');
+                }}
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span className="text-sm sm:text-base">Solicitar Orçamento</span>
+              </Button>
+            ) : (
+              <Button asChild size="lg" className="w-full gap-2 rounded-full font-bold"><Link to="/checkout">Finalizar Compra <ArrowRight className="h-4 w-4" /></Link></Button>
+            )}
             <Link to="/" className="block text-center text-sm text-muted-foreground hover:text-primary">Continuar comprando</Link>
 
             {notaInferior.texto && (

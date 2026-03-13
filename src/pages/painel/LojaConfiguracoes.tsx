@@ -6,7 +6,7 @@ import { platformApi, lojasApi } from '@/services/saas-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle } from 'lucide-react';
+import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle, MessageCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const LojaConfiguracoes = () => {
@@ -18,6 +18,7 @@ const LojaConfiguracoes = () => {
   const { toast } = useToast();
 
   const [exigirCadastro, setExigirCadastro] = useState(false);
+  const [modoOrcamento, setModoOrcamento] = useState(false);
   const [dominioCustomizado, setDominioCustomizado] = useState('');
   const [saving, setSaving] = useState(false);
   const [platformDomain, setPlatformDomain] = useState('');
@@ -30,12 +31,16 @@ const LojaConfiguracoes = () => {
   useEffect(() => {
     if (!loja) return;
     setExigirCadastro(loja.configuracoes?.exigir_cadastro_cliente ?? false);
+    setModoOrcamento(loja.configuracoes?.modo_orcamento ?? false);
     setDominioCustomizado(loja.dominio_customizado || '');
   }, [loja]);
 
   const hasActiveSubscription = !!user?.subscription_status && ['trialing', 'active'].includes(user.subscription_status);
   const canAccessDomains = hasActiveSubscription || user?.modo_amigo || user?.liberar_visualizacao_subdominio;
   const canEditCustomDomain = hasActiveSubscription || user?.modo_amigo;
+
+  const whatsappNumero = loja?.configuracoes?.whatsapp_numero || '';
+  const hasWhatsapp = !!whatsappNumero.trim();
 
   const handleSave = async () => {
     if (!id) return;
@@ -47,6 +52,7 @@ const LojaConfiguracoes = () => {
           dominio_customizado: dominioCustomizado || null,
           configuracoes: {
             exigir_cadastro_cliente: exigirCadastro,
+            modo_orcamento: modoOrcamento,
           },
         } as any,
       });
@@ -108,6 +114,29 @@ const LojaConfiguracoes = () => {
               <p className="text-xs text-muted-foreground">Se desativado, um perfil oculto censurado será criado.</p>
             </div>
             <Switch checked={exigirCadastro} onCheckedChange={setExigirCadastro} />
+          </div>
+        </div>
+
+        {/* Card Modo Orçamento */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <h2 className="font-semibold flex items-center gap-2"><MessageCircle className="h-5 w-5" /> Modo Orçamento</h2>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Ativar Modo Orçamento</p>
+              <p className="text-xs text-muted-foreground">
+                Substitui o botão de compra por um redirecionamento para o WhatsApp da loja. Requer um número de WhatsApp cadastrado.
+              </p>
+              {!hasWhatsapp && (
+                <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
+                  <AlertTriangle className="h-3 w-3 shrink-0" /> Cadastre o WhatsApp no Perfil da Loja primeiro.
+                </p>
+              )}
+            </div>
+            <Switch
+              checked={modoOrcamento}
+              onCheckedChange={setModoOrcamento}
+              disabled={!hasWhatsapp}
+            />
           </div>
         </div>
 

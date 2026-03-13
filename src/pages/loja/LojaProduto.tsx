@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Check, Clock, Flame, ChevronLeft, ChevronRight, ShieldCheck, Minus, Plus, Share2, Home, MessageCircle, X, Maximize2, ChevronDown } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
+import { generateProductQuoteLink } from '@/lib/utils';
 import { calculateAppmaxInstallments } from '@/utils/installments';
 import { useLojaPublicaProduct, useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';
 import { useCart } from '@/contexts/CartContext';
@@ -52,7 +53,7 @@ const BlockDivider = () => <div className="border-b-8 border-muted/40" />;
 
 const LojaProduto = () => {
   const { productSlug } = useParams<{ productSlug: string }>();
-  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig } = useLoja();
+  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig, modoOrcamento, whatsappNumero } = useLoja();
   const { data: product, isLoading } = useLojaPublicaProduct(lojaId, productSlug);
   const { data: fretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allProducts = [] } = useLojaPublicaProducts(lojaId);
@@ -559,9 +560,22 @@ const LojaProduto = () => {
                 <Button variant="outline" className="flex-1 gap-2 rounded-full" onClick={handleAddToCart}>
                   <ShoppingCart className="h-4 w-4" /> Adicionar ao carrinho
                 </Button>
-                <Button className="flex-1 gap-2 rounded-full font-bold" onClick={handleBuyNow}>
-                  Comprar Agora
-                </Button>
+                {modoOrcamento ? (
+                  <Button
+                    className="flex-1 gap-2 rounded-full font-bold"
+                    onClick={() => {
+                      if (!validateVariations()) return;
+                      const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+                      window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank');
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4" /> Orçar agora
+                  </Button>
+                ) : (
+                  <Button className="flex-1 gap-2 rounded-full font-bold" onClick={handleBuyNow}>
+                    Comprar Agora
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -859,19 +873,28 @@ const LojaProduto = () => {
             <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center">
               Adicionar ao carrinho
             </button>
-            <button onClick={() => hasVariations ? openDrawer('buy') : handleBuyNow()} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex flex-col items-center justify-center leading-tight">
-              <span className="text-sm">Comprar agora</span>
-              {(() => {
-                const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
-                if (!btnCfg.ativo) return null;
-                if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
-                if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
-                  const opts = calculateAppmaxInstallments(product.price, installmentConfig);
-                  const last = opts[opts.length - 1];
-                  if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
-                }
-                return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
-              })()}
+            <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
+              {modoOrcamento ? (
+                <>
+                  <MessageCircle className="h-4 w-4 shrink-0" />
+                  <span className="text-sm">Orçar agora</span>
+                </>
+              ) : (
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-sm">Comprar agora</span>
+                  {(() => {
+                    const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
+                    if (!btnCfg.ativo) return null;
+                    if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
+                    if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
+                      const opts = calculateAppmaxInstallments(product.price, installmentConfig);
+                      const last = opts[opts.length - 1];
+                      if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
+                    }
+                    return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
+                  })()}
+                </span>
+              )}
             </button>
           </div>
 
@@ -940,19 +963,28 @@ const LojaProduto = () => {
                 <button onClick={() => { if (!validateVariations()) return; handleAddToCart(); setDrawerOpen(false); }} className="flex-1 bg-secondary text-foreground font-semibold rounded-full py-3 text-sm text-center">
                   Adicionar ao carrinho
                 </button>
-                <button onClick={() => { if (!validateVariations()) return; handleBuyNow(); setDrawerOpen(false); }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex flex-col items-center leading-tight">
-                  <span className="text-sm">Comprar agora</span>
-                  {(() => {
-                    const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
-                    if (!btnCfg.ativo) return null;
-                    if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
-                    if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
-                      const opts = calculateAppmaxInstallments(product.price, installmentConfig);
-                      const last = opts[opts.length - 1];
-                      if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
-                    }
-                    return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
-                  })()}
+                <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank'); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
+                  {modoOrcamento ? (
+                    <>
+                      <MessageCircle className="h-4 w-4 shrink-0" />
+                      <span className="text-sm">Orçar agora</span>
+                    </>
+                  ) : (
+                    <span className="flex flex-col items-center leading-tight">
+                      <span className="text-sm">Comprar agora</span>
+                      {(() => {
+                        const btnCfg = product.config_botao_comprar || { ativo: true, tipo_texto: 'preco' };
+                        if (!btnCfg.ativo) return null;
+                        if (btnCfg.tipo_texto === 'frete_gratis') return <span className="text-xs opacity-80">Frete Grátis</span>;
+                        if (btnCfg.tipo_texto === 'parcelas' && installmentConfig) {
+                          const opts = calculateAppmaxInstallments(product.price, installmentConfig);
+                          const last = opts[opts.length - 1];
+                          if (last && last.installment > 1) return <span className="text-xs opacity-80">{last.installment}x de {formatPrice(last.installmentPrice)}</span>;
+                        }
+                        return <span className="text-xs opacity-80">{formatPrice(product.price)}</span>;
+                      })()}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

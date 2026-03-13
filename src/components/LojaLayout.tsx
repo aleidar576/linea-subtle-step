@@ -919,6 +919,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     installmentConfig,
     categoriaConfig: config.categoria_config || null,
     menuPrincipal: config.menu_principal || [],
+    modoOrcamento: config.modo_orcamento ?? false,
     isLoading: false,
     notFound: false,
   };
