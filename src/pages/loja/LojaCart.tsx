@@ -115,7 +115,7 @@ const LojaCart = () => {
       )}
 
       <div className="container py-6 lg:py-10">
-        <h1 className="text-xl font-bold text-foreground sm:text-2xl">Seu Carrinho ({items.length} {items.length === 1 ? 'item' : 'itens'})</h1>
+        <h1 className="text-xl font-bold text-foreground sm:text-2xl">{lojaCtx.modoOrcamento ? 'Seu Orçamento' : 'Seu Carrinho'} ({items.length} {items.length === 1 ? 'item' : 'itens'})</h1>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-3">
