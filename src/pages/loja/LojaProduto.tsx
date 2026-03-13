@@ -560,9 +560,22 @@ const LojaProduto = () => {
                 <Button variant="outline" className="flex-1 gap-2 rounded-full" onClick={handleAddToCart}>
                   <ShoppingCart className="h-4 w-4" /> Adicionar ao carrinho
                 </Button>
-                <Button className="flex-1 gap-2 rounded-full font-bold" onClick={handleBuyNow}>
-                  Comprar Agora
-                </Button>
+                {modoOrcamento ? (
+                  <Button
+                    className="flex-1 gap-2 rounded-full font-bold"
+                    onClick={() => {
+                      if (!validateVariations()) return;
+                      const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+                      window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank');
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4" /> Orçar agora
+                  </Button>
+                ) : (
+                  <Button className="flex-1 gap-2 rounded-full font-bold" onClick={handleBuyNow}>
+                    Comprar Agora
+                  </Button>
+                )}
               </div>
             </div>
 
