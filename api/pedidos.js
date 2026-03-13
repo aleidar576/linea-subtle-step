@@ -2,6 +2,19 @@
 // 📦 /api/pedidos - Core: Checkout + Gestão de Pedidos
 // ============================================
 
+// Helper: Smart tracking URL por transportadora
+function getTrackingUrl(transportadora, codigo, customUrl) {
+  const map = {
+    'Correios': `https://rastreamento.correios.com.br/app/index.php?codigo=${codigo}`,
+    'Jadlog': `https://www.jadlog.com.br/tracking?cte=${codigo}`,
+    'Loggi': `https://www.loggi.com/rastreador/?tracking=${codigo}`,
+    'Total Express': `https://tracking.totalexpress.com.br/tracking/0?documento=${codigo}`,
+    'Azul Cargo': `https://www.azulcargoexpress.com.br/Rastreio/Rastreio?awb=${codigo}`,
+  };
+  if (transportadora === 'Outra') return customUrl || null;
+  return map[transportadora] || map['Correios'];
+}
+
 const connectDB = require('../lib/mongodb.js');
 const Pedido = require('../models/Pedido.js');
 const CarrinhoAbandonado = require('../models/CarrinhoAbandonado.js');
