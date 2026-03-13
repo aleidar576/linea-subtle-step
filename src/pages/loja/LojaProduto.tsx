@@ -558,7 +558,7 @@ const LojaProduto = () => {
               )}
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1 gap-2 rounded-full" onClick={handleAddToCart}>
-                  <ShoppingCart className="h-4 w-4" /> Adicionar ao carrinho
+                  <ShoppingCart className="h-4 w-4" /> {modoOrcamento ? 'Adicionar ao orçamento' : 'Adicionar ao carrinho'}
                 </Button>
                 {modoOrcamento ? (
                   <Button
