@@ -20,6 +20,7 @@ const Pedido = require('../models/Pedido.js');
 const CarrinhoAbandonado = require('../models/CarrinhoAbandonado.js');
 const Cliente = require('../models/Cliente.js');
 const Loja = require('../models/Loja.js');
+const Lojista = require('../models/Lojista.js');
 const authPkg = require('../lib/auth.js');
 const { sendEmail, getBranding, emailRastreioHtml } = require('../lib/email.js');
 
