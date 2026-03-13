@@ -19,6 +19,7 @@ const LojaConfiguracoes = () => {
 
   const [exigirCadastro, setExigirCadastro] = useState(false);
   const [modoOrcamento, setModoOrcamento] = useState(false);
+  const [whatsappOrcamento, setWhatsappOrcamento] = useState('');
   const [dominioCustomizado, setDominioCustomizado] = useState('');
   const [saving, setSaving] = useState(false);
   const [platformDomain, setPlatformDomain] = useState('');
