@@ -213,8 +213,6 @@ function jsonExample(): Partial<LojaProduct> {
     protecao_cliente: { ativo: false, itens: [] },
     pessoas_vendo: { ativo: false, min: 10, max: 50 },
     cross_sell: { modo: 'aleatorio', categoria_manual_id: null },
-    videos: [],
-    video_layout: 'auto',
     dimensoes: { peso: 0, altura: 0, largura: 0, comprimento: 0 },
   };
 }
@@ -942,8 +940,10 @@ const LojaProdutos = () => {
         data.images = [...new Set(currentImages)];
         if (!data.image && data.images.length > 0) data.image = data.images[0];
       }
-      // Strip codigo_interno from imported data (never import it)
+      // Strip fields that must never be imported
       delete data.codigo_interno;
+      delete data.videos;
+      delete data.video_layout;
 
       // Unify image + images: ensure main image is always in the gallery
       const imagesFromJson = Array.isArray(data.images) ? data.images : [];
@@ -980,6 +980,8 @@ const LojaProdutos = () => {
 REGRAS CRÍTICAS DE IMAGEM: Analise as URLs das imagens no HTML. Você deve extrair APENAS as imagens de MAIOR resolução. Ignore thumbnails ou ícones (ex: remova parâmetros como '-150x150' ou 'width=100' das URLs se necessário para pegar a imagem original).
 
 REGRAS CRITICAS DE TEXTO: Não traga nenhum código, nem quebra de linha, nem /n, apenas preencha os conteúdos em texto, números ou links, e nunca preencha o SKU.
+
+NUNCA inclua campos de vídeo (videos, video_layout, playback_id, asset_id) no JSON. Vídeos são gerenciados exclusivamente pelo painel.
 
 Retorne APENAS o código JSON válido, sem formatações markdown em volta, pronto para ser parseado.
 
