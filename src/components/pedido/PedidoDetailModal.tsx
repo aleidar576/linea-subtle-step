@@ -95,7 +95,13 @@ export default function PedidoDetailModal({ pedidoId, loja, onClose }: Props) {
       transportadora: transportadoraInput,
       rastreio_url: transportadoraInput === 'Outra' ? rastreioUrlInput.trim() || undefined : undefined,
     }, {
-      onSuccess: () => toast.success('Rastreio salvo e cliente notificado!'),
+      onSuccess: (data: any) => {
+        if (data?.appmax_error) {
+          toast.warning('Rastreio salvo e email enviado! ⚠️ Porém, houve falha ao avisar a Appmax.');
+        } else {
+          toast.success('Rastreio salvo e cliente notificado!');
+        }
+      },
       onError: (e: any) => toast.error(e.message),
     });
   };
