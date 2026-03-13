@@ -245,7 +245,7 @@ const LojaCart = () => {
                     quantity: item.quantity,
                     variation: [item.selectedSize, item.selectedColor].filter(Boolean).join(' / ') || undefined,
                   }));
-                  window.open(generateCartQuoteLink(lojaCtx.whatsappNumero, cartItems), '_blank');
+                  window.open(generateCartQuoteLink(lojaCtx.whatsappOrcamento, cartItems), '_blank');
                 }}
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
