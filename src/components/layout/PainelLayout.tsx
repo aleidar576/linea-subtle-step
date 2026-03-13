@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
 import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
 import { ContentTransition } from '@/components/PageTransition';
+import GlobalSearch from '@/components/layout/GlobalSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
