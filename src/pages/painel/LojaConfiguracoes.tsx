@@ -136,11 +136,21 @@ const LojaConfiguracoes = () => {
           </div>
           {modoOrcamento && (
             <div>
-              <label className="text-sm font-medium mb-1 block">WhatsApp para Orçamentos</label>
+              <label className="text-sm font-medium mb-1 block">WhatsApp para Orçamentos (DDD + Número)</label>
               <Input
                 value={whatsappOrcamento}
-                onChange={e => setWhatsappOrcamento(e.target.value)}
-                placeholder="5511999999999"
+                onChange={e => {
+                  const raw = e.target.value.replace(/\D/g, '').slice(0, 11);
+                  let formatted = raw;
+                  if (raw.length > 2) {
+                    formatted = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+                  }
+                  if (raw.length > 7) {
+                    formatted = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+                  }
+                  setWhatsappOrcamento(formatted);
+                }}
+                placeholder="(11) 99999-9999"
                 className="max-w-xs"
               />
               <p className="text-xs text-muted-foreground mt-1">
