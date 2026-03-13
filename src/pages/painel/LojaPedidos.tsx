@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useLoja } from '@/hooks/useLojas';
 import { usePedidos, useCarrinhosAbandonados } from '@/hooks/usePedidos';
 import { platformApi } from '@/services/saas-api';
