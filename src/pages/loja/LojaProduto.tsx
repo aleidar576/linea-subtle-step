@@ -53,7 +53,7 @@ const BlockDivider = () => <div className="border-b-8 border-muted/40" />;
 
 const LojaProduto = () => {
   const { productSlug } = useParams<{ productSlug: string }>();
-  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig, modoOrcamento, whatsappNumero } = useLoja();
+  const { lojaId, nomeExibicao, chatbotEnabled, slogan, gatewayAtivo, installmentConfig, modoOrcamento, whatsappOrcamento } = useLoja();
   const { data: product, isLoading } = useLojaPublicaProduct(lojaId, productSlug);
   const { data: fretes = [] } = useLojaPublicaFretes(lojaId);
   const { data: allProducts = [] } = useLojaPublicaProducts(lojaId);
@@ -566,7 +566,7 @@ const LojaProduto = () => {
                     onClick={() => {
                       if (!validateVariations()) return;
                       const variation = [selectedSize, selectedColor].filter(Boolean).join(' / ');
-                      window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank');
+                      window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank');
                     }}
                   >
                     <MessageCircle className="h-4 w-4" /> Orçar agora
@@ -873,7 +873,7 @@ const LojaProduto = () => {
             <button onClick={handleCartAction} className="flex-1 bg-secondary text-foreground font-semibold rounded-full h-10 text-sm text-center">
               Adicionar ao carrinho
             </button>
-            <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
+            <button onClick={() => hasVariations ? openDrawer('buy') : (modoOrcamento ? (() => { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); })() : handleBuyNow())} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full h-10 flex items-center justify-center gap-2 leading-tight">
               {modoOrcamento ? (
                 <>
                   <MessageCircle className="h-4 w-4 shrink-0" />
@@ -963,7 +963,7 @@ const LojaProduto = () => {
                 <button onClick={() => { if (!validateVariations()) return; handleAddToCart(); setDrawerOpen(false); }} className="flex-1 bg-secondary text-foreground font-semibold rounded-full py-3 text-sm text-center">
                   Adicionar ao carrinho
                 </button>
-                <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappNumero, product.name, quantity, variation), '_blank'); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
+                <button onClick={() => { if (!validateVariations()) return; if (modoOrcamento) { const variation = [selectedSize, selectedColor].filter(Boolean).join(' / '); window.open(generateProductQuoteLink(whatsappOrcamento, product.name, quantity, variation), '_blank'); setDrawerOpen(false); } else { handleBuyNow(); setDrawerOpen(false); } }} className="flex-1 bg-primary text-primary-foreground font-bold rounded-full py-2 flex items-center justify-center gap-2 leading-tight">
                   {modoOrcamento ? (
                     <>
                       <MessageCircle className="h-4 w-4 shrink-0" />

@@ -56,6 +56,7 @@ interface LojaContextType {
   categoriaConfig: CategoriaConfig | null;
   menuPrincipal: MenuItemConfig[];
   modoOrcamento: boolean;
+  whatsappOrcamento: string;
   isLoading: boolean;
   notFound: boolean;
 }

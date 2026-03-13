@@ -920,6 +920,7 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     categoriaConfig: config.categoria_config || null,
     menuPrincipal: config.menu_principal || [],
     modoOrcamento: config.modo_orcamento ?? false,
+    whatsappOrcamento: config.whatsapp_orcamento || '',
     isLoading: false,
     notFound: false,
   };
