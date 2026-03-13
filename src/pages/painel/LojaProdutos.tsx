@@ -303,6 +303,21 @@ const LojaProdutos = () => {
 
   const categories = (catData as any)?.categories || catData || [];
 
+  // Open product editor from URL query param (GlobalSearch integration)
+  useEffect(() => {
+    const produtoParam = prodSearchParams.get('produto');
+    if (produtoParam && products && Array.isArray(products)) {
+      const found = products.find((p: LojaProduct) => p._id === produtoParam);
+      if (found) {
+        setEditingProduct(found);
+        setMode('editor');
+        setActiveTab('basico');
+      }
+      // Clean URL to prevent re-opening on refresh
+      setProdSearchParams({}, { replace: true });
+    }
+  }, [prodSearchParams, products, setProdSearchParams]);
+
   // Load fretes da loja
   const { data: fretesLoja = [] } = useFretes(id);
 
