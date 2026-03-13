@@ -41,8 +41,7 @@ const LojaConfiguracoes = () => {
   const canAccessDomains = hasActiveSubscription || user?.modo_amigo || user?.liberar_visualizacao_subdominio;
   const canEditCustomDomain = hasActiveSubscription || user?.modo_amigo;
 
-  const whatsappNumero = loja?.configuracoes?.whatsapp_numero || '';
-  const hasWhatsapp = !!whatsappNumero.trim();
+  const hasWhatsappOrcamento = !!whatsappOrcamento.trim();
 
   const handleSave = async () => {
     if (!id) return;
