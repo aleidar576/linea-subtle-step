@@ -165,9 +165,25 @@ module.exports = async function handler(req, res) {
     );
 
     // Sync category_id from remaining category_ids (where category_id is now null but array has items)
-    await Product.updateMany(
+    const orphaned = await Product.find(
       { category_id: null, 'category_ids.0': { $exists: true } },
-      [{ $set: { category_id: { $arrayElemAt: ['$category_ids', 0] } } }]
+      { _id: 1, category_ids: 1 }
+    ).lean();
+
+    if (orphaned.length > 0) {
+      const bulkOps = orphaned.map(p => ({
+        updateOne: {
+          filter: { _id: p._id },
+          update: { $set: { category_id: p.category_ids[0] } },
+        },
+      }));
+      await Product.bulkWrite(bulkOps);
+    }
+
+    // Remove category from store menus
+    await Loja.updateMany(
+      { _id: cat.loja_id },
+      { $pull: { 'configuracoes.menu_principal': { ref: catStr } } }
     );
 
     // Move subcategories to uncategorized
