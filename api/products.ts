@@ -166,7 +166,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!lojista) return res.status(401).json({ error: 'Não autorizado' });
         const loja = await Loja.findOne({ _id: loja_id, lojista_id: lojista.lojista_id });
         if (!loja) return res.status(403).json({ error: 'Loja não pertence a este lojista' });
-        const products = await Product.find({ loja_id }).sort({ sort_order: 1 }).lean();
+        const { limit: limitParam } = req.query as Record<string, string | undefined>;
+        const limitNum = limitParam ? Math.min(Number(limitParam) || 0, 200) : 0;
+        const query = Product.find({ loja_id }).sort({ sort_order: 1 });
+        if (limitNum > 0) query.limit(limitNum);
+        const products = await query.lean();
         return res.status(200).json(products);
       }
 

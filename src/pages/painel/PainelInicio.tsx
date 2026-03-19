@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useLojas } from '@/hooks/useLojas';
 import { Store, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -10,10 +10,12 @@ const PainelInicio = () => {
   const hasLojas = activeLojas.length > 0;
   const hasDomain = activeLojas.some(l => l.dominio_customizado);
 
-  const [hasProduto, setHasProduto] = useState(false);
-  const [hasGateway, setHasGateway] = useState(false);
-  const [hasVenda, setHasVenda] = useState(false);
-  const [hasDadosPessoais, setHasDadosPessoais] = useState(false);
+  const [checkResults, setCheckResults] = useState({
+    produto: false,
+    gateway: false,
+    dadosPessoais: false,
+    venda: false,
+  });
   const [checked, setChecked] = useState(false);
   const navigate = useNavigate();
 
@@ -22,27 +24,22 @@ const PainelInicio = () => {
 
     const checkAll = async () => {
       try {
-        // Check products
-        const productsPromises = activeLojas.map(l => lojaProductsApi.list(l._id).catch(() => []));
-        const allProducts = await Promise.all(productsPromises);
-        setHasProduto(allProducts.some(p => p.length > 0));
+        const [allProducts, profile, allPedidos] = await Promise.all([
+          Promise.all(activeLojas.map(l =>
+            lojaProductsApi.list(l._id, { limit: 1 }).catch(() => [])
+          )),
+          lojistaApi.perfil().catch(() => null),
+          Promise.all(activeLojas.map(l =>
+            pedidosApi.list(l._id, { status: 'pago', per_page: 1 }).catch(() => ({ pedidos: [], total: 0 }))
+          )),
+        ]);
 
-        // Check gateway (from lojista profile)
-        try {
-          const profile = await lojistaApi.perfil();
-          setHasGateway(!!profile.gateway_ativo);
-          setHasDadosPessoais(!!(profile.cpf_cnpj && profile.telefone));
-        } catch {
-          setHasGateway(false);
-          setHasDadosPessoais(false);
-        }
-
-        // Check paid orders
-        const pedidosPromises = activeLojas.map(l =>
-          pedidosApi.list(l._id, { status: 'pago', per_page: 1 }).catch(() => ({ pedidos: [], total: 0 }))
-        );
-        const allPedidos = await Promise.all(pedidosPromises);
-        setHasVenda(allPedidos.some(r => r.total > 0));
+        setCheckResults({
+          produto: allProducts.some(p => p.length > 0),
+          gateway: !!(profile as any)?.gateway_ativo,
+          dadosPessoais: !!((profile as any)?.cpf_cnpj && (profile as any)?.telefone),
+          venda: allPedidos.some(r => r.total > 0),
+        });
       } catch { /* ignore */ }
       setChecked(true);
     };
@@ -51,11 +48,11 @@ const PainelInicio = () => {
 
   const checklist = [
     { label: 'Crie a sua primeira loja', done: hasLojas },
-    { label: 'Complete o seu cadastro', done: hasDadosPessoais, link: '/painel/perfil' },
+    { label: 'Complete o seu cadastro', done: checkResults.dadosPessoais, link: '/painel/perfil' },
     { label: 'Configure um domínio', done: hasDomain },
-    { label: 'Cadastre o seu primeiro produto', done: hasProduto },
-    { label: 'Configure um gateway de pagamento', done: hasGateway, link: activeLojas[0] ? `/painel/loja/${activeLojas[0]._id}/gateways` : undefined },
-    { label: 'Faça a sua primeira venda paga!', done: hasVenda },
+    { label: 'Cadastre o seu primeiro produto', done: checkResults.produto },
+    { label: 'Configure um gateway de pagamento', done: checkResults.gateway, link: activeLojas[0] ? `/painel/loja/${activeLojas[0]._id}/gateways` : undefined },
+    { label: 'Faça a sua primeira venda paga!', done: checkResults.venda },
   ];
 
   if (isLoading || !checked) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
