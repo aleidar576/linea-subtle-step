@@ -105,6 +105,10 @@ const AdminPlanos = () => {
   const removeVantagem = (i: number) => setForm(f => ({ ...f, vantagens: f.vantagens.filter((_, idx) => idx !== i) }));
   const updateVantagem = (i: number, v: string) => setForm(f => ({ ...f, vantagens: f.vantagens.map((item, idx) => idx === i ? v : item) }));
 
+  const addLimitacao = () => setForm(f => ({ ...f, limitacoes: [...f.limitacoes, ''] }));
+  const removeLimitacao = (i: number) => setForm(f => ({ ...f, limitacoes: f.limitacoes.filter((_, idx) => idx !== i) }));
+  const updateLimitacao = (i: number, v: string) => setForm(f => ({ ...f, limitacoes: f.limitacoes.map((item, idx) => idx === i ? v : item) }));
+
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
