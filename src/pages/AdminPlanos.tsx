@@ -4,29 +4,15 @@ import { adminsApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, Sparkles, X, FolderPlus, GripVertical } from 'lucide-react';
-import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
-} from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { CSS } from '@dnd-kit/utilities';
-
-interface TopicoItem { titulo: string; descricao: string; }
-interface Topico { nome: string; itens: TopicoItem[]; }
+import { Loader2, Plus, Pencil, Trash2, Sparkles, X } from 'lucide-react';
 
 interface PlanoForm {
   nome: string;
@@ -37,9 +23,8 @@ interface PlanoForm {
   taxa_transacao_trial: number;
   taxa_transacao_fixa: number;
   stripe_price_id: string;
-  topicos: Topico[];
-  limitacoes: string[];
-  destaques: string[];
+  vantagens: string[];
+  desvantagens: string[];
   destaque: boolean;
   ordem: number;
 }
@@ -47,21 +32,7 @@ interface PlanoForm {
 const emptyForm: PlanoForm = {
   nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
-  stripe_price_id: '', topicos: [], limitacoes: [], destaques: [], destaque: false, ordem: 0,
-};
-
-// --- Sortable wrapper for topics ---
-const SortableTopicCard = ({ id, children }: { id: string; children: (handleProps: ReturnType<typeof useSortable>) => React.ReactNode }) => {
-  const sortable = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
-  return <div ref={sortable.setNodeRef} style={style}>{children(sortable)}</div>;
-};
-
-// --- Sortable wrapper for items ---
-const SortableItemRow = ({ id, children }: { id: string; children: (handleProps: ReturnType<typeof useSortable>) => React.ReactNode }) => {
-  const sortable = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
-  return <div ref={sortable.setNodeRef} style={style}>{children(sortable)}</div>;
+  stripe_price_id: '', vantagens: [], desvantagens: [], destaque: false, ordem: 0,
 };
 
 const AdminPlanos = () => {
@@ -74,24 +45,16 @@ const AdminPlanos = () => {
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor),
-  );
-
   const openCreate = () => { setForm(emptyForm); setEditId(null); setShowForm(true); };
   const openEdit = (p: any) => {
-    const topicos = (p.topicos && p.topicos.length > 0)
-      ? p.topicos
-      : (p.vantagens && p.vantagens.length > 0)
-        ? [{ nome: 'Recursos Principais', itens: p.vantagens.map((v: string) => ({ titulo: v, descricao: '' })) }]
-        : [];
     setForm({
       nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
-      stripe_price_id: p.stripe_price_id, topicos, limitacoes: p.limitacoes || [],
-      destaques: p.destaques || [], destaque: p.destaque, ordem: p.ordem,
+      stripe_price_id: p.stripe_price_id,
+      vantagens: p.vantagens || [],
+      desvantagens: p.desvantagens || [],
+      destaque: p.destaque, ordem: p.ordem,
     });
     setEditId(p._id);
     setShowForm(true);
@@ -140,54 +103,15 @@ const AdminPlanos = () => {
     } finally { setSeeding(false); }
   };
 
-  // --- Tópicos helpers ---
-  const addTopico = () => setForm(f => ({ ...f, topicos: [...f.topicos, { nome: '', itens: [] }] }));
-  const removeTopico = (ti: number) => setForm(f => ({ ...f, topicos: f.topicos.filter((_, idx) => idx !== ti) }));
-  const updateTopicoNome = (ti: number, nome: string) =>
-    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, nome } : t) }));
-  const addItem = (ti: number) =>
-    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: [...t.itens, { titulo: '', descricao: '' }] } : t) }));
-  const removeItem = (ti: number, ii: number) =>
-    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: t.itens.filter((_, j) => j !== ii) } : t) }));
-  const updateItem = (ti: number, ii: number, field: 'titulo' | 'descricao', value: string) =>
-    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: t.itens.map((item, j) => j === ii ? { ...item, [field]: value } : item) } : t) }));
-
-  // --- Limitações helpers ---
-  const addLimitacao = () => setForm(f => ({ ...f, limitacoes: [...f.limitacoes, ''] }));
-  const removeLimitacao = (i: number) => setForm(f => ({ ...f, limitacoes: f.limitacoes.filter((_, idx) => idx !== i) }));
-  const updateLimitacao = (i: number, v: string) => setForm(f => ({ ...f, limitacoes: f.limitacoes.map((item, idx) => idx === i ? v : item) }));
-
-  // --- Destaques helpers ---
-  const addDestaque = () => setForm(f => ({ ...f, destaques: [...f.destaques, ''] }));
-  const removeDestaque = (i: number) => setForm(f => ({ ...f, destaques: f.destaques.filter((_, idx) => idx !== i) }));
-  const updateDestaque = (i: number, v: string) => setForm(f => ({ ...f, destaques: f.destaques.map((item, idx) => idx === i ? v : item) }));
-
-  // --- DnD handlers ---
-  const handleTopicDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setForm(f => {
-      const oldIdx = f.topicos.findIndex((_, i) => `topico-${i}` === active.id);
-      const newIdx = f.topicos.findIndex((_, i) => `topico-${i}` === over.id);
-      return { ...f, topicos: arrayMove(f.topicos, oldIdx, newIdx) };
-    });
-  };
-
-  const handleItemDragEnd = (ti: number) => (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setForm(f => {
-      const topico = f.topicos[ti];
-      const oldIdx = topico.itens.findIndex((_, i) => `item-${ti}-${i}` === active.id);
-      const newIdx = topico.itens.findIndex((_, i) => `item-${ti}-${i}` === over.id);
-      const newItens = arrayMove(topico.itens, oldIdx, newIdx);
-      return { ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: newItens } : t) };
-    });
-  };
+  // --- List helpers ---
+  const addToList = (field: 'vantagens' | 'desvantagens') =>
+    setForm(f => ({ ...f, [field]: [...f[field], ''] }));
+  const removeFromList = (field: 'vantagens' | 'desvantagens', i: number) =>
+    setForm(f => ({ ...f, [field]: f[field].filter((_, idx) => idx !== i) }));
+  const updateList = (field: 'vantagens' | 'desvantagens', i: number, v: string) =>
+    setForm(f => ({ ...f, [field]: f[field].map((item, idx) => idx === i ? v : item) }));
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-
-  const topicoIds = form.topicos.map((_, i) => `topico-${i}`);
 
   return (
     <div>
@@ -215,13 +139,10 @@ const AdminPlanos = () => {
                 <TableHead>Preço Original</TableHead>
                 <TableHead>Preço Promocional</TableHead>
                 <TableHead>Taxa %</TableHead>
-                <TableHead>Taxa Trial %</TableHead>
-                <TableHead>Taxa Fixa</TableHead>
                 <TableHead>Stripe Price ID</TableHead>
                 <TableHead>Destaque</TableHead>
-                <TableHead>Tópicos</TableHead>
-                <TableHead>Destaques</TableHead>
-                <TableHead>Limitações</TableHead>
+                <TableHead>Vantagens</TableHead>
+                <TableHead>Desvantagens</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -232,13 +153,10 @@ const AdminPlanos = () => {
                   <TableCell>R$ {(p.preco_original || 0).toFixed(2)}</TableCell>
                   <TableCell>R$ {(p.preco_promocional || 0).toFixed(2)}</TableCell>
                   <TableCell>{p.taxa_transacao_percentual ?? p.taxa_transacao}%</TableCell>
-                  <TableCell>{p.taxa_transacao_trial ?? 2.0}%</TableCell>
-                  <TableCell>R$ {(p.taxa_transacao_fixa || 0).toFixed(2)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
-                  <TableCell>{(p.topicos || []).length}</TableCell>
-                  <TableCell>{(p.destaques || []).length}</TableCell>
-                  <TableCell>{(p.limitacoes || []).length}</TableCell>
+                  <TableCell>{(p.vantagens || []).length}</TableCell>
+                  <TableCell>{(p.desvantagens || []).length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
@@ -254,7 +172,7 @@ const AdminPlanos = () => {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editId ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
           </DialogHeader>
@@ -302,127 +220,34 @@ const AdminPlanos = () => {
               <Switch checked={form.destaque} onCheckedChange={v => setForm(f => ({ ...f, destaque: v }))} />
             </div>
 
-            {/* Limites e Destaques (Chips) */}
+            {/* Vantagens */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-semibold">Limites e Destaques (Chips)</Label>
-                <Button variant="outline" size="sm" onClick={addDestaque} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
+                <Label className="text-base font-semibold">Vantagens (Check Verde)</Label>
+                <Button variant="outline" size="sm" onClick={() => addToList('vantagens')} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
               </div>
-              <p className="text-xs text-muted-foreground mb-2">Exibidos como badges no topo do card público (ex: "1 Loja", "500 Produtos", "3 Pixels").</p>
+              <p className="text-xs text-muted-foreground mb-2">Use **texto** para negrito. Ex: **500** Produtos</p>
               <div className="space-y-2">
-                {form.destaques.map((v, i) => (
+                {form.vantagens.map((v, i) => (
                   <div key={i} className="flex gap-2">
-                    <Input value={v} onChange={e => updateDestaque(i, e.target.value)} placeholder={`Destaque ${i + 1}`} />
-                    <Button variant="ghost" size="icon" onClick={() => removeDestaque(i)}><X className="h-4 w-4" /></Button>
+                    <Input value={v} onChange={e => updateList('vantagens', i, e.target.value)} placeholder={`Vantagem ${i + 1}`} />
+                    <Button variant="ghost" size="icon" onClick={() => removeFromList('vantagens', i)}><X className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Tópicos de Recursos com DnD */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-base font-semibold">Tópicos de Recursos</Label>
-                <Button variant="outline" size="sm" onClick={addTopico} className="gap-1 text-xs">
-                  <FolderPlus className="h-3 w-3" /> Adicionar Novo Tópico
-                </Button>
-              </div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTopicDragEnd} modifiers={[restrictToVerticalAxis]}>
-                <SortableContext items={topicoIds} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-4">
-                    {form.topicos.map((topico, ti) => {
-                      const itemIds = topico.itens.map((_, ii) => `item-${ti}-${ii}`);
-                      return (
-                        <SortableTopicCard key={`topico-${ti}`} id={`topico-${ti}`}>
-                          {(sortable) => (
-                            <Card className="border-border">
-                              <CardContent className="p-4 space-y-3">
-                                <div className="flex gap-2 items-center">
-                                  <button
-                                    type="button"
-                                    className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-                                    {...sortable.attributes}
-                                    {...sortable.listeners}
-                                  >
-                                    <GripVertical className="h-5 w-5" />
-                                  </button>
-                                  <Input
-                                    value={topico.nome}
-                                    onChange={e => updateTopicoNome(ti, e.target.value)}
-                                    placeholder="Nome do Tópico (ex: Marketing & Conversão)"
-                                    className="font-medium"
-                                  />
-                                  <Button variant="ghost" size="icon" onClick={() => removeTopico(ti)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd(ti)} modifiers={[restrictToVerticalAxis]}>
-                                  <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-                                    <div className="space-y-3 pl-2 border-l-2 border-muted ml-1">
-                                      {topico.itens.map((item, ii) => (
-                                        <SortableItemRow key={`item-${ti}-${ii}`} id={`item-${ti}-${ii}`}>
-                                          {(itemSortable) => (
-                                            <div className="space-y-1">
-                                              <div className="flex gap-2 items-center">
-                                                <button
-                                                  type="button"
-                                                  className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-                                                  {...itemSortable.attributes}
-                                                  {...itemSortable.listeners}
-                                                >
-                                                  <GripVertical className="h-4 w-4" />
-                                                </button>
-                                                <Input
-                                                  value={item.titulo}
-                                                  onChange={e => updateItem(ti, ii, 'titulo', e.target.value)}
-                                                  placeholder="Título do recurso"
-                                                  className="text-sm"
-                                                />
-                                                <Button variant="ghost" size="icon" onClick={() => removeItem(ti, ii)}>
-                                                  <X className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                              <Textarea
-                                                value={item.descricao}
-                                                onChange={e => updateItem(ti, ii, 'descricao', e.target.value)}
-                                                placeholder="Descrição detalhada do recurso..."
-                                                className="text-sm min-h-[60px] ml-6"
-                                              />
-                                            </div>
-                                          )}
-                                        </SortableItemRow>
-                                      ))}
-                                    </div>
-                                  </SortableContext>
-                                </DndContext>
-                                <Button variant="outline" size="sm" onClick={() => addItem(ti)} className="gap-1 text-xs w-full">
-                                  <Plus className="h-3 w-3" /> Adicionar Item
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </SortableTopicCard>
-                      );
-                    })}
-                    {form.topicos.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum tópico adicionado.</p>
-                    )}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
-
-            {/* Limitações */}
+            {/* Desvantagens */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label>Limitações do Plano (Recursos NÃO inclusos)</Label>
-                <Button variant="outline" size="sm" onClick={addLimitacao} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar Limitação</Button>
+                <Label className="text-base font-semibold">Desvantagens (X Vermelho)</Label>
+                <Button variant="outline" size="sm" onClick={() => addToList('desvantagens')} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
               </div>
               <div className="space-y-2">
-                {form.limitacoes.map((v, i) => (
+                {form.desvantagens.map((v, i) => (
                   <div key={i} className="flex gap-2">
-                    <Input value={v} onChange={e => updateLimitacao(i, e.target.value)} placeholder={`Limitação ${i + 1}`} />
-                    <Button variant="ghost" size="icon" onClick={() => removeLimitacao(i)}><X className="h-4 w-4" /></Button>
+                    <Input value={v} onChange={e => updateList('desvantagens', i, e.target.value)} placeholder={`Desvantagem ${i + 1}`} />
+                    <Button variant="ghost" size="icon" onClick={() => removeFromList('desvantagens', i)}><X className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>

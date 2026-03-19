@@ -679,16 +679,6 @@ export const lojistaApi = {
 
 // === Planos API ===
 
-export interface PlanoTopicoItem {
-  titulo: string;
-  descricao: string;
-}
-
-export interface PlanoTopico {
-  nome: string;
-  itens: PlanoTopicoItem[];
-}
-
 export interface Plano {
   _id: string;
   nome: string;
@@ -699,10 +689,8 @@ export interface Plano {
   taxa_transacao_trial: number;
   taxa_transacao_fixa: number;
   stripe_price_id: string;
-  topicos: PlanoTopico[];
-  limitacoes: string[];
-  destaques: string[];
-  vantagens?: string[];
+  vantagens: string[];
+  desvantagens: string[];
   destaque: boolean;
   ordem: number;
   is_active: boolean;

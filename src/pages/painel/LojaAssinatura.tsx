@@ -407,34 +407,25 @@ const LojaAssinatura = () => {
                 Começar 7 Dias Grátis
               </Button>
 
-              {/* ── LISTA FLAT DE VANTAGENS ── */}
-              {(() => {
-                const allFeatures: string[] = [
-                  ...(plano.destaques || []),
-                  ...((plano.topicos && plano.topicos.length > 0)
-                    ? plano.topicos.flatMap(t => t.itens.map(i => i.titulo))
-                    : (plano.vantagens || [])
-                  ),
-                ];
-                return allFeatures.length > 0 && (
-                  <ul className="space-y-4 flex-1">
-                    {allFeatures.map((feat, i) => (
-                      <li key={i} className="flex items-center gap-3 text-sm">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
-                        <span className="text-muted-foreground">{parseBold(feat)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
+              {/* ── VANTAGENS ── */}
+              {plano.vantagens && plano.vantagens.length > 0 && (
+                <ul className="space-y-4 flex-1">
+                  {plano.vantagens.map((feat, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
+                      <span className="text-muted-foreground">{parseBold(feat)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-              {/* ── LIMITAÇÕES ── */}
-              {plano.limitacoes && plano.limitacoes.length > 0 && (
+              {/* ── DESVANTAGENS ── */}
+              {plano.desvantagens && plano.desvantagens.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-border/30 space-y-3">
-                  {plano.limitacoes.map((lim, i) => (
+                  {plano.desvantagens.map((item, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
                       <XCircle className="h-5 w-5 text-destructive/60 shrink-0" />
-                      {parseBold(lim)}
+                      {parseBold(item)}
                     </div>
                   ))}
                 </div>
