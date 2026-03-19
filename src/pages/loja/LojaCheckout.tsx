@@ -193,14 +193,14 @@ const LojaCheckout = () => {
       if (p) {
         const cartProduct: import('@/data/products').Product = {
           id: p._id || p.product_id,
-          name: p.nome || p.name,
+          name: p.name,
           slug: p.slug || '',
-          description: p.descricao || p.description || '',
-          shortDescription: p.descricao_curta || p.shortDescription || '',
-          price: p.preco || p.price || 0,
-          originalPrice: p.preco_original || p.originalPrice,
-          image: p.imagens?.[0] || p.image || '',
-          images: p.imagens || p.images || [],
+          description: p.description || '',
+          shortDescription: p.short_description || '',
+          price: p.price || 0,
+          originalPrice: p.original_price || undefined,
+          image: p.images?.[0] || p.image || '',
+          images: p.images || [],
           features: [],
         };
         for (let i = 0; i < quantity; i++) {

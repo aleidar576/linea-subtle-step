@@ -9,7 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useLoja } from '@/contexts/LojaContext';
 import { cuponsApi } from '@/services/saas-api';
 import { toast } from 'sonner';
-import { generateCartQuoteLink } from '@/lib/utils';
+import { generateCartQuoteLink } from '../../lib/utils';
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

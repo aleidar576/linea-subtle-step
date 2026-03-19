@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Check, Clock, Flame, ChevronLeft, ChevronRight, ShieldCheck, Minus, Plus, Share2, Home, MessageCircle, X, Maximize2, ChevronDown } from 'lucide-react';
 import { useLoja } from '@/contexts/LojaContext';
-import { generateProductQuoteLink, generateCartQuoteLink } from '@/lib/utils';
+import { generateProductQuoteLink, generateCartQuoteLink } from '../../lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { calculateAppmaxInstallments } from '@/utils/installments';
 import { useLojaPublicaProduct, useLojaPublicaFretes, useLojaPublicaProducts } from '@/hooks/useLojaPublica';

@@ -7,7 +7,7 @@ import { useEffect, useRef, useCallback, createContext, useContext, ReactNode } 
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { trackingPixelsApi } from '@/services/api';
-import { initPixel, fireEvent, type PixelInfo, type PixelEventData } from '@/lib/pixel-helpers';
+import { initPixel, fireEvent, type PixelInfo, type PixelEventData } from '../lib/pixel-helpers';
 
 // Whitelist of institutional routes where SaaS pixels are active
 const INSTITUTIONAL_ROUTES = ['/', '/registro', '/login', '/verificar-email', '/redefinir-senha', '/seguranca-confirmacao'];

@@ -136,6 +136,12 @@ export interface Loja {
   icone: string;
   dominio_customizado: string | null;
   dominio_verificado: boolean;
+  slogan?: string | null;
+  seo_config?: {
+    title?: string | null;
+    description?: string | null;
+    og_image_url?: string | null;
+  } | null;
   configuracoes: {
     exigir_cadastro_cliente: boolean;
     tema: string;
@@ -144,6 +150,8 @@ export interface Loja {
     custom_css?: string;
     footer?: FooterConfig | null;
     whatsapp_numero?: string;
+    modo_orcamento?: boolean;
+    whatsapp_orcamento?: string;
     cores_globais?: CoresGlobais | null;
     homepage_config?: HomepageConfig | null;
     produto_config?: ProdutoConfig | null;
@@ -291,7 +299,15 @@ export interface HomepageConfig {
     imagem_url?: string;
     comentarios: Array<{ nome: string; texto: string; nota: number; foto: boolean; foto_url?: string }>;
   };
-  tarja?: { cor_fundo: string; titulo: string; subtitulo: string; botao_ativo: boolean; botao_texto: string; botao_link: string };
+  tarja?: {
+    ativo?: boolean;
+    cor_fundo: string;
+    titulo: string;
+    subtitulo: string;
+    botao_ativo: boolean;
+    botao_texto: string;
+    botao_link: string;
+  };
   trust_badges?: Array<{ texto: string; icone: string }>;
   popup?: {
     ativo: boolean;
@@ -444,15 +460,24 @@ export interface LojaProduct {
   category_id: string | null;
   category_ids?: string[];
   name: string;
+  nome?: string;
   slug: string;
   sku?: string;
+  codigo_interno?: string | number;
   short_description: string;
+  shortDescription?: string;
+  descricao_curta?: string;
   description: string;
+  descricao?: string;
   description_image?: string | null;
   price: number;
+  preco?: number;
   original_price?: number | null;
+  originalPrice?: number | null;
+  preco_original?: number | null;
   image: string;
   images: string[];
+  imagens?: string[];
   features: string[];
   promotion?: string | null;
   sizes?: string[] | null;
@@ -783,6 +808,7 @@ export interface Pedido {
     installments: number;
     card_brand: string | null;
     last4: string | null;
+    total_with_interest?: number | null;
   } | null;
 }
 

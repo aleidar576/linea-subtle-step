@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, createContext, useContext, ReactNode } 
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { trackingPixelsApi, settingsApi } from '@/services/api';
-import { initPixel, fireEvent, type PixelInfo, type PixelEventData } from '@/lib/pixel-helpers';
+import { initPixel, fireEvent, type PixelInfo, type PixelEventData } from '../lib/pixel-helpers';
 
 // ============================================
 // 📊 TRACKING ENGINE - Lojista Pixels (storefront)
