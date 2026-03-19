@@ -254,7 +254,7 @@ const AdminPlanos = () => {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>{editId ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
           </DialogHeader>
