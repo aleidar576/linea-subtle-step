@@ -299,7 +299,15 @@ export interface HomepageConfig {
     imagem_url?: string;
     comentarios: Array<{ nome: string; texto: string; nota: number; foto: boolean; foto_url?: string }>;
   };
-  tarja?: { cor_fundo: string; titulo: string; subtitulo: string; botao_ativo: boolean; botao_texto: string; botao_link: string };
+  tarja?: {
+    ativo?: boolean;
+    cor_fundo: string;
+    titulo: string;
+    subtitulo: string;
+    botao_ativo: boolean;
+    botao_texto: string;
+    botao_link: string;
+  };
   trust_badges?: Array<{ texto: string; icone: string }>;
   popup?: {
     ativo: boolean;
