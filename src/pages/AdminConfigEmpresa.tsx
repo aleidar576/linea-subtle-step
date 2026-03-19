@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, Plus, Trash2, Paintbrush, RefreshCw, Globe, MessageCircle } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, Paintbrush, RefreshCw, Globe, MessageCircle, Search } from 'lucide-react';
 import { DynamicIcon } from '@/components/SaaSBrand';
 import { useQueryClient } from '@tanstack/react-query';
 import ImageUploader from '@/components/ImageUploader';
