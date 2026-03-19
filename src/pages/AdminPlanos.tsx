@@ -250,6 +250,23 @@ const AdminPlanos = () => {
               <Switch checked={form.destaque} onCheckedChange={v => setForm(f => ({ ...f, destaque: v }))} />
             </div>
 
+            {/* Limites e Destaques (Chips) */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-base font-semibold">Limites e Destaques (Chips)</Label>
+                <Button variant="outline" size="sm" onClick={addDestaque} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">Exibidos como badges no topo do card público (ex: "1 Loja", "500 Produtos", "3 Pixels").</p>
+              <div className="space-y-2">
+                {form.destaques.map((v, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input value={v} onChange={e => updateDestaque(i, e.target.value)} placeholder={`Destaque ${i + 1}`} />
+                    <Button variant="ghost" size="icon" onClick={() => removeDestaque(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Tópicos de Recursos */}
             <div>
               <div className="flex items-center justify-between mb-3">
