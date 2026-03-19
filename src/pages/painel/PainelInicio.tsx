@@ -186,7 +186,8 @@ const PainelInicio = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           )}
         </>
