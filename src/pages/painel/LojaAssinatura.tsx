@@ -4,19 +4,13 @@ import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, Refresh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const DESTAQUE_ICONS: Record<string, LucideIcon> = {
-  loja: Store, lojas: Store,
-  usuário: Users, usuario: Users, usuários: Users, usuarios: Users,
-  estoque: Package, produto: Package, produtos: Package,
-  pixel: Target, pixels: Target,
-};
-
-const getDestaqueIcon = (text: string): LucideIcon => {
-  const lower = text.toLowerCase();
-  for (const [key, Icon] of Object.entries(DESTAQUE_ICONS)) {
-    if (lower.includes(key)) return Icon;
-  }
-  return CheckCircle2;
+const parseBold = (text: string) => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i} className="font-bold text-foreground">{part.slice(2, -2)}</strong>
+      : part
+  );
 };
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
