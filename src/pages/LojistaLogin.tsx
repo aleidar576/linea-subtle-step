@@ -75,6 +75,7 @@ const LojistaLogin = () => {
     setTwoFARequired(false);
     setTempToken('');
     setOtpCode('');
+    setTwoFAAttempts(0);
   };
 
   return (
