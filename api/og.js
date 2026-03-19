@@ -5,7 +5,7 @@
 const connectDB = require('../lib/mongodb.js');
 const Loja = require('../models/Loja.js');
 
-const DEFAULT_OG_IMAGE = 'https://dusking.com.br/placeholder.svg';
+const DEFAULT_OG_IMAGE = 'https://dusking.com.br/og-default.png';
 const PLATFORM_NAME = 'Dusking';
 const PLATFORM_DESC = 'Plataforma de E-commerce';
 
