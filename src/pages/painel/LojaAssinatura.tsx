@@ -344,7 +344,7 @@ const LojaAssinatura = () => {
 
   // === PLANS SELECTION VIEW ===
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="text-center mb-10">
         <Crown className="h-10 w-10 text-primary mx-auto mb-3" />
         <h1 className="text-3xl font-bold mb-2">Escolha seu Plano</h1>
