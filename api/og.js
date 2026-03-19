@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
       const title = map.platform_seo_title || map.saas_name || PLATFORM_NAME;
       const description = map.platform_seo_description || map.saas_slogan || PLATFORM_DESC;
       const image = map.platform_seo_og_image || map.saas_logo_url || DEFAULT_OG_IMAGE;
-      const url = `https://${globalDomain}`;
+      const url = `https://${globalDomain}${path}`;
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
