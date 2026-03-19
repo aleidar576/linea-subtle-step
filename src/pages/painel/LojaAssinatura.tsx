@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 import { settingsApi } from '@/services/api';
@@ -378,7 +379,18 @@ const LojaAssinatura = () => {
                 </p>
               </div>
 
-              {/* Tópicos (novo formato) ou fallback para vantagens legado */}
+              {/* Destaques (Chips) */}
+              {plano.destaques && plano.destaques.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {plano.destaques.map((dest, i) => (
+                    <Badge key={i} variant="secondary" className="text-xs font-semibold px-3 py-1">
+                      {dest}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Tópicos (Accordion) com fallback para vantagens legado */}
               {(() => {
                 const topicos = (plano.topicos && plano.topicos.length > 0)
                   ? plano.topicos
@@ -386,18 +398,27 @@ const LojaAssinatura = () => {
                     ? [{ nome: 'Recursos Principais', itens: plano.vantagens.map(v => ({ titulo: v, descricao: '' })) }]
                     : [];
                 return topicos.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {topicos.map((topico, ti) => (
                       <div key={ti}>
-                        <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1.5">{topico.nome}</p>
-                        <ul className="space-y-1.5">
+                        <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">{topico.nome}</p>
+                        <Accordion type="single" collapsible className="w-full">
                           {topico.itens.map((item, ii) => (
-                            <li key={ii} className="flex items-start gap-2 text-sm">
-                              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                              <span>{item.titulo}</span>
-                            </li>
+                            <AccordionItem key={ii} value={`${ti}-${ii}`} className="border-b-0">
+                              <AccordionTrigger className="py-2 text-sm hover:no-underline gap-2">
+                                <span className="flex items-center gap-2 text-left">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                                  {item.titulo}
+                                </span>
+                              </AccordionTrigger>
+                              {item.descricao && (
+                                <AccordionContent className="text-xs text-muted-foreground pl-6">
+                                  {item.descricao}
+                                </AccordionContent>
+                              )}
+                            </AccordionItem>
                           ))}
-                        </ul>
+                        </Accordion>
                       </div>
                     ))}
                   </div>

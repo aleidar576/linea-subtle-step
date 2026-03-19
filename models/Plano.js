@@ -22,6 +22,7 @@ const PlanoSchema = new mongoose.Schema({
     }]
   }],
   limitacoes: { type: [String], default: [] },
+  destaques: { type: [String], default: [] },
   destaque: { type: Boolean, default: false },
   ordem: { type: Number, default: 0 },
   is_active: { type: Boolean, default: true },

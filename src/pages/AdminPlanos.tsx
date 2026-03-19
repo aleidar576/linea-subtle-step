@@ -30,6 +30,7 @@ interface PlanoForm {
   stripe_price_id: string;
   topicos: Topico[];
   limitacoes: string[];
+  destaques: string[];
   destaque: boolean;
   ordem: number;
 }
@@ -37,7 +38,7 @@ interface PlanoForm {
 const emptyForm: PlanoForm = {
   nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
-  stripe_price_id: '', topicos: [], limitacoes: [], destaque: false, ordem: 0,
+  stripe_price_id: '', topicos: [], limitacoes: [], destaques: [], destaque: false, ordem: 0,
 };
 
 const AdminPlanos = () => {
@@ -63,7 +64,7 @@ const AdminPlanos = () => {
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
       stripe_price_id: p.stripe_price_id, topicos, limitacoes: p.limitacoes || [],
-      destaque: p.destaque, ordem: p.ordem,
+      destaques: p.destaques || [], destaque: p.destaque, ordem: p.ordem,
     });
     setEditId(p._id);
     setShowForm(true);
@@ -129,6 +130,11 @@ const AdminPlanos = () => {
   const removeLimitacao = (i: number) => setForm(f => ({ ...f, limitacoes: f.limitacoes.filter((_, idx) => idx !== i) }));
   const updateLimitacao = (i: number, v: string) => setForm(f => ({ ...f, limitacoes: f.limitacoes.map((item, idx) => idx === i ? v : item) }));
 
+  // --- Destaques helpers ---
+  const addDestaque = () => setForm(f => ({ ...f, destaques: [...f.destaques, ''] }));
+  const removeDestaque = (i: number) => setForm(f => ({ ...f, destaques: f.destaques.filter((_, idx) => idx !== i) }));
+  const updateDestaque = (i: number, v: string) => setForm(f => ({ ...f, destaques: f.destaques.map((item, idx) => idx === i ? v : item) }));
+
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
@@ -162,6 +168,7 @@ const AdminPlanos = () => {
                 <TableHead>Stripe Price ID</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead>Tópicos</TableHead>
+                <TableHead>Destaques</TableHead>
                 <TableHead>Limitações</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -178,6 +185,7 @@ const AdminPlanos = () => {
                   <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
                   <TableCell>{(p.topicos || []).length}</TableCell>
+                  <TableCell>{(p.destaques || []).length}</TableCell>
                   <TableCell>{(p.limitacoes || []).length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
@@ -240,6 +248,23 @@ const AdminPlanos = () => {
             <div className="flex items-center justify-between">
               <Label>Destaque (Recomendado)</Label>
               <Switch checked={form.destaque} onCheckedChange={v => setForm(f => ({ ...f, destaque: v }))} />
+            </div>
+
+            {/* Limites e Destaques (Chips) */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-base font-semibold">Limites e Destaques (Chips)</Label>
+                <Button variant="outline" size="sm" onClick={addDestaque} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">Exibidos como badges no topo do card público (ex: "1 Loja", "500 Produtos", "3 Pixels").</p>
+              <div className="space-y-2">
+                {form.destaques.map((v, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input value={v} onChange={e => updateDestaque(i, e.target.value)} placeholder={`Destaque ${i + 1}`} />
+                    <Button variant="ghost" size="icon" onClick={() => removeDestaque(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Tópicos de Recursos */}
