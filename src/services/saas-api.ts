@@ -689,7 +689,11 @@ export const stripeApi = {
 };
 
 export const lojaProductsApi = {
-  list: (lojaId: string) => request<LojaProduct[]>(`/products?loja_id=${lojaId}`),
+  list: (lojaId: string, opts?: { limit?: number }) => {
+    const params = new URLSearchParams({ loja_id: lojaId });
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    return request<LojaProduct[]>(`/products?${params.toString()}`);
+  },
   getById: (id: string) => request<LojaProduct>(`/products?id=${id}`),
   create: (data: Partial<LojaProduct>) => request<LojaProduct>('/products', {
     method: 'POST', body: JSON.stringify(data),
