@@ -808,6 +808,7 @@ export interface Pedido {
     installments: number;
     card_brand: string | null;
     last4: string | null;
+    total_with_interest?: number | null;
   } | null;
 }
 

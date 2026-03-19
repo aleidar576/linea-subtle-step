@@ -199,10 +199,22 @@ const LojaCategorias = () => {
     try {
       // Load ALL products from the store via authenticated API
       const { lojaProductsApi } = await import('@/services/saas-api');
-      const all: CatProduct[] = await lojaProductsApi.list(id);
+      const all = await lojaProductsApi.list(id);
+      const normalized: CatProduct[] = all
+        .filter((p): p is typeof p & { _id: string } => Boolean(p._id))
+        .map(p => ({
+          _id: p._id,
+          name: p.name,
+          image: p.image,
+          price: p.price,
+          sort_order: p.sort_order,
+          category_id: p.category_id,
+          category_ids: p.category_ids,
+          is_active: p.is_active,
+        }));
       // Filter out products already in this category
       const currentIds = new Set(catProducts.map(p => p._id));
-      const available = all.filter(p => !currentIds.has(p._id));
+      const available = normalized.filter(p => !currentIds.has(p._id));
       setAllProducts(available);
     } catch { setAllProducts([]); }
     finally { setLoadingAll(false); }
