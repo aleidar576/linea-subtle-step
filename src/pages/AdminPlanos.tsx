@@ -12,7 +12,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, Sparkles, X, GripVertical } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Sparkles, X, GripVertical, MessageCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
