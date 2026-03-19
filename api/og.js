@@ -15,6 +15,7 @@ module.exports = async function handler(req, res) {
   }
 
   const host = (req.query.host || req.headers['host'] || '').toLowerCase().replace(/:\d+$/, '');
+  const path = req.query.path || '/';
   if (!host) {
     return res.status(400).send('<!-- missing host -->');
   }
