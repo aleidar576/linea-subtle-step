@@ -26,6 +26,8 @@ const PainelInicio = () => {
   useEffect(() => {
     if (!activeLojas.length) { setChecked(true); return; }
 
+    setChecked(false);
+
     const checkAll = async () => {
       try {
         const [allProducts, profile, allPedidos] = await Promise.all([
