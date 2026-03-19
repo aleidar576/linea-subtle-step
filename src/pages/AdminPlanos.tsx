@@ -137,8 +137,8 @@ const AdminPlanos = () => {
   };
 
   const handleSave = async () => {
-    if (!form.nome || !form.stripe_price_id) {
-      toast({ title: 'Erro', description: 'Nome e Stripe Price ID são obrigatórios', variant: 'destructive' });
+    if (!form.nome || (!form.isSobMedida && !form.stripe_price_id)) {
+      toast({ title: 'Erro', description: 'Nome é obrigatório. Stripe Price ID é obrigatório para planos normais.', variant: 'destructive' });
       return;
     }
     setSaving(true);
