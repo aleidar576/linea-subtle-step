@@ -12,6 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, User, Lock, ShieldCheck, Copy, Check, Camera, Upload, Link as LinkIcon } from 'lucide-react';
 
+const formatCpfCnpj = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 11) {
+    if (digits.length > 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    if (digits.length > 6) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    if (digits.length > 3) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    return digits;
+  }
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+};
+
 const LojaPerfil = () => {
   const { user } = useLojistaAuth();
   const { data: lojas } = useLojas();
@@ -56,7 +67,7 @@ const LojaPerfil = () => {
         setProfile(p);
         setNome(p.nome);
         setTelefone(p.telefone || '');
-        setCpfCnpj(p.cpf_cnpj || '');
+        setCpfCnpj(formatCpfCnpj(p.cpf_cnpj || ''));
         setAvatarUrl(p.avatar_url || '');
         setTwoFAEnabled(p.two_factor_enabled || false);
       })
@@ -231,7 +242,7 @@ const LojaPerfil = () => {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div><label className="text-sm font-medium mb-1 block">Nome</label><Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required /></div>
               <div><label className="text-sm font-medium mb-1 block">Email</label><Input value={profile?.email || ''} readOnly className="bg-muted cursor-not-allowed" /><p className="text-xs text-muted-foreground mt-1">O email não pode ser alterado</p></div>
-              <div><label className="text-sm font-medium mb-1 block">CPF/CNPJ</label><Input value={cpfCnpj} onChange={e => setCpfCnpj(e.target.value)} placeholder="000.000.000-00" /></div>
+              <div><label className="text-sm font-medium mb-1 block">CPF/CNPJ</label><Input value={cpfCnpj} onChange={e => setCpfCnpj(formatCpfCnpj(e.target.value))} placeholder="000.000.000-00" /></div>
               <div><label className="text-sm font-medium mb-1 block">Celular (WhatsApp)</label><Input value={telefone} onChange={e => {
                 const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
                 let formatted = digits;
