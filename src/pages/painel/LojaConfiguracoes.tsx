@@ -40,6 +40,9 @@ const LojaConfiguracoes = () => {
     setModoOrcamento(loja.configuracoes?.modo_orcamento ?? false);
     setWhatsappOrcamento(loja.configuracoes?.whatsapp_orcamento || '');
     setDominioCustomizado(loja.dominio_customizado || '');
+    setSeoTitle(loja.seo_config?.title || '');
+    setSeoDescription(loja.seo_config?.description || '');
+    setSeoOgImage(loja.seo_config?.og_image_url || '');
   }, [loja]);
 
   const hasActiveSubscription = !!user?.subscription_status && ['trialing', 'active'].includes(user.subscription_status);
