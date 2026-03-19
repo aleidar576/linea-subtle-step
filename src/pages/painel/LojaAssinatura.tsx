@@ -419,6 +419,14 @@ const LojaAssinatura = () => {
                 Começar 7 Dias Grátis
               </Button>
 
+              {/* ── TEXTO DESTAQUE ── */}
+              {plano.textoDestaque && (
+                <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                  <CornerDownRight className="h-4 w-4 text-primary shrink-0" />
+                  <span>{parseAnchor(plano.textoDestaque)}</span>
+                </div>
+              )}
+
               {/* ── VANTAGENS ── */}
               {plano.vantagens && plano.vantagens.length > 0 && (
                 <ul className="space-y-4 flex-1">

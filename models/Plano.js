@@ -7,6 +7,8 @@ const { nowGMT3 } = require('../lib/date-utils.js');
 
 const PlanoSchema = new mongoose.Schema({
   nome: { type: String, required: true },
+  subtitulo: { type: String, default: '' },
+  textoDestaque: { type: String, default: '' },
   preco_original: { type: Number, default: 0 },
   preco_promocional: { type: Number, default: 0 },
   taxa_transacao: { type: Number, default: 2.0 },

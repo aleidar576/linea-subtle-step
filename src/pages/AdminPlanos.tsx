@@ -248,6 +248,15 @@ const AdminPlanos = () => {
               <Label>Nome</Label>
               <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Starter" />
             </div>
+            <div>
+              <Label>Subtítulo do Plano</Label>
+              <Input value={form.subtitulo} onChange={e => setForm(f => ({ ...f, subtitulo: e.target.value }))} placeholder="Ex: Ideal para profissionais..." />
+            </div>
+            <div>
+              <Label>Frase de Ancoragem</Label>
+              <Input value={form.textoDestaque} onChange={e => setForm(f => ({ ...f, textoDestaque: e.target.value }))} placeholder="Ex: Tudo do plano [[Starter]] mais:" />
+              <p className="text-xs text-muted-foreground mt-1">Use [[NomePlano]] para destacar em cor primária</p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Preço Original (R$)</Label>
