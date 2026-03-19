@@ -380,6 +380,9 @@ const LojaAssinatura = () => {
                   {plano.destaque && <Zap className="h-6 w-6 text-green-500" />}
                   {plano.nome}
                 </h2>
+                {plano.subtitulo && (
+                  <p className="text-sm text-muted-foreground mt-1">{plano.subtitulo}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Taxa de transação: {plano.taxa_transacao_percentual ?? plano.taxa_transacao}%
                   {(plano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${plano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
