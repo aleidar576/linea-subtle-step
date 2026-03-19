@@ -47,6 +47,9 @@ const AdminConfigEmpresa = () => {
     saas_logo_size_home: '40',
     saas_logo_size_login: '48',
     whatsapp_suporte: '',
+    platform_seo_title: '',
+    platform_seo_description: '',
+    platform_seo_og_image: '',
   });
   const queryClient = useQueryClient();
 
