@@ -56,8 +56,16 @@ const LojistaLogin = () => {
       await verifyLogin2FA(tempToken, otpCode);
       navigate('/painel');
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      const newAttempts = twoFAAttempts + 1;
+      setTwoFAAttempts(newAttempts);
       setOtpCode('');
+      if (newAttempts >= 3) {
+        toast({ title: 'Código incorreto', description: 'Limite de tentativas atingido. Faça login novamente.', variant: 'destructive' });
+        resetToLogin();
+      } else {
+        const remaining = 3 - newAttempts;
+        toast({ title: 'Código incorreto', description: `Código inválido. Você tem mais ${remaining} tentativa${remaining > 1 ? 's' : ''}.`, variant: 'destructive' });
+      }
     } finally {
       setLoading(false);
     }
