@@ -4,15 +4,20 @@ import { adminsApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, Sparkles, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Sparkles, X, FolderPlus } from 'lucide-react';
+
+interface TopicoItem { titulo: string; descricao: string; }
+interface Topico { nome: string; itens: TopicoItem[]; }
 
 interface PlanoForm {
   nome: string;
@@ -23,7 +28,7 @@ interface PlanoForm {
   taxa_transacao_trial: number;
   taxa_transacao_fixa: number;
   stripe_price_id: string;
-  vantagens: string[];
+  topicos: Topico[];
   limitacoes: string[];
   destaque: boolean;
   ordem: number;
@@ -32,7 +37,7 @@ interface PlanoForm {
 const emptyForm: PlanoForm = {
   nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
-  stripe_price_id: '', vantagens: [], limitacoes: [], destaque: false, ordem: 0,
+  stripe_price_id: '', topicos: [], limitacoes: [], destaque: false, ordem: 0,
 };
 
 const AdminPlanos = () => {
@@ -51,7 +56,7 @@ const AdminPlanos = () => {
       nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
-      stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], limitacoes: p.limitacoes || [],
+      stripe_price_id: p.stripe_price_id, topicos: p.topicos || [], limitacoes: p.limitacoes || [],
       destaque: p.destaque, ordem: p.ordem,
     });
     setEditId(p._id);
@@ -101,10 +106,19 @@ const AdminPlanos = () => {
     } finally { setSeeding(false); }
   };
 
-  const addVantagem = () => setForm(f => ({ ...f, vantagens: [...f.vantagens, ''] }));
-  const removeVantagem = (i: number) => setForm(f => ({ ...f, vantagens: f.vantagens.filter((_, idx) => idx !== i) }));
-  const updateVantagem = (i: number, v: string) => setForm(f => ({ ...f, vantagens: f.vantagens.map((item, idx) => idx === i ? v : item) }));
+  // --- Tópicos helpers ---
+  const addTopico = () => setForm(f => ({ ...f, topicos: [...f.topicos, { nome: '', itens: [] }] }));
+  const removeTopico = (ti: number) => setForm(f => ({ ...f, topicos: f.topicos.filter((_, idx) => idx !== ti) }));
+  const updateTopicoNome = (ti: number, nome: string) =>
+    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, nome } : t) }));
+  const addItem = (ti: number) =>
+    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: [...t.itens, { titulo: '', descricao: '' }] } : t) }));
+  const removeItem = (ti: number, ii: number) =>
+    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: t.itens.filter((_, j) => j !== ii) } : t) }));
+  const updateItem = (ti: number, ii: number, field: 'titulo' | 'descricao', value: string) =>
+    setForm(f => ({ ...f, topicos: f.topicos.map((t, idx) => idx === ti ? { ...t, itens: t.itens.map((item, j) => j === ii ? { ...item, [field]: value } : item) } : t) }));
 
+  // --- Limitações helpers ---
   const addLimitacao = () => setForm(f => ({ ...f, limitacoes: [...f.limitacoes, ''] }));
   const removeLimitacao = (i: number) => setForm(f => ({ ...f, limitacoes: f.limitacoes.filter((_, idx) => idx !== i) }));
   const updateLimitacao = (i: number, v: string) => setForm(f => ({ ...f, limitacoes: f.limitacoes.map((item, idx) => idx === i ? v : item) }));
@@ -141,7 +155,7 @@ const AdminPlanos = () => {
                 <TableHead>Taxa Fixa</TableHead>
                 <TableHead>Stripe Price ID</TableHead>
                 <TableHead>Destaque</TableHead>
-                <TableHead>Vantagens</TableHead>
+                <TableHead>Tópicos</TableHead>
                 <TableHead>Limitações</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -157,7 +171,7 @@ const AdminPlanos = () => {
                   <TableCell>R$ {(p.taxa_transacao_fixa || 0).toFixed(2)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
-                  <TableCell>{(p.vantagens || []).length}</TableCell>
+                  <TableCell>{(p.topicos || []).length}</TableCell>
                   <TableCell>{(p.limitacoes || []).length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
@@ -174,7 +188,7 @@ const AdminPlanos = () => {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editId ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
           </DialogHeader>
@@ -221,20 +235,66 @@ const AdminPlanos = () => {
               <Label>Destaque (Recomendado)</Label>
               <Switch checked={form.destaque} onCheckedChange={v => setForm(f => ({ ...f, destaque: v }))} />
             </div>
+
+            {/* Tópicos de Recursos */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Vantagens</Label>
-                <Button variant="outline" size="sm" onClick={addVantagem} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar Vantagem</Button>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-semibold">Tópicos de Recursos</Label>
+                <Button variant="outline" size="sm" onClick={addTopico} className="gap-1 text-xs">
+                  <FolderPlus className="h-3 w-3" /> Adicionar Novo Tópico
+                </Button>
               </div>
-              <div className="space-y-2">
-                {form.vantagens.map((v, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input value={v} onChange={e => updateVantagem(i, e.target.value)} placeholder={`Vantagem ${i + 1}`} />
-                    <Button variant="ghost" size="icon" onClick={() => removeVantagem(i)}><X className="h-4 w-4" /></Button>
-                  </div>
+              <div className="space-y-4">
+                {form.topicos.map((topico, ti) => (
+                  <Card key={ti} className="border-border">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          value={topico.nome}
+                          onChange={e => updateTopicoNome(ti, e.target.value)}
+                          placeholder="Nome do Tópico (ex: Marketing & Conversão)"
+                          className="font-medium"
+                        />
+                        <Button variant="ghost" size="icon" onClick={() => removeTopico(ti)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                      <div className="space-y-3 pl-2 border-l-2 border-muted ml-1">
+                        {topico.itens.map((item, ii) => (
+                          <div key={ii} className="space-y-1">
+                            <div className="flex gap-2 items-center">
+                              <Input
+                                value={item.titulo}
+                                onChange={e => updateItem(ti, ii, 'titulo', e.target.value)}
+                                placeholder="Título do recurso"
+                                className="text-sm"
+                              />
+                              <Button variant="ghost" size="icon" onClick={() => removeItem(ti, ii)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <Textarea
+                              value={item.descricao}
+                              onChange={e => updateItem(ti, ii, 'descricao', e.target.value)}
+                              placeholder="Descrição detalhada do recurso..."
+                              className="text-sm min-h-[60px]"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => addItem(ti)} className="gap-1 text-xs w-full">
+                        <Plus className="h-3 w-3" /> Adicionar Item
+                      </Button>
+                    </CardContent>
+                  </Card>
                 ))}
+                {form.topicos.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum tópico adicionado.</p>
+                )}
               </div>
             </div>
+
+            {/* Limitações */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Limitações do Plano (Recursos NÃO inclusos)</Label>
@@ -249,6 +309,7 @@ const AdminPlanos = () => {
                 ))}
               </div>
             </div>
+
             <Button onClick={handleSave} className="w-full" disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editId ? 'Salvar Alterações' : 'Criar Plano'}
