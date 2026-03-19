@@ -23,6 +23,9 @@ const LojaConfiguracoes = () => {
   const [modoOrcamento, setModoOrcamento] = useState(false);
   const [whatsappOrcamento, setWhatsappOrcamento] = useState('');
   const [dominioCustomizado, setDominioCustomizado] = useState('');
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [seoOgImage, setSeoOgImage] = useState('');
   const [saving, setSaving] = useState(false);
   const [platformDomain, setPlatformDomain] = useState('');
   const [isCheckingDomain, setIsCheckingDomain] = useState(false);
