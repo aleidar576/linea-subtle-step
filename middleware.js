@@ -12,15 +12,20 @@ export const config = {
 const BOT_UA_REGEX =
   /whatsapp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Discordbot|LinkedInBot|Slackbot|Googlebot|bingbot|Applebot|Pinterest|Embedly|Quora Link Preview|Showyoubot|outbrain|vkShare|W3C_Validator/i;
 
-export default function middleware(request) {
+export default async function middleware(request) {
   const userAgent = request.headers.get('user-agent') || '';
   const url = new URL(request.url);
 
-  // Only rewrite for bots on non-API routes
   if (BOT_UA_REGEX.test(userAgent)) {
     const host = request.headers.get('host') || url.host;
-    const ogUrl = new URL(`/api/og?host=${encodeURIComponent(host)}&path=${encodeURIComponent(url.pathname)}`, request.url);
-    return Response.redirect(ogUrl.toString(), 307);
+    const ogUrl = new URL(
+      `/api/og?host=${encodeURIComponent(host)}&path=${encodeURIComponent(url.pathname)}`,
+      request.url
+    );
+    // Rewrite: fetch internally, return response transparently (no 307 redirect)
+    return fetch(ogUrl.toString(), {
+      headers: request.headers,
+    });
   }
 
   // Human traffic — pass through

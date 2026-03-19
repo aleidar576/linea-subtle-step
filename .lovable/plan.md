@@ -1,61 +1,86 @@
+# Plano de Evolução — PANDORA SaaS
 
+## Strangler Fig — Decomposição do Monólito ✅ COMPLETA
 
-# Fix OG: SVG Fallback + 307 Redirect Leak
+O monólito `api/loja-extras.js` (408+ linhas) foi completamente decomposto em 6 microsserviços especializados usando o padrão **Strangler Fig**. O arquivo original foi deletado.
 
-## Two Problems
+### Fases Concluídas
 
-1. **`api/og.js` line 8**: `DEFAULT_OG_IMAGE` points to a `.svg` file — Facebook rejects SVG for `og:image`.
-2. **`middleware.js` line 23**: Uses `Response.redirect(url, 307)` — this exposes the `/api/og` route to crawlers instead of silently proxying.
+| Fase | Microsserviço | Escopos Migrados | Status |
+|---|---|---|---|
+| SF-1 | `api/midia.js` | midias, midia, upload, mux-upload, mux-status, mux-delete | ✅ |
+| SF-2 | `api/fretes.js` | fretes, frete, fretes-publico, calcular-frete | ✅ |
+| SF-3 | `api/assinaturas.js` | stripe-checkout, stripe-portal, stripe-webhook, cron-taxas, pagar-taxas-manual | ✅ |
+| SF-4 | `api/gateways.js` | gateways-disponiveis, gateway-loja, salvar-gateway, desconectar-gateway, appmax-connect, appmax-install, appmax-webhook | ✅ |
+| SF-5 | `api/marketing.js` | cupons, cupom, cupom-publico, cupons-popup, leads, lead, lead-newsletter, leads-import, leads-export, pixels, pixel | ✅ |
+| SF-5 | `api/storefront.js` | tema, paginas, pagina, pagina-publica, categorias-publico, global-domain, category-products | ✅ |
+| **Final** | **`api/loja-extras.js` DELETADO** | — | ✅ |
 
-## Two Fixes
+### Correções Aplicadas na Revisão
 
-### Fix 1: `api/og.js` — Change default image format
+- URL do webhook Stripe em `AdminIntegracoes.tsx`: `/api/loja-extras?scope=stripe-webhook` → `/api/assinaturas?scope=stripe-webhook` ✅
+- Frontend `saas-api.ts`: Todas as 26+ referências redirecionadas para os novos microsserviços ✅
+- `vercel.json`: Rewrite do loja-extras removido, marketing + storefront adicionados ✅
+- `README.md`: Documentação completamente atualizada com arquitetura de 17 microsserviços ✅
 
-Replace line 8:
-```js
-const DEFAULT_OG_IMAGE = 'https://dusking.com.br/placeholder.svg';
+### Strangler Fig 2 — Decomposição de `api/pedidos.js` ✅ COMPLETA
+
+O monólito `api/pedidos.js` (567 linhas) foi decomposto em 4 microsserviços + core reduzido (~270 linhas).
+
+| Microsserviço | Escopos Migrados | Permissão |
+|---|---|---|
+| `api/crm.js` | clientes, cliente, criar-cliente, redefinir-senha-cliente | Autenticado |
+| `api/carrinhos.js` | carrinho (POST/PATCH), carrinhos (GET) | Público + Autenticado |
+| `api/etiquetas.js` | gerar-etiqueta, cancelar-etiqueta | Autenticado |
+| `api/relatorios.js` | relatorios | Autenticado |
+| `api/pedidos.js` (core) | pedido (POST público, GET/PATCH auth), pedidos (GET auth) | Misto |
+
+### Arquitetura Final (21 Serverless Functions)
+
 ```
-With:
-```js
-const DEFAULT_OG_IMAGE = 'https://dusking.com.br/og-default.png';
+api/
+├── admins.js           # Admin
+├── assinaturas.js      # Stripe (SF-3)
+├── auth-action.ts      # Autenticação
+├── carrinhos.js        # Carrinhos Abandonados (SF2-2)
+├── categorias.js       # Categorias
+├── cliente-auth.js     # Auth clientes
+├── crm.js              # CRM/Clientes (SF2-1)
+├── etiquetas.js        # Fulfillment/Etiquetas (SF2-3)
+├── fretes.js           # Logística (SF-2)
+├── gateways.js         # Pagamentos (SF-4)
+├── lojas.js            # Lojas
+├── lojista.js          # Perfil lojista
+├── marketing.js        # Cupons+Leads+Pixels (SF-5)
+├── midia.js            # Bunny.net+Mux (SF-1)
+├── pedidos.js          # Core Checkout+Pedidos
+├── process-payment.js  # Processamento
+├── products.ts         # Produtos
+├── relatorios.js       # Relatórios (SF2-4)
+├── settings.js         # Config globais
+├── storefront.js       # Temas+Páginas+Vitrine (SF-5)
+└── tracking-webhook.js # Rastreamento
 ```
 
-We also need to create a valid PNG file at `public/og-default.png` (1200×630px). A simple branded placeholder image in PNG format.
+---
 
-### Fix 2: `middleware.js` — Rewrite instead of redirect
+## Diagnóstico da Cobrança Dupla ✅ RESOLVIDO
 
-Replace the `Response.redirect` with a proper Vercel Edge `rewrite` using the `fetch` API pattern. In Vercel Edge Middleware (non-Next.js), a "rewrite" is done by fetching the target URL internally and returning the response — the browser/bot never sees the internal URL.
+### Causa raiz
+`auto_advance: true` na criação de invoices manuais causava tentativa duplicada de cobrança pelo Stripe.
 
-Replace lines 15-28 with:
+### Correção aplicada
+`auto_advance: false` em `processarCronTaxas()` e `pagarTaxasManual()` em `lib/services/assinaturas/stripe.js`.
 
-```js
-export default async function middleware(request) {
-  const userAgent = request.headers.get('user-agent') || '';
-  const url = new URL(request.url);
+---
 
-  if (BOT_UA_REGEX.test(userAgent)) {
-    const host = request.headers.get('host') || url.host;
-    const ogUrl = new URL(
-      `/api/og?host=${encodeURIComponent(host)}&path=${encodeURIComponent(url.pathname)}`,
-      request.url
-    );
-    // Rewrite: fetch internally, return response transparently (no redirect)
-    return fetch(ogUrl.toString(), {
-      headers: request.headers,
-    });
-  }
+## Features Implementadas
 
-  return undefined;
-}
-```
+### Páginas de Categoria ✅
+- Banner, filtros, ordenação, paginação, layout responsivo configurável
 
-This `fetch()` approach acts as a transparent proxy — the bot receives the OG HTML as if it came from the original URL, preserving our clean `og:url` and canonical tags. No 307 is issued.
+### Construtor de Navegação Visual (Menu Builder) ✅
+- Drag & drop, até 2 níveis de nesting, fallback para categorias ativas
 
-### Summary
-
-| File | Change | Lines |
-|------|--------|-------|
-| `api/og.js` | `DEFAULT_OG_IMAGE` → `.png` | 1 line |
-| `middleware.js` | `Response.redirect` → `fetch()` rewrite | ~6 lines |
-| `public/og-default.png` | New 1200×630 branded placeholder | New file |
-
+### Shoppertainment — Video Commerce (Mux) ✅
+- Upload direto, polling de status, exclusão com confirmação, layouts stories/carousel/auto
