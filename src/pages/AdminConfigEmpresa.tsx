@@ -200,6 +200,9 @@ const AdminConfigEmpresa = () => {
           </div>
         </div>
 
+        {/* SEO e Compartilhamento Social */}
+        <SeoCard form={form} setForm={setForm} />
+
         {/* Inadimplência */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <h2 className="font-semibold text-lg">Regras de Inadimplência</h2>
