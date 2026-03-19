@@ -15,6 +15,7 @@ const LojistaLogin = () => {
   const [twoFARequired, setTwoFARequired] = useState(false);
   const [tempToken, setTempToken] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [twoFAAttempts, setTwoFAAttempts] = useState(0);
   const { login, verifyLogin2FA } = useLojistaAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
