@@ -344,7 +344,7 @@ const LojaAssinatura = () => {
 
   // === PLANS SELECTION VIEW ===
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="text-center mb-10">
         <Crown className="h-10 w-10 text-primary mx-auto mb-3" />
         <h1 className="text-3xl font-bold mb-2">Escolha seu Plano</h1>
@@ -356,7 +356,7 @@ const LojaAssinatura = () => {
           <p>Nenhum plano disponível no momento.</p>
         </div>
       ) : (
-        <div className={`grid gap-6 ${planos.length === 1 ? 'max-w-md mx-auto' : planos.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : 'md:grid-cols-3'}`}>
+        <div className={`grid gap-6 ${planos.length === 1 ? 'max-w-md mx-auto' : planos.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : planos.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
           {planos.map((plano) => (
             <div
               key={plano._id}
