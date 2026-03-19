@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { settingsApi } from '@/services/api';
-import { lazy, Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { icons, type LucideProps } from 'lucide-react';
-import dynamicIconImports from 'lucide-react/dynamicIconImports';
 import { useTheme } from '@/hooks/useTheme';
 
 // ── Generic fallback favicon (shopping bag SVG) ──
@@ -78,23 +77,14 @@ interface DynamicIconProps extends Omit<LucideProps, 'ref'> {
 }
 
 export const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
-  const kebabName = name.toLowerCase().replace(/\s+/g, '-') as keyof typeof dynamicIconImports;
+  const pascalName = name
+    .split('-')
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+    .join('') as keyof typeof icons;
 
-  if (dynamicIconImports[kebabName]) {
-    const LazyIcon = lazy(dynamicIconImports[kebabName]);
-    return (
-      <Suspense fallback={<div style={{ width: props.size || 24, height: props.size || 24 }} />}>
-        <LazyIcon {...props} />
-      </Suspense>
-    );
-  }
-
-  const pascalName = name.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('') as keyof typeof icons;
-  const StaticIcon = icons[pascalName];
-  if (StaticIcon) return <StaticIcon {...props} />;
-
-  const Boxes = icons['Boxes'];
-  return <Boxes {...props} />;
+  const LucideIcon = icons[pascalName];
+  if (!LucideIcon) return <icons.Boxes {...props} />;
+  return <LucideIcon {...props} />;
 };
 
 // === SaaSLogo Component ===
