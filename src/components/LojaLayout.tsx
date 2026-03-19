@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { GATEWAYS, getGatewayById } from '@/config/gateways';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
@@ -16,6 +16,7 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 import { leadsApi, cuponsPopupApi, lojaPublicaApi } from '@/services/saas-api';
 import type { FooterConfig, LogoConfig, MenuItemConfig } from '@/services/saas-api';
 import { toast } from 'sonner';
+import GlobalLoader from '@/components/ui/GlobalLoader';
 
 // ── Hex to HSL converter ──
 function hexToHsl(hex: string): string {
@@ -1099,7 +1100,9 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
 
         {/* Content */}
         <main className="flex-1">
-          <Outlet />
+          <Suspense fallback={<GlobalLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
 
         {/* Footer */}

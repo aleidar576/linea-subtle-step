@@ -3,7 +3,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
 import { ContentTransition } from '@/components/PageTransition';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
+import GlobalLoader from '@/components/ui/GlobalLoader';
 import {
   Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone
 } from 'lucide-react';
@@ -126,7 +127,9 @@ const AdminLayout = () => {
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
         <ContentTransition>
-          <Outlet />
+          <Suspense fallback={<GlobalLoader />}>
+            <Outlet />
+          </Suspense>
         </ContentTransition>
       </main>
     </div>

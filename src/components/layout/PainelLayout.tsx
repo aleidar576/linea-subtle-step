@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Link, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
 import { lojistaApi, planosApi, type LojistaProfile, type Plano } from '@/services/saas-api';
@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes';
 import { SaaSLogo, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
 import { ContentTransition } from '@/components/PageTransition';
+import GlobalLoader from '@/components/ui/GlobalLoader';
 import GlobalSearch from '@/components/layout/GlobalSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -392,7 +393,9 @@ const PainelLayout = () => {
         })()}
 
         <ContentTransition>
-          <Outlet />
+          <Suspense fallback={<GlobalLoader />}>
+            <Outlet />
+          </Suspense>
         </ContentTransition>
       </main>
 
