@@ -12,7 +12,71 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, Sparkles, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Sparkles, X, GripVertical } from 'lucide-react';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
+
+/* ── Sortable row ── */
+const SortableItem = ({ id, value, index, field, onUpdate, onRemove }: {
+  id: string; value: string; index: number; field: string;
+  onUpdate: (i: number, v: string) => void; onRemove: (i: number) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+  return (
+    <div ref={setNodeRef} style={style} className="flex gap-2 items-center">
+      <button type="button" {...attributes} {...listeners} className="cursor-grab touch-none text-muted-foreground hover:text-foreground">
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <Input value={value} onChange={e => onUpdate(index, e.target.value)} placeholder={`${field} ${index + 1}`} />
+      <Button variant="ghost" size="icon" onClick={() => onRemove(index)}><X className="h-4 w-4" /></Button>
+    </div>
+  );
+};
+
+/* ── Sortable list section ── */
+const SortableListSection = ({ label, hint, items, field, onAdd, onRemove, onUpdate, onReorder }: {
+  label: string; hint?: string; items: string[]; field: string;
+  onAdd: () => void; onRemove: (i: number) => void;
+  onUpdate: (i: number, v: string) => void; onReorder: (items: string[]) => void;
+}) => {
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+  const ids = items.map((_, i) => `${field}-${i}`);
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = ids.indexOf(active.id as string);
+    const newIdx = ids.indexOf(over.id as string);
+    onReorder(arrayMove(items, oldIdx, newIdx));
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <Label className="text-base font-semibold">{label}</Label>
+        <Button variant="outline" size="sm" onClick={onAdd} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
+      </div>
+      {hint && <p className="text-xs text-muted-foreground mb-2">{hint}</p>}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {items.map((v, i) => (
+              <SortableItem key={ids[i]} id={ids[i]} value={v} index={i} field={field} onUpdate={onUpdate} onRemove={onRemove} />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+};
 
 interface PlanoForm {
   nome: string;
