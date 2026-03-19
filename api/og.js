@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
     const title = loja.seo_config?.title || loja.nome_exibicao || loja.nome;
     const description = loja.seo_config?.description || loja.slogan || 'Conheça nossa loja!';
     const image = loja.seo_config?.og_image_url || loja.icone || loja.favicon || DEFAULT_OG_IMAGE;
-    const url = `https://${host}`;
+    const url = `https://${hostNormalized}${path}`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
