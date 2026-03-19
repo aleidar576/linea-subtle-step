@@ -135,15 +135,32 @@ const PainelInicio = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {activeLojas.map((loja) => (
+              {activeLojas.map((loja) => {
+                const dominioExterno = loja.dominio_customizado && !loja.dominio_customizado.includes('dusking')
+                  ? loja.dominio_customizado
+                  : null;
+
+                return (
                 <Card key={loja._id} className="hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center justify-between text-lg">
                       <span className="truncate pr-2">{loja.nome}</span>
                       <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-0 shrink-0">Ativa</Badge>
                     </CardTitle>
-                    <CardDescription className={loja.dominio_customizado ? '' : 'text-muted-foreground italic'}>
-                      {loja.dominio_customizado || 'Configuração pendente'}
+                    <CardDescription>
+                      {dominioExterno ? (
+                        <a
+                          href={`https://${dominioExterno}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {dominioExterno}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground italic">Domínio pendente</span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="mt-auto pt-0">
@@ -169,7 +186,8 @@ const PainelInicio = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           )}
         </>
