@@ -286,6 +286,59 @@ const AdminConfigEmpresa = () => {
   );
 };
 
+function SeoCard({ form, setForm }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>> }) {
+  const seoTitle = form.platform_seo_title || '';
+  const seoDesc = form.platform_seo_description || '';
+  const seoImage = form.platform_seo_og_image || '';
+
+  const previewTitle = (seoTitle || form.saas_name || 'Sua Plataforma').substring(0, 70);
+  const previewUrl = `https://${form.global_domain || 'seudominio.com.br'}`;
+  const previewDesc = (seoDesc || form.saas_slogan || 'Plataforma de E-commerce').substring(0, 160);
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Search className="h-5 w-5 text-primary" />
+        <h2 className="font-semibold text-lg">SEO e Compartilhamento Social</h2>
+      </div>
+      <p className="text-sm text-muted-foreground">Personalize como sua plataforma aparece no Google, WhatsApp e Instagram.</p>
+
+      {/* Live Preview */}
+      <div className="bg-muted/30 p-4 rounded-lg border space-y-1">
+        <p className="text-xs text-muted-foreground mb-2 font-medium">Pré-visualização no Google</p>
+        <p className="text-blue-600 dark:text-blue-400 text-base font-medium truncate">{previewTitle}{seoTitle.length > 70 ? '...' : ''}</p>
+        <p className="text-green-700 dark:text-green-500 text-xs">{previewUrl}</p>
+        <p className="text-sm text-muted-foreground line-clamp-2">{previewDesc}{seoDesc.length > 160 ? '...' : ''}</p>
+      </div>
+
+      {/* Título */}
+      <div>
+        <label className="text-sm font-medium mb-1 block">Título da página</label>
+        <Input value={seoTitle} onChange={e => setForm(f => ({ ...f, platform_seo_title: e.target.value }))} placeholder="Ex: Dusking - Plataforma de E-commerce" />
+        <p className={`text-xs mt-1 ${seoTitle.length > 70 ? 'text-destructive' : 'text-muted-foreground'}`}>
+          {seoTitle.length} de 70 caracteres usados
+        </p>
+      </div>
+
+      {/* Descrição */}
+      <div>
+        <label className="text-sm font-medium mb-1 block">Meta descrição</label>
+        <Textarea value={seoDesc} onChange={e => setForm(f => ({ ...f, platform_seo_description: e.target.value }))} placeholder="Descreva sua plataforma de forma atrativa..." rows={3} />
+        <p className={`text-xs mt-1 ${seoDesc.length > 160 ? 'text-destructive' : 'text-muted-foreground'}`}>
+          {seoDesc.length} de 160 caracteres usados
+        </p>
+      </div>
+
+      {/* Imagem OG */}
+      <div>
+        <label className="text-sm font-medium mb-1 block">Imagem de compartilhamento (Open Graph)</label>
+        <ImageUploader adminMode value={seoImage} onChange={(url) => setForm(f => ({ ...f, platform_seo_og_image: url }))} placeholder="https://..." />
+        <p className="text-xs text-muted-foreground mt-1">Tamanho recomendado: 1200 x 630 pixels.</p>
+      </div>
+    </div>
+  );
+}
+
 function SyncDomainsCard() {
   const { toast } = useToast();
   const [syncing, setSyncing] = useState(false);
