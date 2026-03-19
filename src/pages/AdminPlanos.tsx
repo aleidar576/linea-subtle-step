@@ -207,7 +207,7 @@ const AdminPlanos = () => {
           <p className="text-muted-foreground">Nenhum plano cadastrado. Use o botão "Seed Inicial" para criar os planos padrão.</p>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
