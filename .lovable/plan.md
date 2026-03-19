@@ -1,24 +1,28 @@
 
 
-## Fix: Grid de 4 planos quebrando para linha de baixo
+## Adicionar Cores de Branding à seção "Identidade Visual" em AdminConfigEmpresa
 
-### Problema
-A lógica atual do grid só trata 1, 2 ou 3+ planos — para 3+ sempre usa `md:grid-cols-3`, fazendo o 4º plano cair para uma segunda linha.
+### Contexto
+A seção "Identidade Visual" já existe em `src/pages/AdminConfigEmpresa.tsx` (linha 123). As cores de branding devem ser adicionadas ali — não como página separada. Essas cores afetarão todas as áreas do SaaS (admin, painel lojista, login, homepage), mas **não** a loja pública (que usa `cores_globais` do tema Market Tok).
 
-### Solução
-**`src/pages/painel/LojaAssinatura.tsx` — linha 359**
+### Alterações
 
-Adicionar caso para 4 planos com `md:grid-cols-4` (ou `md:grid-cols-2 lg:grid-cols-4` para melhor responsividade):
+**1. `src/pages/AdminConfigEmpresa.tsx`**
+- Adicionar 6 keys ao `SETTING_KEYS`: `branding_cor_primaria`, `branding_cor_secundaria`, `branding_fundo_dark`, `branding_fundo_light`, `branding_texto_light`, `branding_texto_dark`
+- Adicionar defaults no `form` state inicial: `#3CC7F5`, `#EE49FD`, `#1E1E2E`, `#FFFFFF`, `#F3F4F6`, `#111827`
+- Na seção "Identidade Visual" (após logos/favicon, antes do card de SEO), adicionar:
+  - Subtítulo "Cores do SaaS" com descrição explicativa
+  - Grid 3x2 com 6 color pickers — cada um com `<input type="color">` + `Input` hex lado a lado
+  - Seção de preview visual abaixo mostrando: botões primário/secundário, card em fundo dark com texto light, card em fundo light com texto dark, gradiente primária→secundária
+  - Botão "Restaurar Padrões" que reseta os 6 campos aos valores default
+- Tudo salva junto com o botão "Salvar Configurações" existente (já funciona via `settingsApi.upsert`)
 
-```
-planos.length === 1 ? 'max-w-md mx-auto'
-: planos.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto'
-: planos.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4'
-: 'md:grid-cols-3'
-```
+**2. `src/components/SaaSBrand.tsx`**
+- Adicionar as 6 keys de branding ao array `BRAND_KEYS`
+- Expor no retorno de `useSaaSBrand()`: `corPrimaria`, `corSecundaria`, `fundoDark`, `fundoLight`, `textoLight`, `textoDark` com os defaults correspondentes
+- Nenhuma aplicação visual ainda — apenas disponibilizar para uso futuro
 
-Também trocar `max-w-5xl` do container pai para `max-w-7xl` para acomodar 4 colunas sem ficarem espremidas.
-
-### Arquivo alterado
-- `src/pages/painel/LojaAssinatura.tsx`
+### Arquivos alterados
+- `src/pages/AdminConfigEmpresa.tsx` (adicionar cores na seção existente)
+- `src/components/SaaSBrand.tsx` (expor cores no hook)
 
