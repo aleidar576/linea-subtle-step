@@ -244,7 +244,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
     }
 
-    const lojista = await Lojista.findOne({ email: lowEmail }).select('+two_factor_secret');
+    const lojista = await Lojista.findOne({ email: lowEmail });
     if (!lojista) return res.status(401).json({ error: 'Credenciais inválidas' });
 
     if (!lojista.email_verificado && !lojista.verificacao_ignorada) {
