@@ -1,9 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle, Store, Users, Package, Target, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
+
+const DESTAQUE_ICONS: Record<string, LucideIcon> = {
+  loja: Store, lojas: Store,
+  usuário: Users, usuario: Users, usuários: Users, usuarios: Users,
+  estoque: Package, produto: Package, produtos: Package,
+  pixel: Target, pixels: Target,
+};
+
+const getDestaqueIcon = (text: string): LucideIcon => {
+  const lower = text.toLowerCase();
+  for (const [key, Icon] of Object.entries(DESTAQUE_ICONS)) {
+    if (lower.includes(key)) return Icon;
+  }
+  return CheckCircle2;
+};
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 import { settingsApi } from '@/services/api';
@@ -364,33 +380,43 @@ const LojaAssinatura = () => {
                 </p>
               </div>
 
-              <div>
+              {/* ── PREÇO ENTERPRISE ── */}
+              <div className="text-center py-4">
                 {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
-                  <p className="text-sm line-through decoration-destructive/50 text-muted-foreground">
+                  <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-1">
                     R$ {plano.preco_original.toFixed(2).replace('.', ',')}
                     <span className="text-xs">/mês</span>
                   </p>
                 )}
-                <p className="text-4xl font-extrabold text-foreground">
-                  {plano.preco_promocional > 0
-                    ? `R$ ${plano.preco_promocional.toFixed(2).replace('.', ',')}`
-                    : 'Consultar'}
-                  <span className="text-sm font-normal text-muted-foreground">/mês</span>
-                </p>
+                {plano.preco_promocional > 0 ? (
+                  <div className="flex items-start justify-center gap-1">
+                    <span className="text-xl font-bold text-muted-foreground mt-1">R$</span>
+                    <span className="text-5xl font-extrabold text-foreground tracking-tight">
+                      {plano.preco_promocional.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-3xl font-extrabold text-foreground">Consultar</span>
+                )}
+                <p className="text-sm text-muted-foreground mt-1">/mês</p>
               </div>
 
-              {/* Destaques (Chips) */}
+              {/* ── BADGES COM ÍCONES MAPEADOS ── */}
               {plano.destaques && plano.destaques.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {plano.destaques.map((dest, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs font-semibold px-3 py-1">
-                      {dest}
-                    </Badge>
-                  ))}
+                <div className="flex flex-wrap justify-center gap-2 py-2">
+                  {plano.destaques.map((dest, i) => {
+                    const Icon = getDestaqueIcon(dest);
+                    return (
+                      <Badge key={i} variant="secondary" className="text-xs font-semibold px-3 py-1.5 gap-1.5">
+                        <Icon className="h-3.5 w-3.5" />
+                        {dest}
+                      </Badge>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Tópicos (Accordion) com fallback para vantagens legado */}
+              {/* ── ACCORDION MULTINÍVEL (Tópico > Item > Descrição) ── */}
               {(() => {
                 const topicos = (plano.topicos && plano.topicos.length > 0)
                   ? plano.topicos
@@ -398,43 +424,57 @@ const LojaAssinatura = () => {
                     ? [{ nome: 'Recursos Principais', itens: plano.vantagens.map(v => ({ titulo: v, descricao: '' })) }]
                     : [];
                 return topicos.length > 0 && (
-                  <div className="space-y-2">
+                  <Accordion type="multiple" className="w-full space-y-2">
                     {topicos.map((topico, ti) => (
-                      <div key={ti}>
-                        <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">{topico.nome}</p>
-                        <Accordion type="single" collapsible className="w-full">
-                          {topico.itens.map((item, ii) => (
-                            <AccordionItem key={ii} value={`${ti}-${ii}`} className="border-b-0">
-                              <AccordionTrigger className="py-2 text-sm hover:no-underline gap-2">
-                                <span className="flex items-center gap-2 text-left">
-                                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                                  {item.titulo}
-                                </span>
-                              </AccordionTrigger>
-                              {item.descricao && (
-                                <AccordionContent className="text-xs text-muted-foreground pl-6">
-                                  {item.descricao}
-                                </AccordionContent>
-                              )}
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </div>
+                      <AccordionItem key={ti} value={`topic-${ti}`} className="border-0 rounded-lg bg-muted/50 overflow-hidden">
+                        <AccordionTrigger className="px-4 py-3 text-base font-semibold hover:no-underline hover:bg-muted/80 transition-colors">
+                          {topico.nome}
+                        </AccordionTrigger>
+                        <AccordionContent className="px-2 pb-2 pt-0">
+                          <Accordion type="single" collapsible className="w-full space-y-1">
+                            {topico.itens.map((item, ii) => (
+                              <AccordionItem key={ii} value={`item-${ti}-${ii}`} className="border-0">
+                                <AccordionTrigger className="py-2 px-3 text-sm font-medium hover:no-underline hover:bg-muted/60 rounded-md gap-2">
+                                  <span className="flex items-center gap-2 text-left">
+                                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                                    {item.titulo}
+                                  </span>
+                                </AccordionTrigger>
+                                {item.descricao && (
+                                  <AccordionContent className="pt-1 pb-3 px-4">
+                                    <ul className="space-y-1.5 pl-6">
+                                      {item.descricao.split('\n').filter(line => line.trim()).map((line, li) => (
+                                        <li key={li} className="text-sm text-muted-foreground flex items-start gap-2">
+                                          <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/40 shrink-0" />
+                                          {line.replace(/^-\s*/, '').trim()}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </AccordionContent>
+                                )}
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        </AccordionContent>
+                      </AccordionItem>
                     ))}
-                  </div>
+                  </Accordion>
                 );
               })()}
 
-              {/* Limitações */}
+              {/* ── LIMITAÇÕES ── */}
               {plano.limitacoes && plano.limitacoes.length > 0 && (
-                <ul className="space-y-1.5 border-t border-border pt-3">
-                  {plano.limitacoes.map((lim, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <XCircle className="h-4 w-4 text-destructive/60 shrink-0" />
-                      {lim}
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <Separator />
+                  <ul className="space-y-2 pt-1">
+                    {plano.limitacoes.map((lim, i) => (
+                      <li key={i} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <XCircle className="h-5 w-5 text-destructive/60 shrink-0" />
+                        {lim}
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
 
               <Button
