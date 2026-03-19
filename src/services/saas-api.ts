@@ -606,11 +606,21 @@ export const lojistaAuthApi = {
       body: JSON.stringify(data),
     }),
 
-  login: (email: string, password: string) =>
-    request<LoginResponse>('/auth-action?action=login-lojista', {
+  login: async (email: string, password: string): Promise<LoginResponse> => {
+    const res = await fetch(`${API_BASE}/auth-action?action=login-lojista`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
-    }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      const err: any = new Error(body.error || `Request failed: ${res.status}`);
+      if (body.email_nao_verificado) { err.email_nao_verificado = true; err.email = body.email; }
+      if (body.acesso_bloqueado) err.acesso_bloqueado = true;
+      throw err;
+    }
+    return res.json();
+  },
 
   verifyLogin2FA: (tempToken: string, code: string) =>
     request<LojistaAuthResponse>('/auth-action?action=verify-login-2fa', {
