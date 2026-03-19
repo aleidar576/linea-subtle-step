@@ -96,7 +96,7 @@ const PainelInicio = () => {
       ) : (
         <>
           {/* Onboarding Checklist - Progressive Disclosure */}
-          {!isOnboardingCompleted && (
+          {!isOnboardingCompleted && checked && (
             <Card className="mb-8">
               <CardContent className="p-6">
                 <h3 className="font-semibold mb-4">Primeiros Passos</h3>
