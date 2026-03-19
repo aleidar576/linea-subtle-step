@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .vercel
+
+node_modules/
+package-lock.json
+bun.lock
+bun.lockb
