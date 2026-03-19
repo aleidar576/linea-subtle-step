@@ -56,7 +56,7 @@ const LojaPerfil = () => {
         setProfile(p);
         setNome(p.nome);
         setTelefone(p.telefone || '');
-        setCpfCnpj(p.cpf_cnpj || '');
+        setCpfCnpj(formatCpfCnpj(p.cpf_cnpj || ''));
         setAvatarUrl(p.avatar_url || '');
         setTwoFAEnabled(p.two_factor_enabled || false);
       })
