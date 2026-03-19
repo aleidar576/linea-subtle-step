@@ -136,6 +136,12 @@ export interface Loja {
   icone: string;
   dominio_customizado: string | null;
   dominio_verificado: boolean;
+  slogan?: string | null;
+  seo_config?: {
+    title?: string | null;
+    description?: string | null;
+    og_image_url?: string | null;
+  } | null;
   configuracoes: {
     exigir_cadastro_cliente: boolean;
     tema: string;
@@ -144,6 +150,8 @@ export interface Loja {
     custom_css?: string;
     footer?: FooterConfig | null;
     whatsapp_numero?: string;
+    modo_orcamento?: boolean;
+    whatsapp_orcamento?: string;
     cores_globais?: CoresGlobais | null;
     homepage_config?: HomepageConfig | null;
     produto_config?: ProdutoConfig | null;
