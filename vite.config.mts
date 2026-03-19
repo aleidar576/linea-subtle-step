@@ -21,7 +21,12 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
+        experimentalMinChunkSize: 10000,
         manualChunks(id) {
+          if (id.includes("/src/components/ui/") || id.includes("/components/ui/")) {
+            return "ui-components";
+          }
+
           if (id.includes("node_modules")) {
             if (id.includes("lucide-react")) {
               return "vendor-icons";
