@@ -30,6 +30,7 @@ interface PlanoForm {
   stripe_price_id: string;
   topicos: Topico[];
   limitacoes: string[];
+  destaques: string[];
   destaque: boolean;
   ordem: number;
 }
@@ -37,7 +38,7 @@ interface PlanoForm {
 const emptyForm: PlanoForm = {
   nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
-  stripe_price_id: '', topicos: [], limitacoes: [], destaque: false, ordem: 0,
+  stripe_price_id: '', topicos: [], limitacoes: [], destaques: [], destaque: false, ordem: 0,
 };
 
 const AdminPlanos = () => {
