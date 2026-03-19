@@ -429,7 +429,7 @@ const LojaAssinatura = () => {
 
               {/* ── VANTAGENS ── */}
               {plano.vantagens && plano.vantagens.length > 0 && (
-                <ul className="space-y-4 flex-1">
+                <ul className="space-y-4">
                   {plano.vantagens.map((feat, i) => (
                     <li key={i} className="flex items-center gap-3 text-sm">
                       <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
