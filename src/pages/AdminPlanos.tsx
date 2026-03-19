@@ -185,6 +185,7 @@ const AdminPlanos = () => {
                   <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
                   <TableCell>{(p.topicos || []).length}</TableCell>
+                  <TableCell>{(p.destaques || []).length}</TableCell>
                   <TableCell>{(p.limitacoes || []).length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
