@@ -235,6 +235,20 @@ const AdminPlanos = () => {
                 ))}
               </div>
             </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Limitações do Plano (Recursos NÃO inclusos)</Label>
+                <Button variant="outline" size="sm" onClick={addLimitacao} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar Limitação</Button>
+              </div>
+              <div className="space-y-2">
+                {form.limitacoes.map((v, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input value={v} onChange={e => updateLimitacao(i, e.target.value)} placeholder={`Limitação ${i + 1}`} />
+                    <Button variant="ghost" size="icon" onClick={() => removeLimitacao(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            </div>
             <Button onClick={handleSave} className="w-full" disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editId ? 'Salvar Alterações' : 'Criar Plano'}
