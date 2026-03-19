@@ -52,11 +52,17 @@ const AdminPlanos = () => {
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setShowForm(true); };
   const openEdit = (p: any) => {
+    // Fallback: migrate legacy vantagens[] to topicos[] format
+    const topicos = (p.topicos && p.topicos.length > 0)
+      ? p.topicos
+      : (p.vantagens && p.vantagens.length > 0)
+        ? [{ nome: 'Recursos Principais', itens: p.vantagens.map((v: string) => ({ titulo: v, descricao: '' })) }]
+        : [];
     setForm({
       nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
-      stripe_price_id: p.stripe_price_id, topicos: p.topicos || [], limitacoes: p.limitacoes || [],
+      stripe_price_id: p.stripe_price_id, topicos, limitacoes: p.limitacoes || [],
       destaque: p.destaque, ordem: p.ordem,
     });
     setEditId(p._id);
