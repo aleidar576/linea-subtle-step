@@ -285,37 +285,27 @@ const AdminPlanos = () => {
             </div>
 
             {/* Vantagens */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-semibold">Vantagens (Check Verde)</Label>
-                <Button variant="outline" size="sm" onClick={() => addToList('vantagens')} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
-              </div>
-              <p className="text-xs text-muted-foreground mb-2">Use **texto** para negrito. Ex: **500** Produtos</p>
-              <div className="space-y-2">
-                {form.vantagens.map((v, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input value={v} onChange={e => updateList('vantagens', i, e.target.value)} placeholder={`Vantagem ${i + 1}`} />
-                    <Button variant="ghost" size="icon" onClick={() => removeFromList('vantagens', i)}><X className="h-4 w-4" /></Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SortableListSection
+              label="Vantagens (Check Verde)"
+              hint='Use **texto** para negrito. Ex: **500** Produtos'
+              items={form.vantagens}
+              field="vantagens"
+              onAdd={() => addToList('vantagens')}
+              onRemove={(i) => removeFromList('vantagens', i)}
+              onUpdate={(i, v) => updateList('vantagens', i, v)}
+              onReorder={(items) => setForm(f => ({ ...f, vantagens: items }))}
+            />
 
             {/* Desvantagens */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-semibold">Desvantagens (X Vermelho)</Label>
-                <Button variant="outline" size="sm" onClick={() => addToList('desvantagens')} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar</Button>
-              </div>
-              <div className="space-y-2">
-                {form.desvantagens.map((v, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input value={v} onChange={e => updateList('desvantagens', i, e.target.value)} placeholder={`Desvantagem ${i + 1}`} />
-                    <Button variant="ghost" size="icon" onClick={() => removeFromList('desvantagens', i)}><X className="h-4 w-4" /></Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SortableListSection
+              label="Desvantagens (X Vermelho)"
+              items={form.desvantagens}
+              field="desvantagens"
+              onAdd={() => addToList('desvantagens')}
+              onRemove={(i) => removeFromList('desvantagens', i)}
+              onUpdate={(i, v) => updateList('desvantagens', i, v)}
+              onReorder={(items) => setForm(f => ({ ...f, desvantagens: items }))}
+            />
 
             <Button onClick={handleSave} className="w-full" disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
