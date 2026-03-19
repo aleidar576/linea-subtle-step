@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -378,12 +378,39 @@ const LojaAssinatura = () => {
                 </p>
               </div>
 
-              {plano.vantagens.length > 0 && (
-                <ul className="space-y-2">
-                  {plano.vantagens.map((v, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                      {v}
+              {/* Tópicos (novo formato) ou fallback para vantagens legado */}
+              {(() => {
+                const topicos = (plano.topicos && plano.topicos.length > 0)
+                  ? plano.topicos
+                  : (plano.vantagens && plano.vantagens.length > 0)
+                    ? [{ nome: 'Recursos Principais', itens: plano.vantagens.map(v => ({ titulo: v, descricao: '' })) }]
+                    : [];
+                return topicos.length > 0 && (
+                  <div className="space-y-3">
+                    {topicos.map((topico, ti) => (
+                      <div key={ti}>
+                        <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1.5">{topico.nome}</p>
+                        <ul className="space-y-1.5">
+                          {topico.itens.map((item, ii) => (
+                            <li key={ii} className="flex items-start gap-2 text-sm">
+                              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                              <span>{item.titulo}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Limitações */}
+              {plano.limitacoes && plano.limitacoes.length > 0 && (
+                <ul className="space-y-1.5 border-t border-border pt-3">
+                  {plano.limitacoes.map((lim, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <XCircle className="h-4 w-4 text-destructive/60 shrink-0" />
+                      {lim}
                     </li>
                   ))}
                 </ul>
