@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { settingsApi } from '@/services/api';
-import { lazy, Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { icons, type LucideProps } from 'lucide-react';
-import dynamicIconImports from 'lucide-react/dynamicIconImports';
 import { useTheme } from '@/hooks/useTheme';
 
 // ── Generic fallback favicon (shopping bag SVG) ──
