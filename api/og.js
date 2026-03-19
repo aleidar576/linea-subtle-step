@@ -7,13 +7,14 @@ const Loja = require('../models/Loja.js');
 
 const DEFAULT_OG_IMAGE = 'https://dusking.com.br/placeholder.svg';
 const PLATFORM_NAME = 'Dusking';
+const PLATFORM_DESC = 'Plataforma de E-commerce';
 
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const host = req.query.host || req.headers['host'] || '';
+  const host = (req.query.host || req.headers['host'] || '').toLowerCase().replace(/:\d+$/, '');
   if (!host) {
     return res.status(400).send('<!-- missing host -->');
   }
@@ -23,23 +24,54 @@ module.exports = async function handler(req, res) {
 
     const Setting = require('../models/Setting.js');
     const globalDomainSetting = await Setting.findOne({ key: 'global_domain' }).lean();
-    const globalDomain = globalDomainSetting?.value || process.env.PLATFORM_DOMAIN || 'dusking.com.br';
+    const globalDomain = (globalDomainSetting?.value || process.env.PLATFORM_DOMAIN || 'dusking.com.br').toLowerCase();
 
+    // ── Normalize www ──
+    const hostNormalized = host.replace(/^www\./, '');
+    const isRootDomain = hostNormalized === globalDomain;
+
+    // ═══════════════════════════════════════════
+    // BRANCH 1: Root domain → Platform SEO
+    // ═══════════════════════════════════════════
+    if (isRootDomain) {
+      const platformKeys = [
+        'platform_seo_title', 'platform_seo_description', 'platform_seo_og_image',
+        'saas_name', 'saas_slogan', 'saas_logo_url',
+      ];
+      const settings = await Setting.find({ key: { $in: platformKeys } }).lean();
+      const map = {};
+      settings.forEach(s => { map[s.key] = s.value; });
+
+      const title = map.platform_seo_title || map.saas_name || PLATFORM_NAME;
+      const description = map.platform_seo_description || map.saas_slogan || PLATFORM_DESC;
+      const image = map.platform_seo_og_image || map.saas_logo_url || DEFAULT_OG_IMAGE;
+      const url = `https://${globalDomain}`;
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+      return res.status(200).send(buildHTML(title, description, image, url));
+    }
+
+    // ═══════════════════════════════════════════
+    // BRANCH 2: Subdomain → Store SEO
+    // ═══════════════════════════════════════════
     let loja = null;
 
-    // 1. Tentar domínio customizado
-    loja = await Loja.findOne({ dominio_customizado: host, is_active: true })
-      .select('nome nome_exibicao slogan favicon icone seo_config slug dominio_customizado')
-      .lean();
-
-    // 2. Tentar subdomínio
-    if (!loja && host.endsWith(`.${globalDomain}`)) {
-      const slug = host.replace(`.${globalDomain}`, '');
+    if (hostNormalized.endsWith(`.${globalDomain}`)) {
+      const slug = hostNormalized.replace(`.${globalDomain}`, '');
       if (slug && !slug.includes('.')) {
         loja = await Loja.findOne({ slug, is_active: true })
           .select('nome nome_exibicao slogan favicon icone seo_config slug dominio_customizado')
           .lean();
       }
+    } else {
+      // ═══════════════════════════════════════════
+      // BRANCH 3: Custom domain → Store SEO
+      // (www already stripped via hostNormalized)
+      // ═══════════════════════════════════════════
+      loja = await Loja.findOne({ dominio_customizado: hostNormalized, is_active: true })
+        .select('nome nome_exibicao slogan favicon icone seo_config slug dominio_customizado')
+        .lean();
     }
 
     if (!loja) {
@@ -48,7 +80,7 @@ module.exports = async function handler(req, res) {
       );
     }
 
-    // Fallback chain
+    // Fallback chain for store
     const title = loja.seo_config?.title || loja.nome_exibicao || loja.nome;
     const description = loja.seo_config?.description || loja.slogan || 'Conheça nossa loja!';
     const image = loja.seo_config?.og_image_url || loja.icone || loja.favicon || DEFAULT_OG_IMAGE;
