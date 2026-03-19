@@ -51,7 +51,8 @@ const AdminPlanos = () => {
       nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
-      stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], destaque: p.destaque, ordem: p.ordem,
+      stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], limitacoes: p.limitacoes || [],
+      destaque: p.destaque, ordem: p.ordem,
     });
     setEditId(p._id);
     setShowForm(true);
