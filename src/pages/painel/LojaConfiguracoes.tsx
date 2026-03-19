@@ -4,10 +4,12 @@ import { useLoja, useUpdateLoja } from '@/hooks/useLojas';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
 import { platformApi, lojasApi } from '@/services/saas-api';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle, MessageCircle, AlertTriangle } from 'lucide-react';
+import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle, MessageCircle, AlertTriangle, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ImageUploader from '@/components/ImageUploader';
 
 const LojaConfiguracoes = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +23,9 @@ const LojaConfiguracoes = () => {
   const [modoOrcamento, setModoOrcamento] = useState(false);
   const [whatsappOrcamento, setWhatsappOrcamento] = useState('');
   const [dominioCustomizado, setDominioCustomizado] = useState('');
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [seoOgImage, setSeoOgImage] = useState('');
   const [saving, setSaving] = useState(false);
   const [platformDomain, setPlatformDomain] = useState('');
   const [isCheckingDomain, setIsCheckingDomain] = useState(false);
@@ -35,6 +40,9 @@ const LojaConfiguracoes = () => {
     setModoOrcamento(loja.configuracoes?.modo_orcamento ?? false);
     setWhatsappOrcamento(loja.configuracoes?.whatsapp_orcamento || '');
     setDominioCustomizado(loja.dominio_customizado || '');
+    setSeoTitle(loja.seo_config?.title || '');
+    setSeoDescription(loja.seo_config?.description || '');
+    setSeoOgImage(loja.seo_config?.og_image_url || '');
   }, [loja]);
 
   const hasActiveSubscription = !!user?.subscription_status && ['trialing', 'active'].includes(user.subscription_status);
@@ -51,6 +59,11 @@ const LojaConfiguracoes = () => {
         id,
         data: {
           dominio_customizado: dominioCustomizado || null,
+          seo_config: {
+            title: seoTitle || null,
+            description: seoDescription || null,
+            og_image_url: seoOgImage || null,
+          },
           configuracoes: {
             exigir_cadastro_cliente: exigirCadastro,
             modo_orcamento: modoOrcamento,
@@ -236,6 +249,72 @@ const LojaConfiguracoes = () => {
               </Button>
             </div>
           )}
+        </div>
+
+        {/* Card SEO e Compartilhamento Social */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-5">
+          <div>
+            <h2 className="font-semibold flex items-center gap-2"><Search className="h-5 w-5" /> SEO e Compartilhamento Social</h2>
+            <p className="text-xs text-muted-foreground mt-1">Personalize como sua loja aparece no Google, WhatsApp e Instagram.</p>
+          </div>
+
+          {/* Live Preview */}
+          <div className="bg-muted/30 p-4 rounded-lg border border-border space-y-1">
+            <p className="text-sm font-medium text-primary truncate">
+              {(seoTitle || loja.nome_exibicao || loja.nome || '').length > 70
+                ? (seoTitle || loja.nome_exibicao || loja.nome || '').substring(0, 70) + '…'
+                : (seoTitle || loja.nome_exibicao || loja.nome || '')}
+            </p>
+            <p className="text-xs text-muted-foreground/80 truncate">
+              https://{dominioCustomizado || `${loja.slug}.${platformDomain || '...'}`}
+            </p>
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {(seoDescription || loja.slogan || 'Conheça nossa loja!').length > 160
+                ? (seoDescription || loja.slogan || 'Conheça nossa loja!').substring(0, 160) + '…'
+                : (seoDescription || loja.slogan || 'Conheça nossa loja!')}
+            </p>
+          </div>
+
+          {/* Título */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Título da página</label>
+            <Input
+              value={seoTitle}
+              onChange={e => setSeoTitle(e.target.value)}
+              placeholder="Ex: DKing - Calçados Exclusivos"
+              maxLength={100}
+            />
+            <p className={`text-xs ${seoTitle.length > 70 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {seoTitle.length} de 70 caracteres usados
+            </p>
+          </div>
+
+          {/* Descrição */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Meta descrição</label>
+            <Textarea
+              value={seoDescription}
+              onChange={e => setSeoDescription(e.target.value)}
+              placeholder="Descreva sua loja de forma atrativa..."
+              maxLength={250}
+              rows={3}
+            />
+            <p className={`text-xs ${seoDescription.length > 160 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {seoDescription.length} de 160 caracteres usados
+            </p>
+          </div>
+
+          {/* Imagem OG */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Imagem de compartilhamento (Open Graph)</label>
+            <ImageUploader
+              lojaId={id}
+              value={seoOgImage}
+              onChange={setSeoOgImage}
+              qualityProfile="banner"
+            />
+            <p className="text-xs text-muted-foreground">Tamanho recomendado: 1200 × 630 pixels.</p>
+          </div>
         </div>
 
         <Button onClick={handleSave} disabled={saving} className="gap-2">
