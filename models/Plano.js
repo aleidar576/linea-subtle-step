@@ -15,7 +15,7 @@ const PlanoSchema = new mongoose.Schema({
   taxa_transacao_percentual: { type: Number, default: 1.5 },
   taxa_transacao_trial: { type: Number, default: 2.0 },
   taxa_transacao_fixa: { type: Number, default: 0 },
-  stripe_price_id: { type: String, required: true },
+  stripe_price_id: { type: String, required: function() { return !this.isSobMedida; }, default: '' },
   vantagens: { type: [String], default: [] },
   desvantagens: { type: [String], default: [] },
   destaque: { type: Boolean, default: false },
