@@ -1,42 +1,22 @@
 
 
-## Diagnóstico
+## Plano: Adicionar seção "Limitações" ao formulário de planos
 
-O bug é um race condition no `useEffect`:
+### Contexto
+O formulário atual tem apenas `vantagens: string[]`. Precisamos adicionar `limitacoes: string[]` com UX idêntica.
 
-1. Na montagem, `activeLojas.length === 0` (lojas ainda carregando) → `setChecked(true)` com `checkResults` todos `false`
-2. `useLojas` termina → `activeLojas.length` muda → `useEffect` re-executa `checkAll()` async
-3. **Durante essa execução async**, `checked` já é `true` e o checklist renderiza com dados desatualizados
-4. Quando `checkAll` termina, se tudo está completo, o card some → **flash**
+### Mudanças
 
-## Correção
+**1. `src/pages/AdminPlanos.tsx`**
+- Adicionar `limitacoes: string[]` ao `PlanoForm` interface e ao `emptyForm`
+- No `openEdit`, carregar `p.limitacoes || []`
+- Adicionar helpers: `addLimitacao`, `removeLimitacao`, `updateLimitacao` (espelhando os de vantagens)
+- No Dialog, após a seção "Vantagens", adicionar seção "Limitações do Plano" com lista dinâmica idêntica
+- Na tabela, adicionar coluna "Limitações" mostrando o count
 
-**Arquivo:** `src/pages/painel/PainelInicio.tsx`
+**2. `models/Plano.js`**
+- Adicionar campo `limitacoes: { type: [String], default: [] }` ao schema
 
-1. **Resetar `checked` para `false`** no início do `useEffect` quando há lojas, para que o Skeleton apareça enquanto os dados reais carregam:
-
-```tsx
-useEffect(() => {
-  if (!activeLojas.length) { setChecked(true); return; }
-
-  setChecked(false); // ← ADICIONAR: força skeleton enquanto busca dados reais
-
-  const checkAll = async () => {
-    // ... lógica existente ...
-  };
-  checkAll();
-}, [activeLojas.length]);
-```
-
-2. **Proteger a renderização do checklist** adicionando a condição `checked` ao guard existente:
-
-```tsx
-{!isOnboardingCompleted && checked && (
-  <Card className="mb-8">
-    {/* ... conteúdo do checklist ... */}
-  </Card>
-)}
-```
-
-Isso garante que o card de "Primeiros Passos" só aparece **após** a verificação real terminar E se houver passos pendentes — eliminando o flash.
+### Detalhes da UI (seção nova no Dialog)
+Renderizada logo abaixo da seção de Vantagens, com label "Limitações do Plano (Recursos NÃO inclusos)", botão "+ Adicionar Limitação", e inputs removíveis -- mesma estrutura visual das vantagens.
 
