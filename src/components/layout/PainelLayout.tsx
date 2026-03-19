@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Link, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
 import { lojistaApi, planosApi, type LojistaProfile, type Plano } from '@/services/saas-api';
