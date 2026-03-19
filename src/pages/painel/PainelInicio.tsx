@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useLojas } from '@/hooks/useLojas';
 import { Store, CheckCircle2, Circle, Loader2, Package, ShoppingCart, Settings, ExternalLink, Plus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect, useState } from 'react';
 import { lojaProductsApi, pedidosApi, lojistaApi, type Loja } from '@/services/saas-api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
