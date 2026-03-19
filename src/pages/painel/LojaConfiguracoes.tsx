@@ -4,10 +4,12 @@ import { useLoja, useUpdateLoja } from '@/hooks/useLojas';
 import { useLojistaAuth } from '@/hooks/useLojistaAuth';
 import { platformApi, lojasApi } from '@/services/saas-api';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle, MessageCircle, AlertTriangle } from 'lucide-react';
+import { Settings, Save, Globe, Loader2, Lock, Crown, HelpCircle, MessageCircle, AlertTriangle, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ImageUploader from '@/components/ImageUploader';
 
 const LojaConfiguracoes = () => {
   const { id } = useParams<{ id: string }>();
