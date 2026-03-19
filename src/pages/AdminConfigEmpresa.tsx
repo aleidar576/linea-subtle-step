@@ -22,6 +22,7 @@ const SETTING_KEYS = [
   'saas_logo_url', 'saas_logo_url_light', 'saas_logo_url_home',
   'saas_logo_size', 'saas_logo_size_home', 'saas_logo_size_login',
   'whatsapp_suporte',
+  'platform_seo_title', 'platform_seo_description', 'platform_seo_og_image',
 ];
 
 const AdminConfigEmpresa = () => {
