@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     console.error('[OG] Error:', err.message);
     return res.status(500).setHeader('Content-Type', 'text/html; charset=utf-8').send(
-      buildHTML(PLATFORM_NAME, 'Erro ao carregar dados', DEFAULT_OG_IMAGE, `https://${host}`)
+      buildHTML(PLATFORM_NAME, 'Erro ao carregar dados', DEFAULT_OG_IMAGE, `https://${hostNormalized}${path}`)
     );
   }
 };
