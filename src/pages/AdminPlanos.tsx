@@ -306,6 +306,32 @@ const AdminPlanos = () => {
               <Switch checked={form.destaque} onCheckedChange={v => setForm(f => ({ ...f, destaque: v }))} />
             </div>
 
+            {/* Configuração do Botão e CTA */}
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <Label className="text-base font-semibold flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Configuração do Botão e CTA</Label>
+              <div>
+                <Label>Texto Customizado do Botão</Label>
+                <Input value={form.textoBotao} onChange={e => setForm(f => ({ ...f, textoBotao: e.target.value }))} placeholder="Ex: Falar com especialista" />
+                <p className="text-xs text-muted-foreground mt-1">Se vazio, usa o texto padrão do checkout</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Ativar Modo Sob Medida (Venda via WhatsApp)</Label>
+                <Switch checked={form.isSobMedida} onCheckedChange={v => setForm(f => ({ ...f, isSobMedida: v }))} />
+              </div>
+              {form.isSobMedida && (
+                <div className="space-y-4 pl-4 border-l-2 border-primary/30">
+                  <div>
+                    <Label>Número do WhatsApp (com DDI e DDD)</Label>
+                    <Input value={form.whatsappNumero} onChange={e => setForm(f => ({ ...f, whatsappNumero: e.target.value }))} placeholder="5511999999999" className="font-mono" />
+                  </div>
+                  <div>
+                    <Label>Mensagem Predefinida para o Especialista</Label>
+                    <Textarea value={form.whatsappMensagem} onChange={e => setForm(f => ({ ...f, whatsappMensagem: e.target.value }))} placeholder="Olá! Tenho interesse no plano Enterprise..." rows={3} />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Vantagens */}
             <SortableListSection
               label="Vantagens (Check Verde)"
