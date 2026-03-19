@@ -24,6 +24,7 @@ interface PlanoForm {
   taxa_transacao_fixa: number;
   stripe_price_id: string;
   vantagens: string[];
+  limitacoes: string[];
   destaque: boolean;
   ordem: number;
 }
@@ -31,7 +32,7 @@ interface PlanoForm {
 const emptyForm: PlanoForm = {
   nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
-  stripe_price_id: '', vantagens: [], destaque: false, ordem: 0,
+  stripe_price_id: '', vantagens: [], limitacoes: [], destaque: false, ordem: 0,
 };
 
 const AdminPlanos = () => {
@@ -50,7 +51,8 @@ const AdminPlanos = () => {
       nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
-      stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], destaque: p.destaque, ordem: p.ordem,
+      stripe_price_id: p.stripe_price_id, vantagens: p.vantagens || [], limitacoes: p.limitacoes || [],
+      destaque: p.destaque, ordem: p.ordem,
     });
     setEditId(p._id);
     setShowForm(true);
@@ -103,6 +105,10 @@ const AdminPlanos = () => {
   const removeVantagem = (i: number) => setForm(f => ({ ...f, vantagens: f.vantagens.filter((_, idx) => idx !== i) }));
   const updateVantagem = (i: number, v: string) => setForm(f => ({ ...f, vantagens: f.vantagens.map((item, idx) => idx === i ? v : item) }));
 
+  const addLimitacao = () => setForm(f => ({ ...f, limitacoes: [...f.limitacoes, ''] }));
+  const removeLimitacao = (i: number) => setForm(f => ({ ...f, limitacoes: f.limitacoes.filter((_, idx) => idx !== i) }));
+  const updateLimitacao = (i: number, v: string) => setForm(f => ({ ...f, limitacoes: f.limitacoes.map((item, idx) => idx === i ? v : item) }));
+
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
@@ -136,6 +142,7 @@ const AdminPlanos = () => {
                 <TableHead>Stripe Price ID</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead>Vantagens</TableHead>
+                <TableHead>Limitações</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -151,6 +158,7 @@ const AdminPlanos = () => {
                   <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
                   <TableCell>{(p.vantagens || []).length}</TableCell>
+                  <TableCell>{(p.limitacoes || []).length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
@@ -223,6 +231,20 @@ const AdminPlanos = () => {
                   <div key={i} className="flex gap-2">
                     <Input value={v} onChange={e => updateVantagem(i, e.target.value)} placeholder={`Vantagem ${i + 1}`} />
                     <Button variant="ghost" size="icon" onClick={() => removeVantagem(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Limitações do Plano (Recursos NÃO inclusos)</Label>
+                <Button variant="outline" size="sm" onClick={addLimitacao} className="gap-1 text-xs"><Plus className="h-3 w-3" /> Adicionar Limitação</Button>
+              </div>
+              <div className="space-y-2">
+                {form.limitacoes.map((v, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input value={v} onChange={e => updateLimitacao(i, e.target.value)} placeholder={`Limitação ${i + 1}`} />
+                    <Button variant="ghost" size="icon" onClick={() => removeLimitacao(i)}><X className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>

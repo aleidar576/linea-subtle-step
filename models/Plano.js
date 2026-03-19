@@ -15,6 +15,7 @@ const PlanoSchema = new mongoose.Schema({
   taxa_transacao_fixa: { type: Number, default: 0 },
   stripe_price_id: { type: String, required: true },
   vantagens: { type: [String], default: [] },
+  limitacoes: { type: [String], default: [] },
   destaque: { type: Boolean, default: false },
   ordem: { type: Number, default: 0 },
   is_active: { type: Boolean, default: true },
