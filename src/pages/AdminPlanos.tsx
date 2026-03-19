@@ -12,7 +12,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, Sparkles, X, GripVertical } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Sparkles, X, GripVertical, MessageCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -93,12 +94,17 @@ interface PlanoForm {
   desvantagens: string[];
   destaque: boolean;
   ordem: number;
+  isSobMedida: boolean;
+  textoBotao: string;
+  whatsappNumero: string;
+  whatsappMensagem: string;
 }
 
 const emptyForm: PlanoForm = {
   nome: '', subtitulo: '', textoDestaque: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
   stripe_price_id: '', vantagens: [], desvantagens: [], destaque: false, ordem: 0,
+  isSobMedida: false, textoBotao: '', whatsappNumero: '', whatsappMensagem: '',
 };
 
 const AdminPlanos = () => {
@@ -118,18 +124,22 @@ const AdminPlanos = () => {
       preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
-      stripe_price_id: p.stripe_price_id,
+      stripe_price_id: p.stripe_price_id || '',
       vantagens: p.vantagens || [],
       desvantagens: p.desvantagens || [],
       destaque: p.destaque, ordem: p.ordem,
+      isSobMedida: p.isSobMedida || false,
+      textoBotao: p.textoBotao || '',
+      whatsappNumero: p.whatsappNumero || '',
+      whatsappMensagem: p.whatsappMensagem || '',
     });
     setEditId(p._id);
     setShowForm(true);
   };
 
   const handleSave = async () => {
-    if (!form.nome || !form.stripe_price_id) {
-      toast({ title: 'Erro', description: 'Nome e Stripe Price ID são obrigatórios', variant: 'destructive' });
+    if (!form.nome || (!form.isSobMedida && !form.stripe_price_id)) {
+      toast({ title: 'Erro', description: 'Nome é obrigatório. Stripe Price ID é obrigatório para planos normais.', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -294,6 +304,32 @@ const AdminPlanos = () => {
             <div className="flex items-center justify-between">
               <Label>Destaque (Recomendado)</Label>
               <Switch checked={form.destaque} onCheckedChange={v => setForm(f => ({ ...f, destaque: v }))} />
+            </div>
+
+            {/* Configuração do Botão e CTA */}
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <Label className="text-base font-semibold flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Configuração do Botão e CTA</Label>
+              <div>
+                <Label>Texto Customizado do Botão</Label>
+                <Input value={form.textoBotao} onChange={e => setForm(f => ({ ...f, textoBotao: e.target.value }))} placeholder="Ex: Falar com especialista" />
+                <p className="text-xs text-muted-foreground mt-1">Se vazio, usa o texto padrão do checkout</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Ativar Modo Sob Medida (Venda via WhatsApp)</Label>
+                <Switch checked={form.isSobMedida} onCheckedChange={v => setForm(f => ({ ...f, isSobMedida: v }))} />
+              </div>
+              {form.isSobMedida && (
+                <div className="space-y-4 pl-4 border-l-2 border-primary/30">
+                  <div>
+                    <Label>Número do WhatsApp (com DDI e DDD)</Label>
+                    <Input value={form.whatsappNumero} onChange={e => setForm(f => ({ ...f, whatsappNumero: e.target.value }))} placeholder="5511999999999" className="font-mono" />
+                  </div>
+                  <div>
+                    <Label>Mensagem Predefinida para o Especialista</Label>
+                    <Textarea value={form.whatsappMensagem} onChange={e => setForm(f => ({ ...f, whatsappMensagem: e.target.value }))} placeholder="Olá! Tenho interesse no plano Enterprise..." rows={3} />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Vantagens */}
