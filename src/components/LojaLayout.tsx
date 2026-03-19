@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { GATEWAYS, getGatewayById } from '@/config/gateways';
 import { getSavedUtmParams } from '@/hooks/useUtmParams';
