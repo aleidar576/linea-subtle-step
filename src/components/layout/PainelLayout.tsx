@@ -392,7 +392,9 @@ const PainelLayout = () => {
         })()}
 
         <ContentTransition>
-          <Outlet />
+          <Suspense fallback={<GlobalLoader />}>
+            <Outlet />
+          </Suspense>
         </ContentTransition>
       </main>
 

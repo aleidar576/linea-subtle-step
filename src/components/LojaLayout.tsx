@@ -1099,7 +1099,9 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
 
         {/* Content */}
         <main className="flex-1">
-          <Outlet />
+          <Suspense fallback={<GlobalLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
 
         {/* Footer */}

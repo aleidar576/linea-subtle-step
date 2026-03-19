@@ -127,7 +127,9 @@ const AdminLayout = () => {
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
         <ContentTransition>
-          <Outlet />
+          <Suspense fallback={<GlobalLoader />}>
+            <Outlet />
+          </Suspense>
         </ContentTransition>
       </main>
     </div>
