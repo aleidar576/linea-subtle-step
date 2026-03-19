@@ -383,40 +383,61 @@ const LojaAssinatura = () => {
                 {plano.subtitulo && (
                   <p className="text-sm text-muted-foreground mt-1">{plano.subtitulo}</p>
                 )}
+              {/* Taxa de transação - oculta para sob medida */}
+              {!plano.isSobMedida && (
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Taxa de transação: {plano.taxa_transacao_percentual ?? plano.taxa_transacao}%
                   {(plano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${plano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
                 </p>
+              )}
               </div>
 
               {/* ── PREÇO MASSIVO ── */}
               <div className="text-center py-8">
-                {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
-                  <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-2">
-                    R$ {plano.preco_original.toFixed(2).replace('.', ',')}
-                  </p>
-                )}
-                {plano.preco_promocional > 0 ? (
-                  <div className="flex items-start justify-center">
-                    <span className="text-2xl font-bold text-muted-foreground mt-2">R$</span>
-                    <span className="text-6xl font-black text-foreground tracking-tight leading-none mx-1">
-                      {plano.preco_promocional.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+                {plano.isSobMedida && plano.preco_promocional === 0 ? (
+                  <span className="text-4xl font-black text-center text-foreground">Sob Medida</span>
                 ) : (
-                  <span className="text-4xl font-black text-foreground">Consultar</span>
+                  <>
+                    {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
+                      <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-2">
+                        R$ {plano.preco_original.toFixed(2).replace('.', ',')}
+                      </p>
+                    )}
+                    {plano.preco_promocional > 0 ? (
+                      <div className="flex items-start justify-center">
+                        <span className="text-2xl font-bold text-muted-foreground mt-2">R$</span>
+                        <span className="text-6xl font-black text-foreground tracking-tight leading-none mx-1">
+                          {plano.preco_promocional.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-4xl font-black text-foreground">Consultar</span>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-2">/mês</p>
+                  </>
                 )}
-                <p className="text-sm text-muted-foreground mt-2">/mês</p>
               </div>
 
               {/* ── CTA ACIMA DA LISTA ── */}
               <Button
                 className="w-full gap-2 rounded-full bg-green-500 hover:bg-green-600 text-white border-0 mb-8 h-12 text-base font-semibold"
-                onClick={() => handleCheckout(plano._id)}
-                disabled={checkoutLoading === plano._id}
+                onClick={() => {
+                  if (plano.isSobMedida) {
+                    window.open(`https://wa.me/${plano.whatsappNumero}?text=${encodeURIComponent(plano.whatsappMensagem || '')}`, '_blank');
+                  } else {
+                    handleCheckout(plano._id);
+                  }
+                }}
+                disabled={!plano.isSobMedida && checkoutLoading === plano._id}
               >
-                {checkoutLoading === plano._id ? <Loader2 className="h-5 w-5 animate-spin" /> : <Crown className="h-5 w-5" />}
-                Começar 7 Dias Grátis
+                {checkoutLoading === plano._id && !plano.isSobMedida ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : plano.isSobMedida ? (
+                  <MessageCircle className="h-5 w-5" />
+                ) : (
+                  <Crown className="h-5 w-5" />
+                )}
+                {plano.textoBotao || (plano.isSobMedida ? 'Falar com Especialista' : 'Começar 7 Dias Grátis')}
               </Button>
 
               {/* ── TEXTO DESTAQUE ── */}
