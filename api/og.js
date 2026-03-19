@@ -15,6 +15,7 @@ module.exports = async function handler(req, res) {
   }
 
   const host = (req.query.host || req.headers['host'] || '').toLowerCase().replace(/:\d+$/, '');
+  const path = req.query.path || '/';
   if (!host) {
     return res.status(400).send('<!-- missing host -->');
   }
@@ -45,7 +46,7 @@ module.exports = async function handler(req, res) {
       const title = map.platform_seo_title || map.saas_name || PLATFORM_NAME;
       const description = map.platform_seo_description || map.saas_slogan || PLATFORM_DESC;
       const image = map.platform_seo_og_image || map.saas_logo_url || DEFAULT_OG_IMAGE;
-      const url = `https://${globalDomain}`;
+      const url = `https://${globalDomain}${path}`;
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
@@ -76,7 +77,7 @@ module.exports = async function handler(req, res) {
 
     if (!loja) {
       return res.status(404).setHeader('Content-Type', 'text/html; charset=utf-8').send(
-        buildHTML(PLATFORM_NAME, 'Loja não encontrada', DEFAULT_OG_IMAGE, `https://${host}`)
+        buildHTML(PLATFORM_NAME, 'Loja não encontrada', DEFAULT_OG_IMAGE, `https://${hostNormalized}${path}`)
       );
     }
 
@@ -84,7 +85,7 @@ module.exports = async function handler(req, res) {
     const title = loja.seo_config?.title || loja.nome_exibicao || loja.nome;
     const description = loja.seo_config?.description || loja.slogan || 'Conheça nossa loja!';
     const image = loja.seo_config?.og_image_url || loja.icone || loja.favicon || DEFAULT_OG_IMAGE;
-    const url = `https://${host}`;
+    const url = `https://${hostNormalized}${path}`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
@@ -92,7 +93,7 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     console.error('[OG] Error:', err.message);
     return res.status(500).setHeader('Content-Type', 'text/html; charset=utf-8').send(
-      buildHTML(PLATFORM_NAME, 'Erro ao carregar dados', DEFAULT_OG_IMAGE, `https://${host}`)
+      buildHTML(PLATFORM_NAME, 'Erro ao carregar dados', DEFAULT_OG_IMAGE, `https://${hostNormalized}${path}`)
     );
   }
 };
@@ -123,6 +124,7 @@ function buildHTML(title, description, image, url) {
   <meta property="og:description" content="${d}" />
   <meta property="og:image" content="${img}" />
   <meta property="og:url" content="${u}" />
+  <link rel="canonical" href="${u}" />
   <meta property="og:site_name" content="${t}" />
 
   <!-- Twitter Card -->
