@@ -15,6 +15,11 @@ const LojaSchema = new mongoose.Schema({
   icone: { type: String, default: '' },
   dominio_customizado: { type: String, default: null },
   dominio_verificado: { type: Boolean, default: false },
+  seo_config: {
+    title: { type: String, default: null },
+    description: { type: String, default: null },
+    og_image_url: { type: String, default: null },
+  },
   configuracoes: {
     exigir_cadastro_cliente: { type: Boolean, default: false },
     tema: { type: String, default: 'market-tok' },

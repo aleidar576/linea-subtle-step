@@ -22,6 +22,7 @@
     { "source": "/api/fretes", "destination": "/api/fretes.js" },
     { "source": "/api/assinaturas", "destination": "/api/assinaturas.js" },
     { "source": "/api/cliente-auth", "destination": "/api/cliente-auth.js" },
+    { "source": "/api/og", "destination": "/api/og.js" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "crons": [
