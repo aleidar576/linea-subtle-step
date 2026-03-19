@@ -1,36 +1,19 @@
 
 
-## Adicionar `subtitulo` e `textoDestaque` aos Planos
+## Remover espaço entre vantagens e desvantagens nos cards
 
-### Resumo
-Dois novos campos de string nos planos: `subtitulo` (descrição curta) e `textoDestaque` (frase de ancoragem com parser `[[NomePlano]]` → texto em cor primária/bold).
+### Problema
+A lista de vantagens tem `flex-1` que empurra as desvantagens para o fundo do card, criando um gap visual nos cards com menos itens.
 
-### Alterações
+### Solução
+Remover `flex-1` da `<ul>` de vantagens (linha 432). O card já está em `flex flex-col` — sem `flex-1`, as desvantagens ficam coladas logo abaixo das vantagens. O card continua esticando para igualar a altura dos irmãos via grid, mas o espaço extra fica no final (abaixo de tudo), não no meio.
 
-**1. `models/Plano.js` — Adicionar campos ao schema (linhas 9-10)**
-- `subtitulo: { type: String, default: '' }`
-- `textoDestaque: { type: String, default: '' }`
+### Alteração
 
-**2. `src/services/saas-api.ts` — Adicionar à interface `Plano` (linha ~693)**
-- `subtitulo: string;`
-- `textoDestaque: string;`
+**`src/pages/painel/LojaAssinatura.tsx` — linha 432**
+- De: `<ul className="space-y-4 flex-1">`
+- Para: `<ul className="space-y-4">`
 
-**3. `src/pages/AdminPlanos.tsx` — Formulário de edição**
-- Adicionar `subtitulo` e `textoDestaque` à interface `PlanoForm` e ao `emptyForm`
-- Em `openEdit`, mapear os novos campos
-- No modal, após o input "Nome", dois novos inputs:
-  - "Subtítulo do Plano" (placeholder: "Ex: Ideal para profissionais...")
-  - "Frase de Ancoragem" (placeholder: "Ex: Tudo do plano [[Starter]] mais:")
-
-**4. `src/pages/painel/LojaAssinatura.tsx` — Renderização nos cards**
-- Criar helper `parseAnchor(text)`: split por `\[\[([^\]]+)\]\]`, renderiza matches em `text-primary font-bold`
-- Abaixo do nome do plano (linha ~373): se `subtitulo` existir, renderizar `<p className="text-sm text-muted-foreground mt-1">`
-- Acima da lista de vantagens (linha ~410): se `textoDestaque` existir, renderizar com ícone `CornerDownRight` + `parseAnchor(texto)`
-- Importar `CornerDownRight` do lucide-react
-
-### Arquivos alterados
-- `models/Plano.js`
-- `src/services/saas-api.ts`
-- `src/pages/AdminPlanos.tsx`
+### Arquivo alterado
 - `src/pages/painel/LojaAssinatura.tsx`
 
