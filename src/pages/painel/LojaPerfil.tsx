@@ -231,7 +231,18 @@ const LojaPerfil = () => {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div><label className="text-sm font-medium mb-1 block">Nome</label><Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required /></div>
               <div><label className="text-sm font-medium mb-1 block">Email</label><Input value={profile?.email || ''} readOnly className="bg-muted cursor-not-allowed" /><p className="text-xs text-muted-foreground mt-1">O email não pode ser alterado</p></div>
-              <div><label className="text-sm font-medium mb-1 block">CPF/CNPJ</label><Input value={cpfCnpj} onChange={e => setCpfCnpj(e.target.value)} placeholder="000.000.000-00" /></div>
+              <div><label className="text-sm font-medium mb-1 block">CPF/CNPJ</label><Input value={cpfCnpj} onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 14);
+                let formatted = digits;
+                if (digits.length <= 11) {
+                  if (digits.length > 9) formatted = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+                  else if (digits.length > 6) formatted = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+                  else if (digits.length > 3) formatted = `${digits.slice(0, 3)}.${digits.slice(3)}`;
+                } else {
+                  formatted = `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+                }
+                setCpfCnpj(formatted);
+              }} placeholder="000.000.000-00" /></div>
               <div><label className="text-sm font-medium mb-1 block">Celular (WhatsApp)</label><Input value={telefone} onChange={e => {
                 const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
                 let formatted = digits;
