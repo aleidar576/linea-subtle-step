@@ -701,6 +701,7 @@ export interface Plano {
   stripe_price_id: string;
   topicos: PlanoTopico[];
   limitacoes: string[];
+  destaques: string[];
   vantagens?: string[];
   destaque: boolean;
   ordem: number;

@@ -130,6 +130,11 @@ const AdminPlanos = () => {
   const removeLimitacao = (i: number) => setForm(f => ({ ...f, limitacoes: f.limitacoes.filter((_, idx) => idx !== i) }));
   const updateLimitacao = (i: number, v: string) => setForm(f => ({ ...f, limitacoes: f.limitacoes.map((item, idx) => idx === i ? v : item) }));
 
+  // --- Destaques helpers ---
+  const addDestaque = () => setForm(f => ({ ...f, destaques: [...f.destaques, ''] }));
+  const removeDestaque = (i: number) => setForm(f => ({ ...f, destaques: f.destaques.filter((_, idx) => idx !== i) }));
+  const updateDestaque = (i: number, v: string) => setForm(f => ({ ...f, destaques: f.destaques.map((item, idx) => idx === i ? v : item) }));
+
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
