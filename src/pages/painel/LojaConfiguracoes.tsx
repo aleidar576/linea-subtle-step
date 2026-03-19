@@ -265,7 +265,7 @@ const LojaConfiguracoes = () => {
                 ? (seoTitle || loja.nome_exibicao || loja.nome || '').substring(0, 70) + '…'
                 : (seoTitle || loja.nome_exibicao || loja.nome || '')}
             </p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 truncate">
+            <p className="text-xs text-muted-foreground/80 truncate">
               https://{dominioCustomizado || `${loja.slug}.${platformDomain || '...'}`}
             </p>
             <p className="text-xs text-muted-foreground line-clamp-2">
