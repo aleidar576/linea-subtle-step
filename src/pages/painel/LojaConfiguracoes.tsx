@@ -59,6 +59,11 @@ const LojaConfiguracoes = () => {
         id,
         data: {
           dominio_customizado: dominioCustomizado || null,
+          seo_config: {
+            title: seoTitle || null,
+            description: seoDescription || null,
+            og_image_url: seoOgImage || null,
+          },
           configuracoes: {
             exigir_cadastro_cliente: exigirCadastro,
             modo_orcamento: modoOrcamento,
