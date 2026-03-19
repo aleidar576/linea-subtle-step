@@ -124,6 +124,7 @@ function buildHTML(title, description, image, url) {
   <meta property="og:description" content="${d}" />
   <meta property="og:image" content="${img}" />
   <meta property="og:url" content="${u}" />
+  <link rel="canonical" href="${u}" />
   <meta property="og:site_name" content="${t}" />
 
   <!-- Twitter Card -->
