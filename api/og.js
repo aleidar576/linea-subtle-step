@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
 
     if (!loja) {
       return res.status(404).setHeader('Content-Type', 'text/html; charset=utf-8').send(
-        buildHTML(PLATFORM_NAME, 'Loja não encontrada', DEFAULT_OG_IMAGE, `https://${host}`)
+        buildHTML(PLATFORM_NAME, 'Loja não encontrada', DEFAULT_OG_IMAGE, `https://${hostNormalized}${path}`)
       );
     }
 
