@@ -26,6 +26,8 @@ const PainelInicio = () => {
   useEffect(() => {
     if (!activeLojas.length) { setChecked(true); return; }
 
+    setChecked(false);
+
     const checkAll = async () => {
       try {
         const [allProducts, profile, allPedidos] = await Promise.all([
@@ -96,7 +98,7 @@ const PainelInicio = () => {
       ) : (
         <>
           {/* Onboarding Checklist - Progressive Disclosure */}
-          {!isOnboardingCompleted && (
+          {!isOnboardingCompleted && checked && (
             <Card className="mb-8">
               <CardContent className="p-6">
                 <h3 className="font-semibold mb-4">Primeiros Passos</h3>
