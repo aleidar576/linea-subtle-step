@@ -12,6 +12,15 @@ const parseBold = (text: string) => {
       : part
   );
 };
+
+const parseAnchor = (text: string) => {
+  const parts = text.split(/(\[\[[^\]]+\]\])/g);
+  return parts.map((part, i) =>
+    part.startsWith('[[') && part.endsWith(']]')
+      ? <strong key={i} className="font-bold text-primary">{part.slice(2, -2)}</strong>
+      : part
+  );
+};
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 import { settingsApi } from '@/services/api';
