@@ -168,6 +168,7 @@ const AdminPlanos = () => {
                 <TableHead>Stripe Price ID</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead>Tópicos</TableHead>
+                <TableHead>Destaques</TableHead>
                 <TableHead>Limitações</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
