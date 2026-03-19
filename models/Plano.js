@@ -21,6 +21,10 @@ const PlanoSchema = new mongoose.Schema({
   destaque: { type: Boolean, default: false },
   ordem: { type: Number, default: 0 },
   is_active: { type: Boolean, default: true },
+  isSobMedida: { type: Boolean, default: false },
+  textoBotao: { type: String, default: '' },
+  whatsappNumero: { type: String, default: '' },
+  whatsappMensagem: { type: String, default: '' },
   criado_em: { type: Date, default: () => nowGMT3() },
 });
 

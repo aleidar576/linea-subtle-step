@@ -93,12 +93,17 @@ interface PlanoForm {
   desvantagens: string[];
   destaque: boolean;
   ordem: number;
+  isSobMedida: boolean;
+  textoBotao: string;
+  whatsappNumero: string;
+  whatsappMensagem: string;
 }
 
 const emptyForm: PlanoForm = {
   nome: '', subtitulo: '', textoDestaque: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
   stripe_price_id: '', vantagens: [], desvantagens: [], destaque: false, ordem: 0,
+  isSobMedida: false, textoBotao: '', whatsappNumero: '', whatsappMensagem: '',
 };
 
 const AdminPlanos = () => {

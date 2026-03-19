@@ -706,6 +706,10 @@ export interface Plano {
   destaque: boolean;
   ordem: number;
   is_active: boolean;
+  isSobMedida: boolean;
+  textoBotao: string;
+  whatsappNumero: string;
+  whatsappMensagem: string;
 }
 
 export const planosApi = {
