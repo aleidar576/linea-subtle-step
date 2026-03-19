@@ -682,6 +682,8 @@ export const lojistaApi = {
 export interface Plano {
   _id: string;
   nome: string;
+  subtitulo: string;
+  textoDestaque: string;
   preco_original: number;
   preco_promocional: number;
   taxa_transacao: number;

@@ -80,6 +80,8 @@ const SortableListSection = ({ label, hint, items, field, onAdd, onRemove, onUpd
 
 interface PlanoForm {
   nome: string;
+  subtitulo: string;
+  textoDestaque: string;
   preco_original: number;
   preco_promocional: number;
   taxa_transacao: number;
@@ -94,7 +96,7 @@ interface PlanoForm {
 }
 
 const emptyForm: PlanoForm = {
-  nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
+  nome: '', subtitulo: '', textoDestaque: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
   stripe_price_id: '', vantagens: [], desvantagens: [], destaque: false, ordem: 0,
 };
@@ -112,7 +114,8 @@ const AdminPlanos = () => {
   const openCreate = () => { setForm(emptyForm); setEditId(null); setShowForm(true); };
   const openEdit = (p: any) => {
     setForm({
-      nome: p.nome, preco_original: p.preco_original, preco_promocional: p.preco_promocional,
+      nome: p.nome, subtitulo: p.subtitulo || '', textoDestaque: p.textoDestaque || '',
+      preco_original: p.preco_original, preco_promocional: p.preco_promocional,
       taxa_transacao: p.taxa_transacao, taxa_transacao_percentual: p.taxa_transacao_percentual ?? p.taxa_transacao ?? 1.5,
       taxa_transacao_trial: p.taxa_transacao_trial ?? 2.0, taxa_transacao_fixa: p.taxa_transacao_fixa ?? 0,
       stripe_price_id: p.stripe_price_id,
@@ -244,6 +247,15 @@ const AdminPlanos = () => {
             <div>
               <Label>Nome</Label>
               <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Starter" />
+            </div>
+            <div>
+              <Label>Subtítulo do Plano</Label>
+              <Input value={form.subtitulo} onChange={e => setForm(f => ({ ...f, subtitulo: e.target.value }))} placeholder="Ex: Ideal para profissionais..." />
+            </div>
+            <div>
+              <Label>Frase de Ancoragem</Label>
+              <Input value={form.textoDestaque} onChange={e => setForm(f => ({ ...f, textoDestaque: e.target.value }))} placeholder="Ex: Tudo do plano [[Starter]] mais:" />
+              <p className="text-xs text-muted-foreground mt-1">Use [[NomePlano]] para destacar em cor primária</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle, CornerDownRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -9,6 +9,15 @@ const parseBold = (text: string) => {
   return parts.map((part, i) =>
     part.startsWith('**') && part.endsWith('**')
       ? <strong key={i} className="font-bold text-foreground">{part.slice(2, -2)}</strong>
+      : part
+  );
+};
+
+const parseAnchor = (text: string) => {
+  const parts = text.split(/(\[\[[^\]]+\]\])/g);
+  return parts.map((part, i) =>
+    part.startsWith('[[') && part.endsWith(']]')
+      ? <strong key={i} className="font-bold text-primary">{part.slice(2, -2)}</strong>
       : part
   );
 };
@@ -371,6 +380,9 @@ const LojaAssinatura = () => {
                   {plano.destaque && <Zap className="h-6 w-6 text-green-500" />}
                   {plano.nome}
                 </h2>
+                {plano.subtitulo && (
+                  <p className="text-sm text-muted-foreground mt-1">{plano.subtitulo}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Taxa de transação: {plano.taxa_transacao_percentual ?? plano.taxa_transacao}%
                   {(plano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${plano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
@@ -406,6 +418,14 @@ const LojaAssinatura = () => {
                 {checkoutLoading === plano._id ? <Loader2 className="h-5 w-5 animate-spin" /> : <Crown className="h-5 w-5" />}
                 Começar 7 Dias Grátis
               </Button>
+
+              {/* ── TEXTO DESTAQUE ── */}
+              {plano.textoDestaque && (
+                <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                  <CornerDownRight className="h-4 w-4 text-primary shrink-0" />
+                  <span>{parseAnchor(plano.textoDestaque)}</span>
+                </div>
+              )}
 
               {/* ── VANTAGENS ── */}
               {plano.vantagens && plano.vantagens.length > 0 && (
