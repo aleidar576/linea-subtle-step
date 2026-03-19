@@ -85,82 +85,94 @@ const PainelInicio = () => {
         </div>
       )}
 
-      {/* Onboarding Checklist - Progressive Disclosure */}
-      {!isOnboardingCompleted && (
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <h3 className="font-semibold mb-4">Primeiros Passos</h3>
-            <div className="space-y-3">
-              {checklist.map((item, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 ${item.link && !item.done ? 'cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1 -mx-2' : ''}`}
-                  onClick={() => { if (item.link && !item.done) navigate(item.link); }}
-                >
-                  {item.done ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
-                  )}
-                  <span className={item.done ? 'text-muted-foreground line-through' : ''}>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Store Grid */}
-      <h2 className="text-xl font-semibold tracking-tight text-foreground mb-4">Suas Lojas</h2>
-
-      {activeLojas.length === 0 ? (
-        <div className="min-h-[300px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 p-8 text-center animate-in fade-in-50">
-          <Store className="w-12 h-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold">Nenhuma loja encontrada</h3>
-          <p className="text-sm text-muted-foreground mb-6">Você ainda não possui nenhuma loja configurada.</p>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Criar Primeira Loja
-          </Button>
+      {!checked ? (
+        <div className="space-y-6">
+          <Skeleton className="h-[200px] w-full rounded-xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <Skeleton className="h-[180px] rounded-xl" />
+            <Skeleton className="h-[180px] rounded-xl" />
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {activeLojas.map((loja) => (
-            <Card key={loja._id} className="hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center justify-between text-lg">
-                  <span className="truncate pr-2">{loja.nome}</span>
-                  <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-0 shrink-0">Ativa</Badge>
-                </CardTitle>
-                <CardDescription className={loja.dominio_customizado ? '' : 'text-muted-foreground italic'}>
-                  {loja.dominio_customizado || 'Configuração pendente'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="mt-auto pt-0">
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/produtos`)}>
-                    <Package className="w-4 h-4 mr-2" />
-                    Produtos
-                  </Button>
-                  <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/pedidos`)}>
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Pedidos
-                  </Button>
-                  <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/configuracoes`)}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configurações
-                  </Button>
-                  <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" asChild>
-                    <a href={loja.dominio_customizado ? `https://${loja.dominio_customizado}` : `/loja/${loja.slug}`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Visitar Loja
-                    </a>
-                  </Button>
+        <>
+          {/* Onboarding Checklist - Progressive Disclosure */}
+          {!isOnboardingCompleted && (
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-4">Primeiros Passos</h3>
+                <div className="space-y-3">
+                  {checklist.map((item, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center gap-3 ${item.link && !item.done ? 'cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1 -mx-2' : ''}`}
+                      onClick={() => { if (item.link && !item.done) navigate(item.link); }}
+                    >
+                      {item.done ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+                      )}
+                      <span className={item.done ? 'text-muted-foreground line-through' : ''}>{item.label}</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          )}
+
+          {/* Store Grid */}
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-4">Suas Lojas</h2>
+
+          {activeLojas.length === 0 ? (
+            <div className="min-h-[300px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 p-8 text-center animate-in fade-in-50">
+              <Store className="w-12 h-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold">Nenhuma loja encontrada</h3>
+              <p className="text-sm text-muted-foreground mb-6">Você ainda não possui nenhuma loja configurada.</p>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Primeira Loja
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {activeLojas.map((loja) => (
+                <Card key={loja._id} className="hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <span className="truncate pr-2">{loja.nome}</span>
+                      <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-0 shrink-0">Ativa</Badge>
+                    </CardTitle>
+                    <CardDescription className={loja.dominio_customizado ? '' : 'text-muted-foreground italic'}>
+                      {loja.dominio_customizado || 'Configuração pendente'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="mt-auto pt-0">
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/produtos`)}>
+                        <Package className="w-4 h-4 mr-2" />
+                        Produtos
+                      </Button>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/pedidos`)}>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Pedidos
+                      </Button>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/configuracoes`)}>
+                        <Settings className="w-4 h-4 mr-2" />
+                        Configurações
+                      </Button>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" asChild>
+                        <a href={loja.dominio_customizado ? `https://${loja.dominio_customizado}` : `/loja/${loja.slug}`} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Visitar Loja
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
