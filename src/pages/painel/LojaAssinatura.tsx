@@ -1,9 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle, Store, Users, Package, Target, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
+
+const DESTAQUE_ICONS: Record<string, LucideIcon> = {
+  loja: Store, lojas: Store,
+  usuário: Users, usuario: Users, usuários: Users, usuarios: Users,
+  estoque: Package, produto: Package, produtos: Package,
+  pixel: Target, pixels: Target,
+};
+
+const getDestaqueIcon = (text: string): LucideIcon => {
+  const lower = text.toLowerCase();
+  for (const [key, Icon] of Object.entries(DESTAQUE_ICONS)) {
+    if (lower.includes(key)) return Icon;
+  }
+  return CheckCircle2;
+};
 import { useToast } from '@/hooks/use-toast';
 import { planosApi, stripeApi, lojistaApi, type Plano, type LojistaProfile } from '@/services/saas-api';
 import { settingsApi } from '@/services/api';
