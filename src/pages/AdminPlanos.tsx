@@ -80,6 +80,8 @@ const SortableListSection = ({ label, hint, items, field, onAdd, onRemove, onUpd
 
 interface PlanoForm {
   nome: string;
+  subtitulo: string;
+  textoDestaque: string;
   preco_original: number;
   preco_promocional: number;
   taxa_transacao: number;
@@ -94,7 +96,7 @@ interface PlanoForm {
 }
 
 const emptyForm: PlanoForm = {
-  nome: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
+  nome: '', subtitulo: '', textoDestaque: '', preco_original: 0, preco_promocional: 0, taxa_transacao: 1.5,
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
   stripe_price_id: '', vantagens: [], desvantagens: [], destaque: false, ordem: 0,
 };
