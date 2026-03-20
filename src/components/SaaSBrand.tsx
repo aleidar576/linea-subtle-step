@@ -13,6 +13,9 @@ const BRAND_KEYS = [
   'saas_logo_url', 'saas_logo_url_light', 'saas_logo_url_home',
   'saas_logo_size', 'saas_logo_size_home', 'saas_logo_size_login',
   'browser_icon',
+  'branding_cor_primaria', 'branding_cor_secundaria',
+  'branding_fundo_dark', 'branding_fundo_light',
+  'branding_texto_light', 'branding_texto_dark',
 ];
 
 export function useSaaSBrand() {
