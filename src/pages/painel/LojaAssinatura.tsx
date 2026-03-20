@@ -197,9 +197,9 @@ const LojaAssinatura = () => {
             )}
 
             {isCancelScheduled && cancelDate && (
-              <div className="flex items-center gap-3 rounded-lg bg-orange-500/10 p-4 border border-orange-300">
-                <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
-                <p className="text-sm text-orange-700 font-medium">
+              <div className="flex items-center gap-3 rounded-lg bg-secondary/15 p-4 border border-secondary/20">
+                <AlertTriangle className="h-5 w-5 text-secondary shrink-0" />
+                <p className="text-sm text-secondary font-medium">
                   Sua assinatura foi cancelada, mas você tem acesso garantido até{' '}
                   <strong>{new Date(cancelDate).toLocaleDateString('pt-BR')}</strong>.
                 </p>
