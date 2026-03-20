@@ -1174,7 +1174,7 @@ ${jsonExampleStr}`;
                           <Label>Preço Promocional</Label>
                           <CurrencyInput value={editingProduct.original_price || 0} onChange={v => setField('original_price', v || null)} />
                           {discountPercent !== null && (
-                            <p className="text-xs text-emerald-500 mt-1 font-medium">Seu produto está com {discountPercent}% de desconto</p>
+                            <p className="text-xs text-primary mt-1 font-medium">Seu produto está com {discountPercent}% de desconto</p>
                           )}
                         </div>
                       </div>
