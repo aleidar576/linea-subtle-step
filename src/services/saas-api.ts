@@ -710,6 +710,10 @@ export interface Plano {
   textoBotao: string;
   whatsappNumero: string;
   whatsappMensagem: string;
+  categoria: 'business' | 'loja_pronta';
+  isPagamentoUnico: boolean;
+  maxParcelas: number;
+  destaques: string[];
 }
 
 export const planosApi = {

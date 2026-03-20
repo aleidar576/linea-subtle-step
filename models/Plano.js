@@ -25,6 +25,10 @@ const PlanoSchema = new mongoose.Schema({
   textoBotao: { type: String, default: '' },
   whatsappNumero: { type: String, default: '' },
   whatsappMensagem: { type: String, default: '' },
+  categoria: { type: String, enum: ['business', 'loja_pronta'], default: 'business' },
+  isPagamentoUnico: { type: Boolean, default: false },
+  maxParcelas: { type: Number, default: 12 },
+  destaques: { type: [String], default: [] },
   criado_em: { type: Date, default: () => nowGMT3() },
 });
 

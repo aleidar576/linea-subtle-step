@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, Plus, Pencil, Trash2, Sparkles, X, GripVertical, MessageCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -98,6 +100,10 @@ interface PlanoForm {
   textoBotao: string;
   whatsappNumero: string;
   whatsappMensagem: string;
+  categoria: 'business' | 'loja_pronta';
+  isPagamentoUnico: boolean;
+  maxParcelas: number;
+  destaques: string[];
 }
 
 const emptyForm: PlanoForm = {
@@ -105,6 +111,12 @@ const emptyForm: PlanoForm = {
   taxa_transacao_percentual: 1.5, taxa_transacao_trial: 2.0, taxa_transacao_fixa: 0,
   stripe_price_id: '', vantagens: [], desvantagens: [], destaque: false, ordem: 0,
   isSobMedida: false, textoBotao: '', whatsappNumero: '', whatsappMensagem: '',
+  categoria: 'business', isPagamentoUnico: false, maxParcelas: 12, destaques: [],
+};
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  business: 'Business',
+  loja_pronta: 'Loja Pronta',
 };
 
 const AdminPlanos = () => {
@@ -132,6 +144,10 @@ const AdminPlanos = () => {
       textoBotao: p.textoBotao || '',
       whatsappNumero: p.whatsappNumero || '',
       whatsappMensagem: p.whatsappMensagem || '',
+      categoria: p.categoria || 'business',
+      isPagamentoUnico: p.isPagamentoUnico || false,
+      maxParcelas: p.maxParcelas ?? 12,
+      destaques: p.destaques || [],
     });
     setEditId(p._id);
     setShowForm(true);
@@ -181,11 +197,11 @@ const AdminPlanos = () => {
   };
 
   // --- List helpers ---
-  const addToList = (field: 'vantagens' | 'desvantagens') =>
+  const addToList = (field: 'vantagens' | 'desvantagens' | 'destaques') =>
     setForm(f => ({ ...f, [field]: [...f[field], ''] }));
-  const removeFromList = (field: 'vantagens' | 'desvantagens', i: number) =>
+  const removeFromList = (field: 'vantagens' | 'desvantagens' | 'destaques', i: number) =>
     setForm(f => ({ ...f, [field]: f[field].filter((_, idx) => idx !== i) }));
-  const updateList = (field: 'vantagens' | 'desvantagens', i: number, v: string) =>
+  const updateList = (field: 'vantagens' | 'desvantagens' | 'destaques', i: number, v: string) =>
     setForm(f => ({ ...f, [field]: f[field].map((item, idx) => idx === i ? v : item) }));
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -213,13 +229,13 @@ const AdminPlanos = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Preço Original</TableHead>
                 <TableHead>Preço Promocional</TableHead>
                 <TableHead>Taxa %</TableHead>
-                <TableHead>Stripe Price ID</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead>Vantagens</TableHead>
-                <TableHead>Desvantagens</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -227,13 +243,25 @@ const AdminPlanos = () => {
               {planos.map((p: any) => (
                 <TableRow key={p._id}>
                   <TableCell className="font-medium">{p.nome}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {CATEGORIA_LABELS[p.categoria] || 'Business'}
+                    </Badge>
+                  </TableCell>
                   <TableCell>R$ {(p.preco_original || 0).toFixed(2)}</TableCell>
                   <TableCell>R$ {(p.preco_promocional || 0).toFixed(2)}</TableCell>
                   <TableCell>{p.taxa_transacao_percentual ?? p.taxa_transacao}%</TableCell>
-                  <TableCell className="text-xs text-muted-foreground font-mono max-w-[160px] truncate">{p.stripe_price_id}</TableCell>
+                  <TableCell>
+                    {p.isPagamentoUnico ? (
+                      <Badge className="bg-secondary/15 text-secondary text-xs">Único</Badge>
+                    ) : p.isSobMedida ? (
+                      <Badge className="bg-muted text-muted-foreground text-xs">Sob Medida</Badge>
+                    ) : (
+                      <Badge className="bg-primary/15 text-primary text-xs">Recorrente</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>{p.destaque ? '⭐' : '-'}</TableCell>
                   <TableCell>{(p.vantagens || []).length}</TableCell>
-                  <TableCell>{(p.desvantagens || []).length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
@@ -258,6 +286,32 @@ const AdminPlanos = () => {
               <Label>Nome</Label>
               <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Starter" />
             </div>
+
+            {/* Categoria */}
+            <div className="border border-border rounded-lg p-4 space-y-3">
+              <Label className="text-base font-semibold">Categoria do Plano</Label>
+              <RadioGroup
+                value={form.categoria}
+                onValueChange={(v: 'business' | 'loja_pronta') => setForm(f => ({ ...f, categoria: v }))}
+                className="flex gap-4"
+              >
+                <label className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${form.categoria === 'business' ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                  <RadioGroupItem value="business" />
+                  <div>
+                    <span className="font-medium text-sm">Business</span>
+                    <p className="text-xs text-muted-foreground">Planos SaaS recorrentes</p>
+                  </div>
+                </label>
+                <label className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${form.categoria === 'loja_pronta' ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                  <RadioGroupItem value="loja_pronta" />
+                  <div>
+                    <span className="font-medium text-sm">Loja Pronta</span>
+                    <p className="text-xs text-muted-foreground">Serviços high-ticket</p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
+
             <div>
               <Label>Subtítulo do Plano</Label>
               <Input value={form.subtitulo} onChange={e => setForm(f => ({ ...f, subtitulo: e.target.value }))} placeholder="Ex: Ideal para profissionais..." />
@@ -277,6 +331,25 @@ const AdminPlanos = () => {
                 <Input type="number" step="0.01" value={form.preco_promocional} onChange={e => setForm(f => ({ ...f, preco_promocional: Number(e.target.value) }))} />
               </div>
             </div>
+
+            {/* Pagamento Único */}
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-semibold">É pagamento único?</Label>
+                  <p className="text-xs text-muted-foreground">Sem cobrança recorrente (ex: serviço avulso)</p>
+                </div>
+                <Switch checked={form.isPagamentoUnico} onCheckedChange={v => setForm(f => ({ ...f, isPagamentoUnico: v }))} />
+              </div>
+              {form.isPagamentoUnico && (
+                <div className="pl-4 border-l-2 border-primary/30">
+                  <Label>Máximo de Parcelas Permitidas</Label>
+                  <Input type="number" min={1} max={24} value={form.maxParcelas} onChange={e => setForm(f => ({ ...f, maxParcelas: Number(e.target.value) }))} />
+                  <p className="text-xs text-muted-foreground mt-1">Usado para exibir o valor parcelado na vitrine</p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Taxa Percentual (%)</Label>
@@ -353,6 +426,18 @@ const AdminPlanos = () => {
               onRemove={(i) => removeFromList('desvantagens', i)}
               onUpdate={(i, v) => updateList('desvantagens', i, v)}
               onReorder={(items) => setForm(f => ({ ...f, desvantagens: items }))}
+            />
+
+            {/* Destaques Extras */}
+            <SortableListSection
+              label="Destaques Extras"
+              hint='Seção "Você também conta com:" — exibida após as vantagens'
+              items={form.destaques}
+              field="destaques"
+              onAdd={() => addToList('destaques')}
+              onRemove={(i) => removeFromList('destaques', i)}
+              onUpdate={(i, v) => updateList('destaques', i, v)}
+              onReorder={(items) => setForm(f => ({ ...f, destaques: items }))}
             />
 
             <Button onClick={handleSave} className="w-full" disabled={saving}>

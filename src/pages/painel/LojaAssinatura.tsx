@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle, CornerDownRight, MessageCircle } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Loader2, ExternalLink, AlertTriangle, RefreshCw, Receipt, Info, ShieldAlert, CreditCard, XCircle, CornerDownRight, MessageCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -33,6 +33,9 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   canceled: { label: 'Cancelada', className: 'bg-muted text-muted-foreground' },
 };
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
 const LojaAssinatura = () => {
   const { trackSaaSEvent } = useSaaSPixels();
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -46,6 +49,7 @@ const LojaAssinatura = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [payManualLoading, setPayManualLoading] = useState(false);
   const [diasToleranciaTaxas, setDiasToleranciaTaxas] = useState(3);
+  const [activeTab, setActiveTab] = useState<'business' | 'loja_pronta'>('business');
 
   const fetchData = useCallback(() => {
     return Promise.all([planosApi.list(), lojistaApi.perfil()])
@@ -75,7 +79,6 @@ const LojaAssinatura = () => {
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
       toast({ title: '🎉 Assinatura ativada!', description: 'Seu trial de 7 dias começou.' });
-      // Fire Subscribe event for SaaS pixels (Stripe checkout success)
       trackSaaSEvent('Subscribe', { content_name: 'Assinatura Lojista', currency: 'BRL' });
     }
   }, [searchParams]);
@@ -172,7 +175,7 @@ const LojaAssinatura = () => {
             {precoPromocional !== null && (
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-extrabold text-foreground">
-                  R$ {precoPromocional.toFixed(2).replace('.', ',')}
+                  {formatCurrency(precoPromocional)}
                 </span>
                 <span className="text-sm text-muted-foreground">/ mês</span>
               </div>
@@ -185,7 +188,7 @@ const LojaAssinatura = () => {
                   <p>
                     Você está no <strong className="text-foreground">período trial de 7 dias</strong>. Ao final, será cobrado automaticamente o plano{' '}
                     <strong className="text-foreground">{planoNome}</strong> de{' '}
-                    <strong className="text-foreground">R$ {(precoPromocional ?? 0).toFixed(2).replace('.', ',')}/mês</strong>.
+                    <strong className="text-foreground">{formatCurrency(precoPromocional ?? 0)}/mês</strong>.
                   </p>
                   {profile.data_vencimento && (
                     <p>
@@ -251,7 +254,7 @@ const LojaAssinatura = () => {
                   </p>
                   <p>
                     Após o trial, a taxa será de <strong className="text-foreground">{currentPlano.taxa_transacao_percentual ?? currentPlano.taxa_transacao ?? 1.5}%</strong>
-                    {(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${currentPlano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''} por transação.
+                    {(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + ${formatCurrency(currentPlano.taxa_transacao_fixa)}` : ''} por transação.
                   </p>
                 </div>
               </div>
@@ -259,7 +262,7 @@ const LojaAssinatura = () => {
 
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-extrabold text-foreground">
-                R$ {taxasAcumuladas.toFixed(2).replace('.', ',')}
+                {formatCurrency(taxasAcumuladas)}
               </span>
             </div>
 
@@ -276,12 +279,11 @@ const LojaAssinatura = () => {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Taxa por transação:</span>
                 <span className="font-medium">
-                  {taxaVigente}%{(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${currentPlano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
+                  {taxaVigente}%{(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + ${formatCurrency(currentPlano.taxa_transacao_fixa)}` : ''}
                 </span>
               </div>
             )}
 
-            {/* Botão: Pagar taxas antecipadamente (quando status OK mas há taxas) */}
             {profile.status_taxas === 'ok' && taxasAcumuladas > 0 && (
               <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2">
                 {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
@@ -289,13 +291,12 @@ const LojaAssinatura = () => {
               </Button>
             )}
 
-            {/* Banner: Falha na cobrança */}
             {profile.status_taxas === 'falha' && taxasAcumuladas > 0 && (
                <div className="rounded-lg bg-secondary/15 p-4 border border-secondary/20 space-y-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-secondary shrink-0" />
                   <p className="text-sm text-secondary font-medium">
-                    Atenção: Não conseguimos debitar as taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} do seu cartão.
+                    Atenção: Não conseguimos debitar as taxas de {formatCurrency(taxasAcumuladas)} do seu cartão.
                     {dataVencimentoTaxas && <> O sistema tentará novamente em <strong>{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</strong>.</>}
                   </p>
                 </div>
@@ -306,13 +307,12 @@ const LojaAssinatura = () => {
               </div>
             )}
 
-            {/* Banner: Bloqueado — limite de tentativas */}
             {profile.status_taxas === 'bloqueado' && taxasAcumuladas > 0 && (
               <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
                   <div className="text-sm text-destructive font-medium">
-                    <p>Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} estão pendentes.</p>
+                    <p>Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de {formatCurrency(taxasAcumuladas)} estão pendentes.</p>
                     {profile.data_bloqueio_taxas ? (() => {
                       const toleranciaExtra = (profile as any)?.tolerancia_extra_dias_taxas || 0;
                       const dataBloqueio = new Date(profile.data_bloqueio_taxas);
@@ -343,21 +343,56 @@ const LojaAssinatura = () => {
   }
 
   // === PLANS SELECTION VIEW ===
+  const hasLojaPronta = planos.some(p => (p.categoria || 'business') === 'loja_pronta');
+  const filteredPlanos = planos.filter(p => (p.categoria || 'business') === activeTab);
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-10">
         <Crown className="h-10 w-10 text-primary mx-auto mb-3" />
         <h1 className="text-3xl font-bold mb-2">Escolha seu Plano</h1>
-        <p className="text-muted-foreground">Comece com 7 dias grátis. Cancele quando quiser.</p>
+        <p className="text-muted-foreground">
+          {activeTab === 'business'
+            ? 'Comece com 7 dias grátis. Cancele quando quiser.'
+            : 'Serviços de criação profissional para sua loja.'}
+        </p>
       </div>
 
-      {planos.length === 0 ? (
+      {/* Tabs */}
+      {hasLojaPronta && (
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex gap-1 bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('business')}
+              className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
+                activeTab === 'business'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Planos Business
+            </button>
+            <button
+              onClick={() => setActiveTab('loja_pronta')}
+              className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
+                activeTab === 'loja_pronta'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Loja Pronta
+            </button>
+          </div>
+        </div>
+      )}
+
+      {filteredPlanos.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p>Nenhum plano disponível no momento.</p>
         </div>
       ) : (
-        <div className={`grid gap-6 ${planos.length === 1 ? 'max-w-md mx-auto' : planos.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : planos.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
-          {planos.map((plano) => (
+        <div className={`grid gap-6 ${filteredPlanos.length === 1 ? 'max-w-md mx-auto' : filteredPlanos.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : filteredPlanos.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+          {filteredPlanos.map((plano) => (
             <div
               key={plano._id}
               className={`bg-card rounded-2xl p-8 relative flex flex-col ${
@@ -384,10 +419,10 @@ const LojaAssinatura = () => {
                   <p className="text-sm text-muted-foreground mt-1">{plano.subtitulo}</p>
                 )}
               {/* Taxa de transação - oculta para sob medida */}
-              {!plano.isSobMedida && (
+              {!plano.isSobMedida && !plano.isPagamentoUnico && (
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Taxa de transação: {plano.taxa_transacao_percentual ?? plano.taxa_transacao}%
-                  {(plano.taxa_transacao_fixa || 0) > 0 ? ` + R$ ${plano.taxa_transacao_fixa.toFixed(2).replace('.', ',')}` : ''}
+                  {(plano.taxa_transacao_fixa || 0) > 0 ? ` + ${formatCurrency(plano.taxa_transacao_fixa)}` : ''}
                 </p>
               )}
               </div>
@@ -400,7 +435,7 @@ const LojaAssinatura = () => {
                   <>
                     {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
                       <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-2">
-                        R$ {plano.preco_original.toFixed(2).replace('.', ',')}
+                        {formatCurrency(plano.preco_original)}
                       </p>
                     )}
                     {plano.preco_promocional > 0 ? (
@@ -413,7 +448,23 @@ const LojaAssinatura = () => {
                     ) : (
                       <span className="text-4xl font-black text-foreground">Consultar</span>
                     )}
-                    <p className="text-sm text-muted-foreground mt-2">/mês</p>
+
+                    {/* Tipo de cobrança */}
+                    {plano.isPagamentoUnico ? (
+                      <div className="mt-2">
+                        <p className="text-sm text-muted-foreground">à vista</p>
+                        {plano.maxParcelas > 1 && plano.preco_promocional > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            ou em até {plano.maxParcelas}x de{' '}
+                            <strong className="text-foreground">
+                              {formatCurrency(plano.preco_promocional / plano.maxParcelas)}
+                            </strong>
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-2">/mês</p>
+                    )}
                   </>
                 )}
               </div>
@@ -437,7 +488,7 @@ const LojaAssinatura = () => {
                 ) : (
                   <Crown className="h-5 w-5" />
                 )}
-                {plano.textoBotao || (plano.isSobMedida ? 'Falar com Especialista' : 'Começar 7 Dias Grátis')}
+                {plano.textoBotao || (plano.isSobMedida ? 'Falar com Especialista' : plano.isPagamentoUnico ? 'Contratar Agora' : 'Começar 7 Dias Grátis')}
               </Button>
 
               {/* ── TEXTO DESTAQUE ── */}
@@ -460,6 +511,23 @@ const LojaAssinatura = () => {
                 </ul>
               )}
 
+              {/* ── DESTAQUES EXTRAS ── */}
+              {plano.destaques && plano.destaques.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-border/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-3">
+                    Você também conta com:
+                  </p>
+                  <ul className="space-y-3">
+                    {plano.destaques.map((d, i) => (
+                      <li key={i} className="flex items-center gap-3 text-sm">
+                        <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-muted-foreground">{parseBold(d)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* ── DESVANTAGENS ── */}
               {plano.desvantagens && plano.desvantagens.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-border/30 space-y-3">
@@ -477,7 +545,9 @@ const LojaAssinatura = () => {
       )}
 
       <p className="text-center text-xs text-muted-foreground mt-6">
-        Durante o trial de 7 dias, a taxa de transação aplicada é de 2.0%.
+        {activeTab === 'business'
+          ? 'Durante o trial de 7 dias, a taxa de transação aplicada é de 2.0%.'
+          : 'Pagamento único. Sem mensalidades adicionais para o serviço contratado.'}
       </p>
     </div>
   );
