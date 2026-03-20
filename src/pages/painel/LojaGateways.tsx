@@ -418,9 +418,9 @@ function AppmaxConfig({
             <div>
               <Label className="text-xs">Parcelas sem juros</Label>
               <Input type="number" min={1} max={maxInstallments} value={freeInstallments} onChange={e => setFreeInstallments(Math.min(maxInstallments, Math.max(1, Number(e.target.value))))} />
-              <div className="mt-2 flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2.5">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-yellow-700 leading-snug">
+              <div className="mt-2 flex items-start gap-2 rounded-md border border-secondary/30 bg-secondary/10 p-2.5">
+                <AlertTriangle className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                <p className="text-[11px] text-secondary leading-snug">
                   As taxas das parcelas configuradas como "Sem Juros" serão descontadas diretamente do seu saldo a receber na Appmax (Taxa Absorvida).
                 </p>
               </div>
