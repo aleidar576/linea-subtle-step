@@ -291,10 +291,10 @@ const LojaAssinatura = () => {
 
             {/* Banner: Falha na cobrança */}
             {profile.status_taxas === 'falha' && taxasAcumuladas > 0 && (
-              <div className="rounded-lg bg-orange-500/10 p-4 border border-orange-300 space-y-3">
+               <div className="rounded-lg bg-secondary/15 p-4 border border-secondary/20 space-y-3">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
-                  <p className="text-sm text-orange-700 font-medium">
+                  <AlertTriangle className="h-5 w-5 text-secondary shrink-0" />
+                  <p className="text-sm text-secondary font-medium">
                     Atenção: Não conseguimos debitar as taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} do seu cartão.
                     {dataVencimentoTaxas && <> O sistema tentará novamente em <strong>{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</strong>.</>}
                   </p>
