@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, X, Menu, X as XIcon } from 'lucide-react';
+import { ArrowRight, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,7 +11,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { SaaSLogo, useSaaSBrand, useFaviconUpdater, DynamicIcon } from '@/components/SaaSBrand';
+import { DynamicIcon, useSaaSBrand, useFaviconUpdater } from '@/components/SaaSBrand';
+import InstitucionalLayout from '@/components/InstitucionalLayout';
 import { publicLandingApi, type LandingPageCMSData, type Plano } from '@/services/saas-api';
 
 /* ───────── helpers ───────── */
@@ -58,7 +59,6 @@ const LandingPage = () => {
   const [cms, setCms] = useState<LandingPageCMSData | null>(null);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   /* ─── data fetching ─── */
   useEffect(() => {
@@ -87,64 +87,8 @@ const LandingPage = () => {
     return `https://wa.me/${clean}?text=${encodeURIComponent(mensagem)}`;
   };
 
-  /* ─── smooth scroll ─── */
-  const scrollTo = (id: string) => {
-    setMobileMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
-    <div className="min-h-screen bg-white text-zinc-900 scroll-smooth">
-      {/* ══════════════ HEADER ══════════════ */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100">
-        <div className="container mx-auto flex items-center justify-between px-4 h-16">
-          <SaaSLogo context="home" theme="light" nameClassName="text-xl text-zinc-900 tracking-tight" />
-
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6">
-            <button onClick={() => scrollTo('recursos')} className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">
-              Recursos
-            </button>
-            <button onClick={() => scrollTo('planos')} className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">
-              Planos
-            </button>
-            <Button variant="ghost" className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100" onClick={() => navigate('/login')}>
-              Fazer login
-            </Button>
-            <Button
-              className="text-white"
-              style={{ backgroundColor: 'hsl(var(--primary))' }}
-              onClick={() => navigate('/registro')}
-            >
-              Criar conta gratuita
-            </Button>
-          </nav>
-
-          {/* Mobile hamburger */}
-          <button className="md:hidden p-2 text-zinc-700" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <XIcon className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-zinc-100 px-4 pb-4 space-y-3">
-            <button onClick={() => scrollTo('recursos')} className="block w-full text-left text-sm text-zinc-600 py-2">Recursos</button>
-            <button onClick={() => scrollTo('planos')} className="block w-full text-left text-sm text-zinc-600 py-2">Planos</button>
-            <Button variant="outline" className="w-full border-zinc-200 text-zinc-700" onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}>
-              Fazer login
-            </Button>
-            <Button
-              className="w-full text-white"
-              style={{ backgroundColor: 'hsl(var(--primary))' }}
-              onClick={() => { setMobileMenuOpen(false); navigate('/registro'); }}
-            >
-              Criar conta gratuita
-            </Button>
-          </div>
-        )}
-      </header>
-
+    <InstitucionalLayout>
       {/* ══════════════ HERO ══════════════ */}
       <section className="bg-white">
         <div className="container mx-auto px-4 py-20 md:py-28">
@@ -163,9 +107,7 @@ const LandingPage = () => {
               )}
 
               {/* Email input group */}
-              <div
-                className="flex items-center bg-white border border-zinc-200 rounded-full shadow-lg shadow-zinc-900/5 max-w-md overflow-hidden"
-              >
+              <div className="flex items-center bg-white border border-zinc-200 rounded-full shadow-lg shadow-zinc-900/5 max-w-md overflow-hidden">
                 <Input
                   type="email"
                   placeholder="Seu email"
@@ -252,13 +194,9 @@ const LandingPage = () => {
 
       {/* ══════════════ Z-PATTERN BLOCKS ══════════════ */}
       {cms.zPatternBlocks.map((block, i) => (
-        <section
-          key={i}
-          className={i % 2 === 0 ? 'bg-zinc-50' : 'bg-white'}
-        >
+        <section key={i} className={i % 2 === 0 ? 'bg-zinc-50' : 'bg-white'}>
           <div className="container mx-auto px-4 py-16 md:py-24">
             <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-              {/* Image */}
               <motion.div
                 {...reveal(0.1)}
                 className={block.alinhamentoImagem === 'direita' ? 'md:order-last' : ''}
@@ -272,8 +210,6 @@ const LandingPage = () => {
                   />
                 )}
               </motion.div>
-
-              {/* Text */}
               <motion.div {...reveal()}>
                 <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight mb-5 leading-tight">
                   {block.titulo}
@@ -317,7 +253,6 @@ const LandingPage = () => {
                     }`}
                     style={isHighlight ? { borderColor: 'hsl(var(--primary))' } : undefined}
                   >
-                    {/* Highlight badge */}
                     {isHighlight && (
                       <div
                         className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-white"
@@ -327,13 +262,11 @@ const LandingPage = () => {
                       </div>
                     )}
 
-                    {/* Plan name */}
                     <h3 className="text-lg font-bold text-zinc-900">{plano.nome}</h3>
                     {plano.subtitulo && (
                       <p className="text-sm text-zinc-500 mt-1">{plano.subtitulo}</p>
                     )}
 
-                    {/* Price */}
                     <div className="my-6">
                       {isSobMedida && plano.preco_promocional === 0 ? (
                         <p className="text-2xl font-bold text-zinc-900">Sob Medida</p>
@@ -358,7 +291,6 @@ const LandingPage = () => {
                       )}
                     </div>
 
-                    {/* CTA */}
                     {isSobMedida ? (
                       <a
                         href={buildWhatsAppLink(plano.whatsappNumero, plano.whatsappMensagem || `Olá! Tenho interesse no plano ${plano.nome}.`)}
@@ -379,7 +311,6 @@ const LandingPage = () => {
                       </Button>
                     )}
 
-                    {/* Features */}
                     <ul className="mt-6 space-y-2.5 flex-1">
                       {plano.vantagens.map((v, vi) => (
                         <li key={vi} className="flex items-start gap-2 text-sm text-zinc-600">
@@ -432,51 +363,7 @@ const LandingPage = () => {
           </div>
         </section>
       )}
-
-      {/* ══════════════ FOOTER ══════════════ */}
-      <footer className="bg-zinc-950 text-zinc-400">
-        <div className="container mx-auto px-4 py-14">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-            {/* Brand */}
-            <div className="col-span-2 md:col-span-1">
-              <SaaSLogo context="home" theme="dark" nameClassName="text-lg text-white tracking-tight" />
-              <p className="text-sm text-zinc-500 mt-3 max-w-xs">
-                A plataforma de e-commerce mais rápida do Brasil.
-              </p>
-            </div>
-
-            {/* Links */}
-            <div>
-              <h4 className="text-sm font-semibold text-zinc-300 mb-4">Produto</h4>
-              <ul className="space-y-2.5 text-sm">
-                <li><button onClick={() => scrollTo('recursos')} className="hover:text-white transition-colors">Recursos</button></li>
-                <li><button onClick={() => scrollTo('planos')} className="hover:text-white transition-colors">Planos e preços</button></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-zinc-300 mb-4">Conta</h4>
-              <ul className="space-y-2.5 text-sm">
-                <li><button onClick={() => navigate('/login')} className="hover:text-white transition-colors">Fazer login</button></li>
-                <li><button onClick={() => navigate('/registro')} className="hover:text-white transition-colors">Criar conta gratuita</button></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-zinc-300 mb-4">Legal</h4>
-              <ul className="space-y-2.5 text-sm">
-                <li><button onClick={() => navigate('/privacidade')} className="hover:text-white transition-colors">Política de privacidade</button></li>
-                <li><button onClick={() => navigate('/termos')} className="hover:text-white transition-colors">Termos de uso</button></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-zinc-800 mt-10 pt-6 text-center text-xs text-zinc-600">
-            © {new Date().getFullYear()} {brandName}. Todos os direitos reservados.
-          </div>
-        </div>
-      </footer>
-    </div>
+    </InstitucionalLayout>
   );
 };
 
