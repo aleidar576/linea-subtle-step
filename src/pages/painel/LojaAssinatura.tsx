@@ -509,7 +509,7 @@ const LojaAssinatura = () => {
               </Button>
 
               {/* ── LISTA DE FEATURES (mt-auto ancora no fundo do card) ── */}
-              <div className="mt-auto">
+              <div>
               {plano.textoDestaque && (
                 <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
                   <CornerDownRight className="h-4 w-4 text-primary shrink-0" />
