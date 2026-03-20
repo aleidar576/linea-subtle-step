@@ -84,6 +84,7 @@ const AdminGateways = lazy(() => import("./pages/AdminGateways"));
 const AdminPlanos = lazy(() => import("./pages/AdminPlanos"));
 const AdminIntegracoes = lazy(() => import("./pages/AdminIntegracoes"));
 const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
+const AdminLandingPage = lazy(() => import("./pages/AdminLandingPage"));
 
 // =============================================
 // 🔄 LAZY PAGE IMPORTS — Loja Pública
