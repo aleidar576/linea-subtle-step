@@ -327,9 +327,9 @@ const AdminLojistas = () => {
                       </Badge>
                     ) : (
                       <Badge className={
-                        selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' :
-                        selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' :
-                        selectedLojista.subscription_status === 'past_due' ? 'bg-yellow-500/10 text-yellow-600' :
+                        selectedLojista.subscription_status === 'active' ? 'bg-primary/15 text-primary' :
+                        selectedLojista.subscription_status === 'trialing' ? 'bg-primary/10 text-primary' :
+                        selectedLojista.subscription_status === 'past_due' ? 'bg-secondary/15 text-secondary' :
                         'bg-destructive/10 text-destructive'
                       }>
                         {selectedLojista.subscription_status}
