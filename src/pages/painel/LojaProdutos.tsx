@@ -1128,7 +1128,7 @@ ${jsonExampleStr}`;
                       <div>
                         <Label>Nome *</Label>
                         <Input placeholder="Nome do produto" value={editingProduct.name || ''} onChange={e => setField('name', e.target.value)} />
-                        {nameWarning && <p className="text-xs text-amber-500 mt-1">{nameWarning}</p>}
+                        {nameWarning && <p className="text-xs text-secondary mt-1">{nameWarning}</p>}
                       </div>
                       <div>
                         <Label>SKU (Código de Referência)</Label>
