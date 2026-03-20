@@ -374,8 +374,8 @@ const LojaAssinatura = () => {
                 </div>
               )}
 
-              {/* ── HEADER CENTRALIZADO ── */}
-              <div className="text-center pt-2">
+              {/* ── HEADER CENTRALIZADO (altura fixa para alinhar cards) ── */}
+              <div className="text-center pt-2 min-h-[90px]">
                 <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
                   {plano.destaque && <Zap className="h-6 w-6 text-primary" />}
                   {plano.nome}
@@ -392,8 +392,8 @@ const LojaAssinatura = () => {
               )}
               </div>
 
-              {/* ── PREÇO MASSIVO ── */}
-              <div className="text-center py-8">
+              {/* ── PREÇO MASSIVO (altura fixa para alinhar) ── */}
+              <div className="text-center py-8 min-h-[140px] flex flex-col items-center justify-center">
                 {plano.isSobMedida && plano.preco_promocional === 0 ? (
                   <span className="text-4xl font-black text-center text-foreground">Sob Medida</span>
                 ) : (
