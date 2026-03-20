@@ -483,7 +483,7 @@ const AdminLojistas = () => {
                       ) : l.email_verificado ? (
                         <Badge className="bg-primary/10 text-primary">Ativo</Badge>
                       ) : l.verificacao_ignorada ? (
-                        <Badge className="bg-yellow-500/10 text-yellow-600">Ignorado</Badge>
+                        <Badge className="bg-secondary/15 text-secondary">Ignorado</Badge>
                       ) : (
                         <Badge variant="secondary">Pendente</Badge>
                       )}

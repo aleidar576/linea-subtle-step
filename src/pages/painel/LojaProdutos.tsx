@@ -2156,7 +2156,7 @@ ${jsonExampleStr}`;
               <DialogDescription>Use este modelo para importar produtos. Copie o JSON puro ou o prompt otimizado para IAs (ChatGPT, Claude, etc).</DialogDescription>
             </DialogHeader>
             <div className="relative">
-              <pre className="bg-zinc-950 text-green-400 rounded-lg p-4 text-xs font-mono overflow-auto max-h-[50vh] border border-border">
+              <pre className="bg-background text-primary rounded-lg p-4 text-xs font-mono overflow-auto max-h-[50vh] border border-border">
                 {jsonExampleStr}
               </pre>
             </div>

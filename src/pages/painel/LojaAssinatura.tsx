@@ -453,7 +453,7 @@ const LojaAssinatura = () => {
                 <ul className="space-y-4">
                   {plano.vantagens.map((feat, i) => (
                     <li key={i} className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
+                      <CheckCircle2 className="h-5 w-5 text-primary shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
                       <span className="text-muted-foreground">{parseBold(feat)}</span>
                     </li>
                   ))}
