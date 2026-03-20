@@ -1434,7 +1434,7 @@ ${jsonExampleStr}`;
                             <div className="flex items-center gap-3 text-left">
                               <div className="flex items-center gap-0.5">
                                 {Array.from({ length: 5 }).map((_, s) => (
-                                  <Star key={s} className={`h-3.5 w-3.5 ${s < av.nota ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'}`} />
+                                  <Star key={s} className={`h-3.5 w-3.5 ${s < av.nota ? 'text-secondary fill-secondary' : 'text-muted-foreground/30'}`} />
                                 ))}
                               </div>
                               <span className="text-sm font-medium">{av.nome || 'Sem nome'}</span>
