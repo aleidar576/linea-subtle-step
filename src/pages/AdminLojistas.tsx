@@ -340,8 +340,8 @@ const AdminLojistas = () => {
                   )}
                 </div>
                 {selectedLojista.cancel_at_period_end && (selectedLojista.cancel_at || selectedLojista.data_vencimento) && (
-                  <div className="flex items-center gap-2 rounded-lg bg-orange-500/10 p-2 border border-orange-300 mt-1">
-                    <span className="text-xs text-orange-700 font-medium">
+                  <div className="flex items-center gap-2 rounded-lg bg-secondary/15 p-2 border border-secondary/20 mt-1">
+                    <span className="text-xs text-secondary font-medium">
                       Acesso até {new Date(selectedLojista.cancel_at || selectedLojista.data_vencimento!).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
