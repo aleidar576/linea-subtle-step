@@ -47,8 +47,8 @@ const AdminSetup = () => {
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
         <Card className="w-full max-w-md border-border/50 shadow-lg">
           <CardContent className="flex flex-col items-center gap-4 py-10">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
-              <Clock className="h-8 w-8 text-amber-500" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary/10">
+              <Clock className="h-8 w-8 text-secondary" />
             </div>
             <h2 className="text-xl font-bold text-foreground">Aguardando Aprovação</h2>
             <p className="text-sm text-muted-foreground text-center max-w-xs">
