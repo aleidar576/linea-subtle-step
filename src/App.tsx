@@ -87,6 +87,14 @@ const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
 const AdminLandingPage = lazy(() => import("./pages/AdminLandingPage"));
 
 // =============================================
+// 🔄 LAZY PAGE IMPORTS — Institucional
+// =============================================
+const PlanosPage = lazy(() => import("./pages/institucional/PlanosPage"));
+const SobrePage = lazy(() => import("./pages/institucional/SobrePage"));
+const ContatoPage = lazy(() => import("./pages/institucional/ContatoPage"));
+const LegalPage = lazy(() => import("./pages/institucional/LegalPage"));
+
+// =============================================
 // 🔄 LAZY PAGE IMPORTS — Loja Pública
 // =============================================
 const LojaHome = lazy(() => import("./pages/loja/LojaHome"));
