@@ -25,7 +25,7 @@ const reveal = (delay = 0) => ({
 });
 
 const buildWhatsAppLink = (numero: string, mensagem: string) => {
-  const clean = numero.replace(/\D/g, '');
+  const clean = (numero || '').replace(/\D/g, '');
   return `https://wa.me/${clean}?text=${encodeURIComponent(mensagem)}`;
 };
 
@@ -133,13 +133,13 @@ const PlanosPage = () => {
                   )}
 
                   <ul className="mt-6 space-y-2.5 flex-1">
-                    {plano.vantagens.map((v, vi) => (
+                    {(plano.vantagens || []).map((v, vi) => (
                       <li key={vi} className="flex items-start gap-2 text-sm text-zinc-600">
                         <Check className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
                         <span>{v}</span>
                       </li>
                     ))}
-                    {plano.desvantagens.map((d, di) => (
+                    {(plano.desvantagens || []).map((d, di) => (
                       <li key={`d-${di}`} className="flex items-start gap-2 text-sm text-zinc-400">
                         <X className="h-4 w-4 shrink-0 mt-0.5 text-zinc-300" />
                         <span className="line-through">{d}</span>

@@ -1,4 +1,4 @@
-const { connectDB } = require('../lib/mongodb');
+const connectDB = require('../lib/mongodb');
 const { requireAdmin } = require('../lib/auth');
 const LandingPageCMS = require('../models/LandingPageCMS');
 
@@ -28,10 +28,10 @@ module.exports = async function handler(req, res) {
     if (!admin) return res.status(401).json({ error: 'Não autorizado.' });
 
     try {
-      const { hero, zPatternBlocks, miniFeatures, integrations, faq } = req.body;
+      const { hero, zPatternBlocks, miniFeatures, integrations, faq, sobre, contato, legal } = req.body;
       const doc = await LandingPageCMS.findOneAndUpdate(
         {},
-        { hero, zPatternBlocks, miniFeatures, integrations, faq },
+        { hero, zPatternBlocks, miniFeatures, integrations, faq, sobre, contato, legal },
         { upsert: true, new: true, runValidators: true }
       );
       return res.status(200).json(doc);
