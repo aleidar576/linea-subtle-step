@@ -322,7 +322,7 @@ const AdminLojistas = () => {
                   <span className="text-muted-foreground">Status na Stripe:</span>
                   {selectedLojista.subscription_status ? (
                     selectedLojista.cancel_at_period_end ? (
-                      <Badge className="bg-orange-500/10 text-orange-600 border-orange-300">
+                      <Badge className="bg-secondary/15 text-secondary border-secondary/20">
                         Cancelamento Programado
                       </Badge>
                     ) : (
