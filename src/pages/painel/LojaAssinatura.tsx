@@ -429,44 +429,61 @@ const LojaAssinatura = () => {
 
               {/* ── PREÇO MASSIVO (altura fixa para alinhar) ── */}
               <div className="text-center py-8 min-h-[140px] flex flex-col items-center justify-center">
-                {plano.isSobMedida && plano.preco_promocional === 0 ? (
-                  <span className="text-4xl font-black text-center text-foreground">Sob Medida</span>
-                ) : (
-                  <>
-                    {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
-                      <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-2">
-                        {formatCurrency(plano.preco_original)}
-                      </p>
-                    )}
-                    {plano.preco_promocional > 0 ? (
-                      <div className="flex items-start justify-center">
-                        <span className="text-2xl font-bold text-muted-foreground mt-2">R$</span>
-                        <span className="text-6xl font-black text-foreground tracking-tight leading-none mx-1">
-                          {plano.preco_promocional.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-4xl font-black text-foreground">Consultar</span>
-                    )}
+                {(() => {
+                  const precoReal = (plano.preco_promocional > 0 ? plano.preco_promocional : plano.preco_original) || 0;
 
-                    {/* Tipo de cobrança */}
-                    {plano.isPagamentoUnico ? (
-                      <div className="mt-2">
-                        <p className="text-sm text-muted-foreground">à vista</p>
-                        {plano.maxParcelas > 1 && plano.preco_promocional > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            ou em até {plano.maxParcelas}x de{' '}
-                            <strong className="text-foreground">
-                              {formatCurrency(plano.preco_promocional / plano.maxParcelas)}
-                            </strong>
+                  {/* A) Pagamento Único com preço — estilo Tray */}
+                  if (plano.isPagamentoUnico && precoReal > 0) {
+                    return (
+                      <>
+                        {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
+                          <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-2">
+                            {formatCurrency(plano.preco_original)}
                           </p>
                         )}
-                      </div>
-                    ) : (
+                        <div className="flex items-baseline justify-center gap-1">
+                          <span className="text-4xl font-black text-foreground">
+                            {plano.maxParcelas > 1 ? `${plano.maxParcelas}x` : '1x'}
+                          </span>
+                          <span className="text-lg font-medium text-muted-foreground">de</span>
+                          <span className="text-4xl font-black text-foreground">
+                            {formatCurrency(precoReal / (plano.maxParcelas > 1 ? plano.maxParcelas : 1))}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2 font-medium">
+                          ou {formatCurrency(precoReal)} à vista
+                        </p>
+                      </>
+                    );
+                  }
+
+                  {/* B) Sob Medida sem preço — fallback enterprise */}
+                  if (plano.isSobMedida && precoReal === 0) {
+                    return <span className="text-4xl font-black text-foreground">Sob Medida</span>;
+                  }
+
+                  {/* C) SaaS recorrente padrão */}
+                  return (
+                    <>
+                      {plano.preco_original > 0 && plano.preco_original !== plano.preco_promocional && (
+                        <p className="text-sm line-through decoration-destructive/50 text-muted-foreground mb-2">
+                          {formatCurrency(plano.preco_original)}
+                        </p>
+                      )}
+                      {precoReal > 0 ? (
+                        <div className="flex items-start justify-center">
+                          <span className="text-2xl font-bold text-muted-foreground mt-2">R$</span>
+                          <span className="text-6xl font-black text-foreground tracking-tight leading-none mx-1">
+                            {precoReal.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-4xl font-black text-foreground">Consultar</span>
+                      )}
                       <p className="text-sm text-muted-foreground mt-2">/mês</p>
-                    )}
-                  </>
-                )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* ── CTA ACIMA DA LISTA ── */}
