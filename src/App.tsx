@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { SaaSPixelProvider } from "@/hooks/useSaaSPixels";
 import { queryClient } from '@/config/queryClient';
 import GlobalLoader from "@/components/ui/GlobalLoader";
+import BrandingInjector from "@/components/BrandingInjector";
 
 // Static layout imports (never lazy — skeleton must not flash)
 import PainelLayout from "./components/layout/PainelLayout";
@@ -120,6 +121,7 @@ function isSaaSHost(hostname: string): boolean {
 // SaaS App (painel, admin, landing, demo)
 const SaaSApp = () => (
   <ThemeProvider>
+    <BrandingInjector />
     <AuthProvider>
       <LojistaAuthProvider>
       <CartProvider>
