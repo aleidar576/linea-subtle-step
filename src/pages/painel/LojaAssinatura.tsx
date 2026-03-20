@@ -362,7 +362,7 @@ const LojaAssinatura = () => {
               key={plano._id}
               className={`bg-card rounded-2xl p-8 relative flex flex-col ${
                 plano.destaque
-                  ? 'border-2 border-green-500 shadow-lg shadow-green-500/10'
+                  ? 'border-2 border-primary shadow-lg shadow-primary/10'
                   : 'border border-border'
               }`}
             >
