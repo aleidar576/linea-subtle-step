@@ -410,7 +410,7 @@ const LojaAssinatura = () => {
               )}
 
               {/* ── HEADER CENTRALIZADO (altura fixa para alinhar cards) ── */}
-              <div className="text-center pt-2 min-h-[90px]">
+              <div className="text-center pt-2 min-h-[140px] flex flex-col justify-start">
                 <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
                   {plano.destaque && <Zap className="h-6 w-6 text-primary" />}
                   {plano.nome}
@@ -508,7 +508,8 @@ const LojaAssinatura = () => {
                 {plano.textoBotao || (plano.isSobMedida ? 'Falar com Especialista' : plano.isPagamentoUnico ? 'Contratar Agora' : 'Começar 7 Dias Grátis')}
               </Button>
 
-              {/* ── TEXTO DESTAQUE ── */}
+              {/* ── LISTA DE FEATURES (mt-auto ancora no fundo do card) ── */}
+              <div className="mt-auto">
               {plano.textoDestaque && (
                 <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
                   <CornerDownRight className="h-4 w-4 text-primary shrink-0" />
@@ -556,6 +557,7 @@ const LojaAssinatura = () => {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           ))}
         </div>
