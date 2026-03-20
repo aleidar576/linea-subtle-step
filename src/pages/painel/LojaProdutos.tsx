@@ -2134,7 +2134,7 @@ ${jsonExampleStr}`;
               </div>
             )}
             {jsonText.trim() && jsonErrors.length === 0 && (
-              <p className="text-xs text-emerald-500 flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
+              <p className="text-xs text-primary flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
             )}
             {false && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
