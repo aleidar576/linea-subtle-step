@@ -115,13 +115,9 @@ const AdminTeam = () => {
                     </TableCell>
                     <TableCell>
                       {admin.status === 'active' ? (
-                        <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-0">
-                          Ativo
-                        </Badge>
+                        <Badge variant="success">Ativo</Badge>
                       ) : (
-                        <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-0">
-                          Pendente
-                        </Badge>
+                        <Badge variant="warning">Pendente</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
