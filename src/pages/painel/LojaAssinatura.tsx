@@ -428,7 +428,7 @@ const LojaAssinatura = () => {
               </div>
 
               {/* ── PREÇO MASSIVO (altura fixa para alinhar) ── */}
-              <div className="text-center py-8 min-h-[140px] flex flex-col items-center justify-center">
+              <div className="text-center py-8 h-auto md:h-[140px] flex flex-col items-center justify-center">
                 {(() => {
                   const precoReal = (plano.preco_promocional > 0 ? plano.preco_promocional : plano.preco_original) || 0;
 
