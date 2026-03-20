@@ -418,9 +418,9 @@ function AppmaxConfig({
             <div>
               <Label className="text-xs">Parcelas sem juros</Label>
               <Input type="number" min={1} max={maxInstallments} value={freeInstallments} onChange={e => setFreeInstallments(Math.min(maxInstallments, Math.max(1, Number(e.target.value))))} />
-              <div className="mt-2 flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2.5">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-yellow-700 leading-snug">
+              <div className="mt-2 flex items-start gap-2 rounded-md border border-secondary/30 bg-secondary/10 p-2.5">
+                <AlertTriangle className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                <p className="text-[11px] text-secondary leading-snug">
                   As taxas das parcelas configuradas como "Sem Juros" serão descontadas diretamente do seu saldo a receber na Appmax (Taxa Absorvida).
                 </p>
               </div>
@@ -579,10 +579,10 @@ const LojaGateways = () => {
 
       {/* Alert if no gateway active */}
       {!gatewayAtivo && (
-        <div className="mb-6 rounded-lg bg-yellow-500/15 border border-yellow-500/30 p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+        <div className="mb-6 rounded-lg bg-secondary/15 border border-secondary/30 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">Nenhum gateway ativo</p>
+            <p className="text-sm font-medium text-secondary">Nenhum gateway ativo</p>
             <p className="text-xs text-muted-foreground">Configure e ative um gateway abaixo para começar a receber pagamentos na sua loja.</p>
           </div>
         </div>

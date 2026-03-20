@@ -15,10 +15,10 @@ const AdminEstatisticas = () => {
 
   const cards = [
     { label: 'Total Lojistas', value: stats.totalLojistas, icon: Users, color: 'text-primary' },
-    { label: 'Lojistas Ativos', value: stats.lojistasAtivos, icon: CheckCircle2, color: 'text-green-500' },
+    { label: 'Lojistas Ativos', value: stats.lojistasAtivos, icon: CheckCircle2, color: 'text-primary' },
     { label: 'Bloqueados', value: stats.lojistasBloqueados, icon: Ban, color: 'text-destructive' },
-    { label: 'Total Lojas', value: stats.totalLojas, icon: Store, color: 'text-chart-1' },
-    { label: 'Lojas Ativas', value: stats.lojasAtivas, icon: TrendingUp, color: 'text-chart-2' },
+    { label: 'Total Lojas', value: stats.totalLojas, icon: Store, color: 'text-primary' },
+    { label: 'Lojas Ativas', value: stats.lojasAtivas, icon: TrendingUp, color: 'text-primary' },
   ];
 
   const chartData = stats.cadastrosPorMes.map(item => ({
@@ -53,7 +53,7 @@ const AdminEstatisticas = () => {
               <XAxis dataKey="mes" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
               <YAxis allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
               <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-              <Bar dataKey="cadastros" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="cadastros" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

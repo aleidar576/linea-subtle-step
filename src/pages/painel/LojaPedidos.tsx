@@ -16,21 +16,21 @@ import PedidoDetailModal from '@/components/pedido/PedidoDetailModal';
 
 // === STATUS UNIVERSAL (BYOG-ready) ===
 const STATUS_MAP: Record<string, { label: string; classes: string }> = {
-  pendente:   { label: 'Aguardando Pagamento', classes: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  em_analise: { label: 'Em Análise',           classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
-  pago:       { label: 'Pago',                 classes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  recusado:   { label: 'Cancelado / Recusado',  classes: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
-  estornado:  { label: 'Reembolsado',           classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400' },
-  chargeback: { label: 'Chargeback',            classes: 'bg-red-200 text-red-900 border border-red-300 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700' },
-  enviado:    { label: 'Enviado (legado)',       classes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
-  entregue:   { label: 'Entregue (legado)',      classes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  cancelado:  { label: 'Cancelado (legado)',     classes: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+  pendente:   { label: 'Aguardando Pagamento', classes: 'bg-secondary/15 text-secondary' },
+  em_analise: { label: 'Em Análise',           classes: 'bg-primary/10 text-primary' },
+  pago:       { label: 'Pago',                 classes: 'bg-primary/15 text-primary' },
+  recusado:   { label: 'Cancelado / Recusado',  classes: 'bg-destructive/10 text-destructive' },
+  estornado:  { label: 'Reembolsado',           classes: 'bg-muted text-muted-foreground' },
+  chargeback: { label: 'Chargeback',            classes: 'bg-destructive/15 text-destructive border border-destructive/20' },
+  enviado:    { label: 'Enviado (legado)',       classes: 'bg-primary/10 text-primary' },
+  entregue:   { label: 'Entregue (legado)',      classes: 'bg-primary/15 text-primary' },
+  cancelado:  { label: 'Cancelado (legado)',     classes: 'bg-destructive/10 text-destructive' },
 };
 
 function getStatusBadge(status: string) {
   const mapped = STATUS_MAP[status];
   if (mapped) return mapped;
-  return { label: status.charAt(0).toUpperCase() + status.slice(1), classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+  return { label: status.charAt(0).toUpperCase() + status.slice(1), classes: 'bg-muted text-muted-foreground' };
 }
 
 const ETAPA_LABELS: Record<string, string> = {

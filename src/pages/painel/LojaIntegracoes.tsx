@@ -166,7 +166,7 @@ export default function LojaIntegracoes() {
                 <Badge
                   variant={isActive ? 'default' : 'secondary'}
                   className={isActive
-                    ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15'
+                    ? 'bg-primary/15 text-primary border-primary/30 hover:bg-primary/15'
                     : 'bg-muted text-muted-foreground'}
                 >
                   {isActive ? 'Ativo' : 'Inativo'}

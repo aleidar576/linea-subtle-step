@@ -1128,7 +1128,7 @@ ${jsonExampleStr}`;
                       <div>
                         <Label>Nome *</Label>
                         <Input placeholder="Nome do produto" value={editingProduct.name || ''} onChange={e => setField('name', e.target.value)} />
-                        {nameWarning && <p className="text-xs text-amber-500 mt-1">{nameWarning}</p>}
+                        {nameWarning && <p className="text-xs text-secondary mt-1">{nameWarning}</p>}
                       </div>
                       <div>
                         <Label>SKU (Código de Referência)</Label>
@@ -1174,7 +1174,7 @@ ${jsonExampleStr}`;
                           <Label>Preço Promocional</Label>
                           <CurrencyInput value={editingProduct.original_price || 0} onChange={v => setField('original_price', v || null)} />
                           {discountPercent !== null && (
-                            <p className="text-xs text-emerald-500 mt-1 font-medium">Seu produto está com {discountPercent}% de desconto</p>
+                            <p className="text-xs text-primary mt-1 font-medium">Seu produto está com {discountPercent}% de desconto</p>
                           )}
                         </div>
                       </div>
@@ -1434,7 +1434,7 @@ ${jsonExampleStr}`;
                             <div className="flex items-center gap-3 text-left">
                               <div className="flex items-center gap-0.5">
                                 {Array.from({ length: 5 }).map((_, s) => (
-                                  <Star key={s} className={`h-3.5 w-3.5 ${s < av.nota ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'}`} />
+                                  <Star key={s} className={`h-3.5 w-3.5 ${s < av.nota ? 'text-secondary fill-secondary' : 'text-muted-foreground/30'}`} />
                                 ))}
                               </div>
                               <span className="text-sm font-medium">{av.nome || 'Sem nome'}</span>
@@ -1875,7 +1875,7 @@ ${jsonExampleStr}`;
                             </div>
                             {(editingProduct.vantagens.itens || []).map((item, i) => (
                               <div key={i} className="flex items-center gap-2">
-                                <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                                <Check className="h-4 w-4 text-primary shrink-0" />
                                 <Input value={item} onChange={e => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens[i] = e.target.value; setField('vantagens', { ...editingProduct.vantagens!, itens }); }} placeholder={`Vantagem ${i + 1}`} />
                                 <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens.splice(i, 1); setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><X className="h-3 w-3" /></Button>
                               </div>
@@ -2134,7 +2134,7 @@ ${jsonExampleStr}`;
               </div>
             )}
             {jsonText.trim() && jsonErrors.length === 0 && (
-              <p className="text-xs text-emerald-500 flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
+              <p className="text-xs text-primary flex items-center gap-1.5">✅ JSON válido, pronto para importar.</p>
             )}
             {false && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -2156,7 +2156,7 @@ ${jsonExampleStr}`;
               <DialogDescription>Use este modelo para importar produtos. Copie o JSON puro ou o prompt otimizado para IAs (ChatGPT, Claude, etc).</DialogDescription>
             </DialogHeader>
             <div className="relative">
-              <pre className="bg-zinc-950 text-green-400 rounded-lg p-4 text-xs font-mono overflow-auto max-h-[50vh] border border-border">
+              <pre className="bg-background text-primary rounded-lg p-4 text-xs font-mono overflow-auto max-h-[50vh] border border-border">
                 {jsonExampleStr}
               </pre>
             </div>
@@ -2587,7 +2587,7 @@ ${jsonExampleStr}`;
                     <TableCell className="px-4 py-3 text-[13px] font-medium text-foreground">{p.name}</TableCell>
                     <TableCell className="px-4 py-3">
                       {p.is_active ? (
-                        <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/15">Ativo</Badge>
+                        <Badge variant="success">Ativo</Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-muted/50 text-muted-foreground border border-border hover:bg-muted/70">Inativo</Badge>
                       )}

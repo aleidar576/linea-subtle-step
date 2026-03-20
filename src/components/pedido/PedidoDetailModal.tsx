@@ -20,12 +20,12 @@ import type { Pedido, Loja } from '@/services/saas-api';
 
 // === STATUS ===
 const STATUS_MAP: Record<string, { label: string; classes: string }> = {
-  pendente:   { label: 'Aguardando Pagamento', classes: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  em_analise: { label: 'Em Análise',           classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
-  pago:       { label: 'Pago',                 classes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  recusado:   { label: 'Cancelado / Recusado',  classes: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
-  estornado:  { label: 'Reembolsado',           classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400' },
-  chargeback: { label: 'Chargeback',            classes: 'bg-red-200 text-red-900 dark:bg-red-900/40 dark:text-red-300' },
+  pendente:   { label: 'Aguardando Pagamento', classes: 'bg-secondary/15 text-secondary' },
+  em_analise: { label: 'Em Análise',           classes: 'bg-primary/10 text-primary' },
+  pago:       { label: 'Pago',                 classes: 'bg-primary/15 text-primary' },
+  recusado:   { label: 'Cancelado / Recusado',  classes: 'bg-destructive/10 text-destructive' },
+  estornado:  { label: 'Reembolsado',           classes: 'bg-muted text-muted-foreground' },
+  chargeback: { label: 'Chargeback',            classes: 'bg-destructive/15 text-destructive border border-destructive/20' },
 };
 
 function getStatusBadge(status: string) {

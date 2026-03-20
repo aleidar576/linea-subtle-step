@@ -27,8 +27,8 @@ import { settingsApi } from '@/services/api';
 import { useSaaSPixels } from '@/hooks/useSaaSPixels';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  trialing: { label: 'Trial Ativo', className: 'bg-blue-500/10 text-blue-600' },
-  active: { label: 'Ativa', className: 'bg-green-500/10 text-green-600' },
+  trialing: { label: 'Trial Ativo', className: 'bg-primary/10 text-primary' },
+  active: { label: 'Ativa', className: 'bg-primary/15 text-primary' },
   past_due: { label: 'Atrasada', className: 'bg-destructive/10 text-destructive' },
   canceled: { label: 'Cancelada', className: 'bg-muted text-muted-foreground' },
 };
@@ -139,7 +139,7 @@ const LojaAssinatura = () => {
   if (hasSubscription && profile) {
     const isCancelScheduled = profile.cancel_at_period_end === true;
     const status = isCancelScheduled
-      ? { label: 'Cancelamento Programado', className: 'bg-orange-500/10 text-orange-600 border-orange-300' }
+      ? { label: 'Cancelamento Programado', className: 'bg-secondary/15 text-secondary border-secondary/20' }
       : STATUS_MAP[profile.subscription_status!] || { label: profile.subscription_status, className: '' };
     const planoNome = currentPlano?.nome || profile.plano || 'Free';
     const precoPromocional = currentPlano?.preco_promocional ?? null;
@@ -197,9 +197,9 @@ const LojaAssinatura = () => {
             )}
 
             {isCancelScheduled && cancelDate && (
-              <div className="flex items-center gap-3 rounded-lg bg-orange-500/10 p-4 border border-orange-300">
-                <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
-                <p className="text-sm text-orange-700 font-medium">
+              <div className="flex items-center gap-3 rounded-lg bg-secondary/15 p-4 border border-secondary/20">
+                <AlertTriangle className="h-5 w-5 text-secondary shrink-0" />
+                <p className="text-sm text-secondary font-medium">
                   Sua assinatura foi cancelada, mas você tem acesso garantido até{' '}
                   <strong>{new Date(cancelDate).toLocaleDateString('pt-BR')}</strong>.
                 </p>
@@ -291,15 +291,15 @@ const LojaAssinatura = () => {
 
             {/* Banner: Falha na cobrança */}
             {profile.status_taxas === 'falha' && taxasAcumuladas > 0 && (
-              <div className="rounded-lg bg-orange-500/10 p-4 border border-orange-300 space-y-3">
+               <div className="rounded-lg bg-secondary/15 p-4 border border-secondary/20 space-y-3">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
-                  <p className="text-sm text-orange-700 font-medium">
+                  <AlertTriangle className="h-5 w-5 text-secondary shrink-0" />
+                  <p className="text-sm text-secondary font-medium">
                     Atenção: Não conseguimos debitar as taxas de R$ {taxasAcumuladas.toFixed(2).replace('.', ',')} do seu cartão.
                     {dataVencimentoTaxas && <> O sistema tentará novamente em <strong>{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</strong>.</>}
                   </p>
                 </div>
-                <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2 border-orange-400 text-orange-700 hover:bg-orange-500/10">
+                <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2 border-secondary/30 text-secondary hover:bg-secondary/10">
                   {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                   Regularizar Pagamento Agora
                 </Button>
@@ -362,13 +362,13 @@ const LojaAssinatura = () => {
               key={plano._id}
               className={`bg-card rounded-2xl p-8 relative flex flex-col ${
                 plano.destaque
-                  ? 'border-2 border-green-500 shadow-lg shadow-green-500/10'
+                  ? 'border-2 border-primary shadow-lg shadow-primary/10'
                   : 'border border-border'
               }`}
             >
               {plano.destaque && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="bg-green-500 text-white text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap">
+                  <span className="bg-primary text-primary-foreground text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap">
                     Recomendado
                   </span>
                 </div>
@@ -377,7 +377,7 @@ const LojaAssinatura = () => {
               {/* ── HEADER CENTRALIZADO ── */}
               <div className="text-center pt-2">
                 <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
-                  {plano.destaque && <Zap className="h-6 w-6 text-green-500" />}
+                  {plano.destaque && <Zap className="h-6 w-6 text-primary" />}
                   {plano.nome}
                 </h2>
                 {plano.subtitulo && (
@@ -420,7 +420,7 @@ const LojaAssinatura = () => {
 
               {/* ── CTA ACIMA DA LISTA ── */}
               <Button
-                className="w-full gap-2 rounded-full bg-green-500 hover:bg-green-600 text-white border-0 mb-8 h-12 text-base font-semibold"
+                className="w-full gap-2 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 mb-8 h-12 text-base font-semibold"
                 onClick={() => {
                   if (plano.isSobMedida) {
                     window.open(`https://wa.me/${plano.whatsappNumero}?text=${encodeURIComponent(plano.whatsappMensagem || '')}`, '_blank');
@@ -453,7 +453,7 @@ const LojaAssinatura = () => {
                 <ul className="space-y-4">
                   {plano.vantagens.map((feat, i) => (
                     <li key={i} className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
+                      <CheckCircle2 className="h-5 w-5 text-primary shrink-0" fill="currentColor" stroke="hsl(var(--card))" />
                       <span className="text-muted-foreground">{parseBold(feat)}</span>
                     </li>
                   ))}

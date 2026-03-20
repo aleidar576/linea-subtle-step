@@ -170,7 +170,7 @@ const LojaConfiguracoes = () => {
                 Número exclusivo para receber orçamentos (diferente do WhatsApp flutuante).
               </p>
               {!hasWhatsappOrcamento && (
-                <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
+                <p className="text-xs text-secondary flex items-center gap-1 mt-1">
                   <AlertTriangle className="h-3 w-3 shrink-0" /> Preencha o número para que o modo funcione.
                 </p>
               )}
@@ -210,7 +210,7 @@ const LojaConfiguracoes = () => {
                 disabled={!canEditCustomDomain}
               />
               {canAccessDomains && !canEditCustomDomain && (
-                <p className="text-xs text-amber-500 mt-1">Upgrade necessário para vincular domínio próprio.</p>
+                <p className="text-xs text-secondary mt-1">Upgrade necessário para vincular domínio próprio.</p>
               )}
               {canEditCustomDomain && (
                 <p className="text-xs text-muted-foreground mt-1">Configure o CNAME no seu provedor de DNS apontando para a plataforma.</p>

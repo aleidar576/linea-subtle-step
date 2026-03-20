@@ -205,7 +205,7 @@ const AdminLojistas = () => {
               {selectedLojista.subscription_status && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Status Assinatura:</span>
-                  <Badge className={selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' : selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' : 'bg-destructive/10 text-destructive'}>
+                  <Badge className={selectedLojista.subscription_status === 'active' ? 'bg-primary/15 text-primary' : selectedLojista.subscription_status === 'trialing' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}>
                     {selectedLojista.subscription_status}
                   </Badge>
                 </div>
@@ -322,14 +322,14 @@ const AdminLojistas = () => {
                   <span className="text-muted-foreground">Status na Stripe:</span>
                   {selectedLojista.subscription_status ? (
                     selectedLojista.cancel_at_period_end ? (
-                      <Badge className="bg-orange-500/10 text-orange-600 border-orange-300">
+                      <Badge className="bg-secondary/15 text-secondary border-secondary/20">
                         Cancelamento Programado
                       </Badge>
                     ) : (
                       <Badge className={
-                        selectedLojista.subscription_status === 'active' ? 'bg-green-500/10 text-green-600' :
-                        selectedLojista.subscription_status === 'trialing' ? 'bg-blue-500/10 text-blue-600' :
-                        selectedLojista.subscription_status === 'past_due' ? 'bg-yellow-500/10 text-yellow-600' :
+                        selectedLojista.subscription_status === 'active' ? 'bg-primary/15 text-primary' :
+                        selectedLojista.subscription_status === 'trialing' ? 'bg-primary/10 text-primary' :
+                        selectedLojista.subscription_status === 'past_due' ? 'bg-secondary/15 text-secondary' :
                         'bg-destructive/10 text-destructive'
                       }>
                         {selectedLojista.subscription_status}
@@ -340,8 +340,8 @@ const AdminLojistas = () => {
                   )}
                 </div>
                 {selectedLojista.cancel_at_period_end && (selectedLojista.cancel_at || selectedLojista.data_vencimento) && (
-                  <div className="flex items-center gap-2 rounded-lg bg-orange-500/10 p-2 border border-orange-300 mt-1">
-                    <span className="text-xs text-orange-700 font-medium">
+                  <div className="flex items-center gap-2 rounded-lg bg-secondary/15 p-2 border border-secondary/20 mt-1">
+                    <span className="text-xs text-secondary font-medium">
                       Acesso até {new Date(selectedLojista.cancel_at || selectedLojista.data_vencimento!).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
@@ -483,7 +483,7 @@ const AdminLojistas = () => {
                       ) : l.email_verificado ? (
                         <Badge className="bg-primary/10 text-primary">Ativo</Badge>
                       ) : l.verificacao_ignorada ? (
-                        <Badge className="bg-yellow-500/10 text-yellow-600">Ignorado</Badge>
+                        <Badge className="bg-secondary/15 text-secondary">Ignorado</Badge>
                       ) : (
                         <Badge variant="secondary">Pendente</Badge>
                       )}
