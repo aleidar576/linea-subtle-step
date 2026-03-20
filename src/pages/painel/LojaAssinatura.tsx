@@ -377,7 +377,7 @@ const LojaAssinatura = () => {
               {/* ── HEADER CENTRALIZADO ── */}
               <div className="text-center pt-2">
                 <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
-                  {plano.destaque && <Zap className="h-6 w-6 text-green-500" />}
+                  {plano.destaque && <Zap className="h-6 w-6 text-primary" />}
                   {plano.nome}
                 </h2>
                 {plano.subtitulo && (
