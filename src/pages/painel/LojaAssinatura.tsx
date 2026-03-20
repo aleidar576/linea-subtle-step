@@ -557,6 +557,7 @@ const LojaAssinatura = () => {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           ))}
         </div>
