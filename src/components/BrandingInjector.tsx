@@ -100,29 +100,29 @@ export default function BrandingInjector() {
     if (theme === 'dark') {
       const bg = hexToHSL(fundoDark);
       const fg = hexToHSL(textoLight);
-      // Ultra-subtle borders: only 4% lighter than background
-      const border = shiftLightness(bg, 4);
-      // Secondary/accent: 5% lighter — barely perceptible surface lift
-      const sec = shiftLightness(bg, 5);
+      // Borders: 14% lighter than bg for functional contrast
+      const border = shiftLightness(bg, 14);
+      // Secondary/accent: 10% lighter for clear surface distinction
+      const sec = shiftLightness(bg, 10);
 
       set('--background', bg);
       set('--foreground', fg);
-      // Cards: 2% lift for flat, elegant separation
-      set('--card', shiftLightness(bg, 2));
+      // Cards: 5% lift for visible separation
+      set('--card', shiftLightness(bg, 5));
       set('--card-foreground', fg);
-      set('--popover', shiftLightness(bg, 3));
+      set('--popover', shiftLightness(bg, 6));
       set('--popover-foreground', fg);
-      set('--muted', shiftLightness(bg, 4));
+      set('--muted', shiftLightness(bg, 8));
       set('--muted-foreground', shiftLightness(fg, -25));
       set('--accent', sec);
       set('--accent-foreground', fg);
       set('--border', border);
-      set('--input', shiftLightness(bg, 5));
+      set('--input', shiftLightness(bg, 12));
       set('--secondary', sec);
       set('--secondary-foreground', shiftLightness(fg, -14));
 
-      // Sidebar: 1% lift, ultra-subtle border
-      set('--sidebar-background', shiftLightness(bg, 1));
+      // Sidebar: 3% lift, border matches global
+      set('--sidebar-background', shiftLightness(bg, 3));
       set('--sidebar-foreground', fg);
       set('--sidebar-border', border);
       set('--sidebar-accent', sec);
