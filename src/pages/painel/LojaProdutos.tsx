@@ -2587,7 +2587,7 @@ ${jsonExampleStr}`;
                     <TableCell className="px-4 py-3 text-[13px] font-medium text-foreground">{p.name}</TableCell>
                     <TableCell className="px-4 py-3">
                       {p.is_active ? (
-                        <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/15">Ativo</Badge>
+                        <Badge variant="success">Ativo</Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-muted/50 text-muted-foreground border border-border hover:bg-muted/70">Inativo</Badge>
                       )}
