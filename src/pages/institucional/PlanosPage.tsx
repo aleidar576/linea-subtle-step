@@ -25,7 +25,7 @@ const reveal = (delay = 0) => ({
 });
 
 const buildWhatsAppLink = (numero: string, mensagem: string) => {
-  const clean = numero.replace(/\D/g, '');
+  const clean = (numero || '').replace(/\D/g, '');
   return `https://wa.me/${clean}?text=${encodeURIComponent(mensagem)}`;
 };
 
