@@ -1224,6 +1224,12 @@ export const platformApi = {
   getDomain: () => publicRequest<{ domain: string }>('/storefront?scope=global-domain'),
 };
 
+// === Public Landing Page API (sem auth) ===
+export const publicLandingApi = {
+  getCMS: () => publicRequest<LandingPageCMSData>('/landing-cms'),
+  getPlanos: () => publicRequest<Plano[]>('/settings?scope=planos'),
+};
+
 // === Relatórios API ===
 
 export interface RelatorioData {
