@@ -87,19 +87,15 @@ export default function BrandingInjector() {
     const secondary = hexToHSL(corSecundaria);
     const primaryFg = isLightColor(primary) ? '220 13% 10%' : '0 0% 100%';
 
-    // Primary / accent
+    // Primary
     set('--primary', primary);
     set('--primary-foreground', primaryFg);
-    set('--accent', shiftLightness(primary, theme === 'dark' ? -15 : 30));
-    set('--accent-foreground', primaryFg);
     set('--ring', primary);
 
     // Sidebar primary
     set('--sidebar-primary', primary);
     set('--sidebar-primary-foreground', primaryFg);
     set('--sidebar-ring', primary);
-    set('--sidebar-accent', shiftLightness(primary, theme === 'dark' ? -20 : 35));
-    set('--sidebar-accent-foreground', primaryFg);
 
     if (theme === 'dark') {
       const bg = hexToHSL(fundoDark);
