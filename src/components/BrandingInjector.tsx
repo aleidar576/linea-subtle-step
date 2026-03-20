@@ -61,8 +61,12 @@ const INJECTED_VARS = [
   '--card', '--card-foreground',
   '--popover', '--popover-foreground',
   '--muted', '--muted-foreground',
+  '--border', '--input',
+  '--secondary', '--secondary-foreground',
+  '--sidebar-background', '--sidebar-foreground',
   '--sidebar-primary', '--sidebar-primary-foreground',
   '--sidebar-ring', '--sidebar-accent',
+  '--sidebar-border', '--sidebar-accent-foreground',
 ];
 
 /**
@@ -90,15 +94,19 @@ export default function BrandingInjector() {
     set('--accent-foreground', primaryFg);
     set('--ring', primary);
 
-    // Sidebar
+    // Sidebar primary
     set('--sidebar-primary', primary);
     set('--sidebar-primary-foreground', primaryFg);
     set('--sidebar-ring', primary);
     set('--sidebar-accent', shiftLightness(primary, theme === 'dark' ? -20 : 35));
+    set('--sidebar-accent-foreground', primaryFg);
 
     if (theme === 'dark') {
       const bg = hexToHSL(fundoDark);
       const fg = hexToHSL(textoLight);
+      const border = shiftLightness(bg, 14);
+      const sec = shiftLightness(bg, 10);
+
       set('--background', bg);
       set('--foreground', fg);
       set('--card', shiftLightness(bg, 4));
@@ -107,9 +115,21 @@ export default function BrandingInjector() {
       set('--popover-foreground', fg);
       set('--muted', shiftLightness(bg, 8));
       set('--muted-foreground', shiftLightness(fg, -20));
+      set('--border', border);
+      set('--input', border);
+      set('--secondary', sec);
+      set('--secondary-foreground', shiftLightness(fg, -14));
+
+      // Sidebar inherits main theme
+      set('--sidebar-background', shiftLightness(bg, 2));
+      set('--sidebar-foreground', fg);
+      set('--sidebar-border', border);
     } else {
       const bg = hexToHSL(fundoLight);
       const fg = hexToHSL(textoDark);
+      const border = shiftLightness(bg, -9);
+      const sec = shiftLightness(bg, -4);
+
       set('--background', bg);
       set('--foreground', fg);
       set('--card', bg);
@@ -118,6 +138,15 @@ export default function BrandingInjector() {
       set('--popover-foreground', fg);
       set('--muted', shiftLightness(bg, -5));
       set('--muted-foreground', shiftLightness(fg, 25));
+      set('--border', border);
+      set('--input', border);
+      set('--secondary', sec);
+      set('--secondary-foreground', fg);
+
+      // Sidebar inherits main theme
+      set('--sidebar-background', shiftLightness(bg, -2));
+      set('--sidebar-foreground', fg);
+      set('--sidebar-border', border);
     }
 
     // Cleanup on unmount

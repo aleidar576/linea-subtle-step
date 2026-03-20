@@ -57,28 +57,27 @@ const VerificarEmail = () => {
   };
 
   return (
-    <div className="dark">
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 mb-8 justify-center">
-          <SaaSLogo size={40} iconClassName="bg-primary" nameClassName="text-slate-100 text-2xl" />
+          <SaaSLogo size={40} iconClassName="bg-primary" nameClassName="text-foreground text-2xl" />
         </Link>
 
         <div className="bg-card border border-border rounded-xl p-8">
           {status === 'loading' && (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-slate-400">A verificar o seu email...</p>
+              <p className="text-muted-foreground">A verificar o seu email...</p>
             </div>
           )}
           {status === 'pending' && (
             <div className="flex flex-col items-center gap-4">
               <Mail className="h-12 w-12 text-primary" />
-              <h2 className="text-xl font-bold text-slate-100">Verifique o seu email</h2>
-              <p className="text-slate-400">
+              <h2 className="text-xl font-bold text-foreground">Verifique o seu email</h2>
+              <p className="text-muted-foreground">
                 Enviámos um link de verificação para o seu email. Clique no link para ativar a sua conta.
               </p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Não recebeu? Verifique a pasta de spam ou reenvie abaixo.
               </p>
 
@@ -104,8 +103,8 @@ const VerificarEmail = () => {
           {status === 'success' && (
             <div className="flex flex-col items-center gap-4">
               <CheckCircle2 className="h-12 w-12 text-primary" />
-              <h2 className="text-xl font-bold text-slate-100">Email verificado!</h2>
-              <p className="text-slate-400">{message}</p>
+              <h2 className="text-xl font-bold text-foreground">Email verificado!</h2>
+              <p className="text-muted-foreground">{message}</p>
               <Button asChild className="mt-4">
                 <Link to="/login">Fazer Login</Link>
               </Button>
@@ -114,8 +113,8 @@ const VerificarEmail = () => {
           {status === 'error' && (
             <div className="flex flex-col items-center gap-4">
               <XCircle className="h-12 w-12 text-destructive" />
-              <h2 className="text-xl font-bold text-slate-100">Erro na verificação</h2>
-              <p className="text-slate-400">{message}</p>
+              <h2 className="text-xl font-bold text-foreground">Erro na verificação</h2>
+              <p className="text-muted-foreground">{message}</p>
               <Button variant="outline" asChild className="mt-4">
                 <Link to="/registro">Tentar novamente</Link>
               </Button>
@@ -123,7 +122,6 @@ const VerificarEmail = () => {
           )}
         </div>
       </div>
-    </div>
     </div>
   );
 };

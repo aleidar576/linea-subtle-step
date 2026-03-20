@@ -51,12 +51,11 @@ const LojistaRegistro = () => {
   };
 
   return (
-    <div className="dark">
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4 justify-center">
-            <SaaSLogo context="home" theme="dark" nameClassName="text-foreground text-2xl" />
+            <SaaSLogo context="home" nameClassName="text-foreground text-2xl" />
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Criar conta</h1>
           <p className="text-muted-foreground mt-1">{authSubtitle}</p>
@@ -106,7 +105,6 @@ const LojistaRegistro = () => {
           </p>
         </form>
       </div>
-    </div>
     </div>
   );
 };

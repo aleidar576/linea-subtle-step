@@ -49,36 +49,35 @@ const RedefinirSenha = () => {
   };
 
   return (
-    <div className="dark">
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4 justify-center">
-            <SaaSLogo size={40} iconClassName="bg-primary" nameClassName="text-slate-100 text-2xl" />
+            <SaaSLogo size={40} iconClassName="bg-primary" nameClassName="text-foreground text-2xl" />
           </Link>
-          <h1 className="text-2xl font-bold text-slate-100">{token ? 'Nova Senha' : 'Redefinir Senha'}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{token ? 'Nova Senha' : 'Redefinir Senha'}</h1>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-6">
           {reset ? (
             <div className="text-center space-y-4">
               <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
-              <p className="font-semibold text-slate-100">Senha redefinida com sucesso!</p>
+              <p className="font-semibold text-foreground">Senha redefinida com sucesso!</p>
               <Button asChild><Link to="/login">Fazer Login</Link></Button>
             </div>
           ) : sent ? (
             <div className="text-center space-y-4">
-              <p className="text-slate-400">Se o email existir, enviaremos um link de redefinição.</p>
+              <p className="text-muted-foreground">Se o email existir, enviaremos um link de redefinição.</p>
               <Button variant="outline" asChild><Link to="/login">Voltar ao Login</Link></Button>
             </div>
           ) : token ? (
             <form onSubmit={handleRedefinir} className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1 block text-slate-200">Nova Senha</label>
+                <label className="text-sm font-medium mb-1 block text-foreground">Nova Senha</label>
                 <Input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Mínimo 6 caracteres" required minLength={6} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block text-slate-200">Confirmar Senha</label>
+                <label className="text-sm font-medium mb-1 block text-foreground">Confirmar Senha</label>
                 <Input type="password" value={confirmSenha} onChange={e => setConfirmSenha(e.target.value)} placeholder="Repita a senha" required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
@@ -89,7 +88,7 @@ const RedefinirSenha = () => {
           ) : (
             <form onSubmit={handleSolicitar} className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1 block text-slate-200">Email</label>
+                <label className="text-sm font-medium mb-1 block text-foreground">Email</label>
                 <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
@@ -103,7 +102,6 @@ const RedefinirSenha = () => {
           )}
         </div>
       </div>
-    </div>
     </div>
   );
 };
