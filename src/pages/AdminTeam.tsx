@@ -65,19 +65,19 @@ const AdminTeam = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-green-500" />
+              <Shield className="h-4 w-4 text-primary" />
               <p className="text-sm text-muted-foreground">Ativos</p>
             </div>
-            <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>
+            <p className="text-2xl font-bold text-primary mt-1">{activeCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 text-amber-500" />
+              <Loader2 className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Pendentes</p>
             </div>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
+            <p className="text-2xl font-bold text-muted-foreground mt-1">{pendingCount}</p>
           </CardContent>
         </Card>
       </div>
