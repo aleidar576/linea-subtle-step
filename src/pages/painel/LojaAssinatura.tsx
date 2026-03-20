@@ -368,7 +368,7 @@ const LojaAssinatura = () => {
             >
               {plano.destaque && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="bg-green-500 text-white text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap">
+                  <span className="bg-primary text-primary-foreground text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap">
                     Recomendado
                   </span>
                 </div>
