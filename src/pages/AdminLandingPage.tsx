@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Save, GripVertical, Image as ImageIcon, Type, Zap, HelpCircle, LayoutTemplate } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, GripVertical, Image as ImageIcon, Type, Zap, HelpCircle, LayoutTemplate, Info, Phone, FileText } from 'lucide-react';
 
 const EMPTY_CMS: LandingPageCMSData = {
   hero: { titulo: '', subtitulo: '', ctaTexto: '', bottomTexto: '', imagemUrl: '' },
@@ -17,6 +17,9 @@ const EMPTY_CMS: LandingPageCMSData = {
   miniFeatures: [],
   integrations: [],
   faq: [],
+  sobre: { titulo: '', conteudo: '', imagemUrl: '' },
+  contato: { email: '', whatsapp: '', textoApoio: '' },
+  legal: { termosUso: '', politicaPrivacidade: '' },
 };
 
 const AdminLandingPage = () => {
@@ -33,6 +36,9 @@ const AdminLandingPage = () => {
         miniFeatures: cms.miniFeatures || [],
         integrations: cms.integrations || [],
         faq: cms.faq || [],
+        sobre: cms.sobre || EMPTY_CMS.sobre,
+        contato: cms.contato || EMPTY_CMS.contato,
+        legal: cms.legal || EMPTY_CMS.legal,
       });
       setLoading(false);
     });
@@ -114,6 +120,21 @@ const AdminLandingPage = () => {
     }));
   };
 
+  // ── Sobre helpers ──
+  const updateSobre = useCallback((field: string, value: string) => {
+    setData(prev => ({ ...prev, sobre: { ...prev.sobre, [field]: value } }));
+  }, []);
+
+  // ── Contato helpers ──
+  const updateContato = useCallback((field: string, value: string) => {
+    setData(prev => ({ ...prev, contato: { ...prev.contato, [field]: value } }));
+  }, []);
+
+  // ── Legal helpers ──
+  const updateLegal = useCallback((field: string, value: string) => {
+    setData(prev => ({ ...prev, legal: { ...prev.legal, [field]: value } }));
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -146,6 +167,9 @@ const AdminLandingPage = () => {
           <TabsTrigger value="features" className="gap-1.5 text-xs"><Zap className="h-3.5 w-3.5" />Recursos</TabsTrigger>
           <TabsTrigger value="integrations" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" />Integrações</TabsTrigger>
           <TabsTrigger value="faq" className="gap-1.5 text-xs"><HelpCircle className="h-3.5 w-3.5" />FAQ</TabsTrigger>
+          <TabsTrigger value="sobre" className="gap-1.5 text-xs"><Info className="h-3.5 w-3.5" />Sobre Nós</TabsTrigger>
+          <TabsTrigger value="contato" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" />Contato</TabsTrigger>
+          <TabsTrigger value="legal" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Textos Legais</TabsTrigger>
         </TabsList>
 
         {/* ═══════════════ HERO ═══════════════ */}
@@ -379,6 +403,108 @@ const AdminLandingPage = () => {
                   </CardContent>
                 </Card>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ═══════════════ SOBRE NÓS ═══════════════ */}
+        <TabsContent value="sobre">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sobre Nós</CardTitle>
+              <CardDescription>Conteúdo da página institucional "Sobre Nós".</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Título</Label>
+                    <Input value={data.sobre.titulo} onChange={e => updateSobre('titulo', e.target.value)} placeholder="Sobre a nossa empresa" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Conteúdo</Label>
+                    <Textarea
+                      value={data.sobre.conteudo}
+                      onChange={e => updateSobre('conteudo', e.target.value)}
+                      placeholder="Conte a história da sua empresa, missão, valores..."
+                      className="min-h-[200px]"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Imagem</Label>
+                  <ImageUploader
+                    adminMode
+                    qualityProfile="banner"
+                    value={data.sobre.imagemUrl}
+                    onChange={url => updateSobre('imagemUrl', url)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ═══════════════ CONTATO ═══════════════ */}
+        <TabsContent value="contato">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contato</CardTitle>
+              <CardDescription>Informações de contato exibidas na página pública.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email de contato</Label>
+                    <Input value={data.contato.email} onChange={e => updateContato('email', e.target.value)} placeholder="contato@suaempresa.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>WhatsApp (com DDD)</Label>
+                    <Input value={data.contato.whatsapp} onChange={e => updateContato('whatsapp', e.target.value)} placeholder="5511999999999" />
+                    <p className="text-[11px] text-muted-foreground">Formato: código do país + DDD + número (ex: 5511999999999)</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Texto de apoio</Label>
+                  <Textarea
+                    value={data.contato.textoApoio}
+                    onChange={e => updateContato('textoApoio', e.target.value)}
+                    placeholder="Estamos disponíveis de segunda a sexta..."
+                    className="min-h-[120px]"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ═══════════════ TEXTOS LEGAIS ═══════════════ */}
+        <TabsContent value="legal">
+          <Card>
+            <CardHeader>
+              <CardTitle>Textos Legais</CardTitle>
+              <CardDescription>Termos de uso e política de privacidade exibidos nas páginas públicas /termos e /privacidade.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Termos de Uso</Label>
+                <Textarea
+                  value={data.legal.termosUso}
+                  onChange={e => updateLegal('termosUso', e.target.value)}
+                  placeholder="Cole aqui os termos de uso completos da plataforma..."
+                  className="min-h-[500px] font-mono text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Política de Privacidade</Label>
+                <Textarea
+                  value={data.legal.politicaPrivacidade}
+                  onChange={e => updateLegal('politicaPrivacidade', e.target.value)}
+                  placeholder="Cole aqui a política de privacidade completa da plataforma..."
+                  className="min-h-[500px] font-mono text-sm"
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1316,12 +1316,32 @@ export interface FAQItem {
   resposta: string;
 }
 
+export interface SobreCMS {
+  titulo: string;
+  conteudo: string;
+  imagemUrl: string;
+}
+
+export interface ContatoCMS {
+  email: string;
+  whatsapp: string;
+  textoApoio: string;
+}
+
+export interface LegalCMS {
+  termosUso: string;
+  politicaPrivacidade: string;
+}
+
 export interface LandingPageCMSData {
   hero: HeroCMS;
   zPatternBlocks: ZPatternBlock[];
   miniFeatures: MiniFeature[];
   integrations: string[];
   faq: FAQItem[];
+  sobre: SobreCMS;
+  contato: ContatoCMS;
+  legal: LegalCMS;
 }
 
 const EMPTY_CMS: LandingPageCMSData = {
@@ -1330,6 +1350,9 @@ const EMPTY_CMS: LandingPageCMSData = {
   miniFeatures: [],
   integrations: [],
   faq: [],
+  sobre: { titulo: '', conteudo: '', imagemUrl: '' },
+  contato: { email: '', whatsapp: '', textoApoio: '' },
+  legal: { termosUso: '', politicaPrivacidade: '' },
 };
 
 export const adminApi = {

@@ -87,6 +87,14 @@ const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
 const AdminLandingPage = lazy(() => import("./pages/AdminLandingPage"));
 
 // =============================================
+// 🔄 LAZY PAGE IMPORTS — Institucional
+// =============================================
+const PlanosPage = lazy(() => import("./pages/institucional/PlanosPage"));
+const SobrePage = lazy(() => import("./pages/institucional/SobrePage"));
+const ContatoPage = lazy(() => import("./pages/institucional/ContatoPage"));
+const LegalPage = lazy(() => import("./pages/institucional/LegalPage"));
+
+// =============================================
 // 🔄 LAZY PAGE IMPORTS — Loja Pública
 // =============================================
 const LojaHome = lazy(() => import("./pages/loja/LojaHome"));
@@ -141,6 +149,11 @@ const SaaSApp = () => (
                     <Route path="/verificar-email" element={<VerificarEmail />} />
                     <Route path="/redefinir-senha" element={<RedefinirSenha />} />
                     <Route path="/seguranca-confirmacao" element={<SegurancaConfirmacao />} />
+                    <Route path="/planos" element={<PlanosPage />} />
+                    <Route path="/sobre" element={<SobrePage />} />
+                    <Route path="/contato" element={<ContatoPage />} />
+                    <Route path="/termos" element={<LegalPage tipo="termos" />} />
+                    <Route path="/privacidade" element={<LegalPage tipo="privacidade" />} />
 
                     {/* Painel Lojista */}
                     <Route path="/painel" element={<PainelLayout />}>
