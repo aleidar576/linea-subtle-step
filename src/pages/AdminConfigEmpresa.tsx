@@ -60,6 +60,7 @@ const AdminConfigEmpresa = () => {
     platform_seo_title: '',
     platform_seo_description: '',
     platform_seo_og_image: '',
+    ...BRANDING_DEFAULTS,
   });
   const queryClient = useQueryClient();
 
