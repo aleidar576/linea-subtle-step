@@ -128,7 +128,7 @@ const AdminTeam = () => {
                             size="sm"
                             onClick={() => approveMutation.mutate(admin._id)}
                             disabled={approveMutation.isPending}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                            className="text-primary hover:text-primary/80 hover:bg-primary/10"
                           >
                             <CheckCircle className="mr-1 h-4 w-4" />
                             Aprovar
