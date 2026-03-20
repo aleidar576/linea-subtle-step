@@ -139,7 +139,7 @@ const LojaAssinatura = () => {
   if (hasSubscription && profile) {
     const isCancelScheduled = profile.cancel_at_period_end === true;
     const status = isCancelScheduled
-      ? { label: 'Cancelamento Programado', className: 'bg-orange-500/10 text-orange-600 border-orange-300' }
+      ? { label: 'Cancelamento Programado', className: 'bg-secondary/15 text-secondary border-secondary/20' }
       : STATUS_MAP[profile.subscription_status!] || { label: profile.subscription_status, className: '' };
     const planoNome = currentPlano?.nome || profile.plano || 'Free';
     const precoPromocional = currentPlano?.preco_promocional ?? null;
