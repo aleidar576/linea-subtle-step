@@ -170,7 +170,7 @@ const LojaConfiguracoes = () => {
                 Número exclusivo para receber orçamentos (diferente do WhatsApp flutuante).
               </p>
               {!hasWhatsappOrcamento && (
-                <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
+                <p className="text-xs text-secondary flex items-center gap-1 mt-1">
                   <AlertTriangle className="h-3 w-3 shrink-0" /> Preencha o número para que o modo funcione.
                 </p>
               )}
