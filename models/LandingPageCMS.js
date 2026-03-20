@@ -26,12 +26,32 @@ const FAQItemSchema = new mongoose.Schema({
   resposta: { type: String, default: '' },
 }, { _id: false });
 
+const SobreSchema = new mongoose.Schema({
+  titulo: { type: String, default: '' },
+  conteudo: { type: String, default: '' },
+  imagemUrl: { type: String, default: '' },
+}, { _id: false });
+
+const ContatoSchema = new mongoose.Schema({
+  email: { type: String, default: '' },
+  whatsapp: { type: String, default: '' },
+  textoApoio: { type: String, default: '' },
+}, { _id: false });
+
+const LegalSchema = new mongoose.Schema({
+  termosUso: { type: String, default: '' },
+  politicaPrivacidade: { type: String, default: '' },
+}, { _id: false });
+
 const LandingPageCMSSchema = new mongoose.Schema({
   hero: { type: HeroSchema, default: () => ({}) },
   zPatternBlocks: { type: [ZPatternBlockSchema], default: [] },
   miniFeatures: { type: [MiniFeatureSchema], default: [] },
   integrations: { type: [String], default: [] },
   faq: { type: [FAQItemSchema], default: [] },
+  sobre: { type: SobreSchema, default: () => ({}) },
+  contato: { type: ContatoSchema, default: () => ({}) },
+  legal: { type: LegalSchema, default: () => ({}) },
 }, { timestamps: true });
 
 LandingPageCMSSchema.statics.getSingleton = async function () {
