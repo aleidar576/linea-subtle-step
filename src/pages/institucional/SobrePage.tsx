@@ -41,7 +41,7 @@ const SobrePage = () => {
     );
   }
 
-  const sobre = cms?.sobre || { titulo: '', conteudo: '', imagemUrl: '' };
+  const sobre = { titulo: '', conteudo: '', imagemUrl: '', ...(cms?.sobre || {}) };
 
   return (
     <InstitucionalLayout>

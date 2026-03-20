@@ -13,10 +13,7 @@ const InstitucionalLayout = ({ children }: Props) => {
   const { brandName } = useSaaSBrand();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const scrollTo = (id: string) => {
-    setMobileMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Navigation is handled via <Link> components — no scrollTo needed
 
   return (
     <div className="min-h-screen bg-white text-zinc-900 overflow-x-hidden">

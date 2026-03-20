@@ -53,7 +53,7 @@ const ContatoPage = () => {
   }
 
   const contato = cms?.contato || { email: '', whatsapp: '', textoApoio: '' };
-  const whatsappClean = contato.whatsapp.replace(/\D/g, '');
+  const whatsappClean = (contato.whatsapp || '').replace(/\D/g, '');
 
   return (
     <InstitucionalLayout>
