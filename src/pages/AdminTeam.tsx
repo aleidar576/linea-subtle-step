@@ -65,19 +65,19 @@ const AdminTeam = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-green-500" />
+              <Shield className="h-4 w-4 text-primary" />
               <p className="text-sm text-muted-foreground">Ativos</p>
             </div>
-            <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>
+            <p className="text-2xl font-bold text-primary mt-1">{activeCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 text-amber-500" />
+              <Loader2 className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Pendentes</p>
             </div>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
+            <p className="text-2xl font-bold text-muted-foreground mt-1">{pendingCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -115,13 +115,9 @@ const AdminTeam = () => {
                     </TableCell>
                     <TableCell>
                       {admin.status === 'active' ? (
-                        <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-0">
-                          Ativo
-                        </Badge>
+                        <Badge variant="success">Ativo</Badge>
                       ) : (
-                        <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-0">
-                          Pendente
-                        </Badge>
+                        <Badge variant="warning">Pendente</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -132,7 +128,7 @@ const AdminTeam = () => {
                             size="sm"
                             onClick={() => approveMutation.mutate(admin._id)}
                             disabled={approveMutation.isPending}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                            className="text-primary hover:text-primary/80 hover:bg-primary/10"
                           >
                             <CheckCircle className="mr-1 h-4 w-4" />
                             Aprovar

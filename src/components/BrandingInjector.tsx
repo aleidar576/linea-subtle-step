@@ -100,26 +100,29 @@ export default function BrandingInjector() {
     if (theme === 'dark') {
       const bg = hexToHSL(fundoDark);
       const fg = hexToHSL(textoLight);
-      const border = shiftLightness(bg, 14);
-      const sec = shiftLightness(bg, 10);
+      // Ultra-subtle borders: only 4% lighter than background
+      const border = shiftLightness(bg, 4);
+      // Secondary/accent: 5% lighter — barely perceptible surface lift
+      const sec = shiftLightness(bg, 5);
 
       set('--background', bg);
       set('--foreground', fg);
-      set('--card', shiftLightness(bg, 4));
+      // Cards: 2% lift for flat, elegant separation
+      set('--card', shiftLightness(bg, 2));
       set('--card-foreground', fg);
-      set('--popover', shiftLightness(bg, 4));
+      set('--popover', shiftLightness(bg, 3));
       set('--popover-foreground', fg);
-      set('--muted', shiftLightness(bg, 8));
-      set('--muted-foreground', shiftLightness(fg, -20));
+      set('--muted', shiftLightness(bg, 4));
+      set('--muted-foreground', shiftLightness(fg, -25));
       set('--accent', sec);
       set('--accent-foreground', fg);
       set('--border', border);
-      set('--input', border);
+      set('--input', shiftLightness(bg, 5));
       set('--secondary', sec);
       set('--secondary-foreground', shiftLightness(fg, -14));
 
-      // Sidebar inherits main theme
-      set('--sidebar-background', shiftLightness(bg, 2));
+      // Sidebar: 1% lift, ultra-subtle border
+      set('--sidebar-background', shiftLightness(bg, 1));
       set('--sidebar-foreground', fg);
       set('--sidebar-border', border);
       set('--sidebar-accent', sec);
@@ -127,26 +130,26 @@ export default function BrandingInjector() {
     } else {
       const bg = hexToHSL(fundoLight);
       const fg = hexToHSL(textoDark);
-      const border = shiftLightness(bg, -9);
-      const sec = shiftLightness(bg, -4);
+      const border = shiftLightness(bg, -5);
+      const sec = shiftLightness(bg, -3);
 
       set('--background', bg);
       set('--foreground', fg);
-      set('--card', bg);
+      set('--card', shiftLightness(bg, -1));
       set('--card-foreground', fg);
       set('--popover', bg);
       set('--popover-foreground', fg);
-      set('--muted', shiftLightness(bg, -5));
+      set('--muted', shiftLightness(bg, -3));
       set('--muted-foreground', shiftLightness(fg, 25));
       set('--accent', sec);
       set('--accent-foreground', fg);
       set('--border', border);
-      set('--input', border);
+      set('--input', shiftLightness(bg, -4));
       set('--secondary', sec);
       set('--secondary-foreground', fg);
 
-      // Sidebar inherits main theme
-      set('--sidebar-background', shiftLightness(bg, -2));
+      // Sidebar
+      set('--sidebar-background', shiftLightness(bg, -1));
       set('--sidebar-foreground', fg);
       set('--sidebar-border', border);
       set('--sidebar-accent', sec);
