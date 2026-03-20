@@ -299,7 +299,7 @@ const LojaAssinatura = () => {
                     {dataVencimentoTaxas && <> O sistema tentará novamente em <strong>{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</strong>.</>}
                   </p>
                 </div>
-                <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2 border-orange-400 text-orange-700 hover:bg-orange-500/10">
+                <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2 border-secondary/30 text-secondary hover:bg-secondary/10">
                   {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                   Regularizar Pagamento Agora
                 </Button>
