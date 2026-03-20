@@ -121,6 +121,7 @@ function isSaaSHost(hostname: string): boolean {
 // SaaS App (painel, admin, landing, demo)
 const SaaSApp = () => (
   <ThemeProvider>
+    <BrandingInjector />
     <AuthProvider>
       <LojistaAuthProvider>
       <CartProvider>
