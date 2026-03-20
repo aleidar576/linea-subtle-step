@@ -1875,7 +1875,7 @@ ${jsonExampleStr}`;
                             </div>
                             {(editingProduct.vantagens.itens || []).map((item, i) => (
                               <div key={i} className="flex items-center gap-2">
-                                <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                                <Check className="h-4 w-4 text-primary shrink-0" />
                                 <Input value={item} onChange={e => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens[i] = e.target.value; setField('vantagens', { ...editingProduct.vantagens!, itens }); }} placeholder={`Vantagem ${i + 1}`} />
                                 <Button variant="ghost" size="icon" onClick={() => { const itens = [...(editingProduct.vantagens?.itens || [])]; itens.splice(i, 1); setField('vantagens', { ...editingProduct.vantagens!, itens }); }}><X className="h-3 w-3" /></Button>
                               </div>
