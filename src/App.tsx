@@ -84,6 +84,7 @@ const AdminGateways = lazy(() => import("./pages/AdminGateways"));
 const AdminPlanos = lazy(() => import("./pages/AdminPlanos"));
 const AdminIntegracoes = lazy(() => import("./pages/AdminIntegracoes"));
 const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
+const AdminLandingPage = lazy(() => import("./pages/AdminLandingPage"));
 
 // =============================================
 // 🔄 LAZY PAGE IMPORTS — Loja Pública
@@ -192,6 +193,7 @@ const SaaSApp = () => (
                       <Route path="pacotes-comentarios" element={<AdminPacotesComentarios />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="marketing" element={<AdminMarketing />} />
+                      <Route path="landing-page" element={<AdminLandingPage />} />
                       <Route path="gateways" element={<AdminGateways />} />
                       <Route path="estatisticas" element={<AdminEstatisticas />} />
                     </Route>

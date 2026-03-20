@@ -1282,6 +1282,50 @@ function adminRequest<T>(path: string, options?: RequestInit): Promise<T> {
   });
 }
 
+// === CMS Landing Page Types ===
+
+export interface HeroCMS {
+  titulo: string;
+  subtitulo: string;
+  ctaTexto: string;
+  bottomTexto: string;
+  imagemUrl: string;
+}
+
+export interface ZPatternBlock {
+  titulo: string;
+  descricao: string;
+  imagemUrl: string;
+  alinhamentoImagem: 'esquerda' | 'direita';
+}
+
+export interface MiniFeature {
+  iconeNome: string;
+  titulo: string;
+  descricao: string;
+}
+
+export interface FAQItem {
+  pergunta: string;
+  resposta: string;
+}
+
+export interface LandingPageCMSData {
+  hero: HeroCMS;
+  zPatternBlocks: ZPatternBlock[];
+  miniFeatures: MiniFeature[];
+  integrations: string[];
+  faq: FAQItem[];
+}
+
+const EMPTY_CMS: LandingPageCMSData = {
+  hero: { titulo: '', subtitulo: '', ctaTexto: '', bottomTexto: '', imagemUrl: '' },
+  zPatternBlocks: [],
+  miniFeatures: [],
+  integrations: [],
+  faq: [],
+};
+
 export const adminApi = {
   broadcast: (titulo: string, mensagem: string) =>
     adminRequest<{ success: boolean; count: number }>('/admins?scope=broadcast', {
@@ -1298,5 +1342,17 @@ export const adminApi = {
   updateGatewaysPlataforma: (config: GatewayPlatformRecord) =>
     adminRequest<{ success: boolean }>('/settings?scope=gateways-plataforma', {
       method: 'PATCH', body: JSON.stringify({ gateways_config: config }),
+    }),
+  getLandingCMS: async (): Promise<LandingPageCMSData> => {
+    try {
+      return await adminRequest<LandingPageCMSData>('/landing-cms');
+    } catch {
+      return EMPTY_CMS;
+    }
+  },
+  updateLandingCMS: (data: LandingPageCMSData) =>
+    adminRequest<LandingPageCMSData>('/landing-cms', {
+      method: 'PUT',
+      body: JSON.stringify(data),
     }),
 };
