@@ -46,6 +46,13 @@ export function useSaaSBrand() {
     logoSizeHome: parseInt(map.saas_logo_size_home || '40', 10) || 40,
     logoSizeLogin: parseInt(map.saas_logo_size_login || '48', 10) || 48,
     faviconUrl: map.browser_icon || '',
+    // Branding colors
+    corPrimaria: map.branding_cor_primaria || '#3CC7F5',
+    corSecundaria: map.branding_cor_secundaria || '#EE49FD',
+    fundoDark: map.branding_fundo_dark || '#1E1E2E',
+    fundoLight: map.branding_fundo_light || '#FFFFFF',
+    textoLight: map.branding_texto_light || '#F3F4F6',
+    textoDark: map.branding_texto_dark || '#111827',
     // Legacy compat
     logoUrl: logoUrlDark || logoUrlLight || '',
   };
