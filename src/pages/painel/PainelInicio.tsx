@@ -110,7 +110,7 @@ const PainelInicio = () => {
                       onClick={() => { if (item.link && !item.done) navigate(item.link); }}
                     >
                       {item.done ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                       ) : (
                         <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
                       )}
