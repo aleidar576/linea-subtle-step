@@ -1,33 +1,38 @@
 
 
-## ✅ CONCLUÍDO: Eliminar Flash Fantasma + Tokenizar Arquivos Críticos
+## Correção de Alinhamento dos Cards — `LojaAssinatura.tsx`
 
-### FRENTE 1 — Flash Fantasma (RESOLVIDO)
-- `src/index.css`: Variáveis `:root` e `.dark` sincronizadas com paleta oficial (#00D1FF primary, #09090B dark bg)
-- `src/components/SaaSBrand.tsx`: Fallbacks hex atualizados (#00D1FF, #E44F30, #09090B, #FAFAFA)
+### Problema
+A classe `mt-auto` na div de features (linha 512) cria um gap visual gigante entre o CTA e a lista de vantagens.
 
-### FRENTE 2 — Tokenização (RESOLVIDO)
-Cores hardcoded substituídas por tokens semânticos em 16 arquivos:
+### 3 Alterações Pontuais
 
-| Arquivo | Mudança |
-|---|---|
-| `AdminEstatisticas.tsx` | Ícones + chart fill → `text-primary`, `hsl(var(--primary))` |
-| `LojaAssinatura.tsx` | STATUS_MAP + badges + CTA → primary/secondary/destructive tokens |
-| `LojaPedidos.tsx` | STATUS_MAP completo → tokens semânticos |
-| `PedidoDetailModal.tsx` | STATUS_MAP duplicado → mesmos tokens |
-| `PainelInicio.tsx` | Checklist + badge Ativa → `text-primary`, `Badge variant="success"` |
-| `AdminLojistas.tsx` | Badges de status → primary/secondary tokens |
-| `AdminSetup.tsx` | Ícones amber/green → `text-secondary`, `text-primary` |
-| `LojaProdutos.tsx` | Validações, stars, JSON preview → tokens |
-| `LojaIntegracoes.tsx` | Badge ativo → `bg-primary/15 text-primary` |
-| `LojaPerfil.tsx` | Ícone copy → `text-primary` |
-| `AdminForgotPassword.tsx` | Success icon → `bg-primary/10 text-primary` |
-| `AdminResetPassword.tsx` | Success icon → `bg-primary/10 text-primary` |
-| `LojaConfiguracoes.tsx` | Warnings amber → `text-secondary` |
-| `LojaGateways.tsx` | Warnings yellow → `bg-secondary/15 text-secondary` |
+**Arquivo:** `src/pages/painel/LojaAssinatura.tsx`
 
-### Arquivos intencionalmente NÃO alterados
-- Vitrine Pública (`LojaCheckout`, `CheckoutPage`, `LojaHome`) — isolamento de tema
-- `AdminConfigEmpresa.tsx` — cores simulam UI do Google (blue/green intencionais)
-- `LojaTemas.tsx` — verde do WhatsApp é cor de marca
-- `ChatWidget.tsx` — dot verde "online" é indicador funcional
+**1. Remover `mt-auto` da lista de features (linha 512)**
+```
+// DE:
+<div className="mt-auto">
+// PARA:
+<div>
+```
+
+**2. Header — trocar `min-h` por `h` fixo responsivo (linha 413)**
+```
+// DE:
+<div className="text-center pt-2 min-h-[140px] flex flex-col justify-start">
+// PARA:
+<div className="text-center pt-2 h-auto md:h-[140px] flex flex-col justify-start">
+```
+
+**3. Bloco de preço — trocar `min-h` por `h` fixo responsivo (linha 431)**
+```
+// DE:
+<div className="text-center py-8 min-h-[140px] flex flex-col items-center justify-center">
+// PARA:
+<div className="text-center py-8 h-auto md:h-[140px] flex flex-col items-center justify-center">
+```
+
+### Resultado
+No desktop, Header (140px) + Preço (140px) = 280px fixos acima do CTA em todos os cards. O botão CTA fica sempre na mesma coordenada Y. No mobile, `h-auto` permite fluxo natural sem cortes.
+
