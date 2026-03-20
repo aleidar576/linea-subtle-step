@@ -87,19 +87,15 @@ export default function BrandingInjector() {
     const secondary = hexToHSL(corSecundaria);
     const primaryFg = isLightColor(primary) ? '220 13% 10%' : '0 0% 100%';
 
-    // Primary / accent
+    // Primary
     set('--primary', primary);
     set('--primary-foreground', primaryFg);
-    set('--accent', shiftLightness(primary, theme === 'dark' ? -15 : 30));
-    set('--accent-foreground', primaryFg);
     set('--ring', primary);
 
     // Sidebar primary
     set('--sidebar-primary', primary);
     set('--sidebar-primary-foreground', primaryFg);
     set('--sidebar-ring', primary);
-    set('--sidebar-accent', shiftLightness(primary, theme === 'dark' ? -20 : 35));
-    set('--sidebar-accent-foreground', primaryFg);
 
     if (theme === 'dark') {
       const bg = hexToHSL(fundoDark);
@@ -115,6 +111,8 @@ export default function BrandingInjector() {
       set('--popover-foreground', fg);
       set('--muted', shiftLightness(bg, 8));
       set('--muted-foreground', shiftLightness(fg, -20));
+      set('--accent', sec);
+      set('--accent-foreground', fg);
       set('--border', border);
       set('--input', border);
       set('--secondary', sec);
@@ -124,6 +122,8 @@ export default function BrandingInjector() {
       set('--sidebar-background', shiftLightness(bg, 2));
       set('--sidebar-foreground', fg);
       set('--sidebar-border', border);
+      set('--sidebar-accent', sec);
+      set('--sidebar-accent-foreground', fg);
     } else {
       const bg = hexToHSL(fundoLight);
       const fg = hexToHSL(textoDark);
@@ -138,6 +138,8 @@ export default function BrandingInjector() {
       set('--popover-foreground', fg);
       set('--muted', shiftLightness(bg, -5));
       set('--muted-foreground', shiftLightness(fg, 25));
+      set('--accent', sec);
+      set('--accent-foreground', fg);
       set('--border', border);
       set('--input', border);
       set('--secondary', sec);
@@ -147,6 +149,8 @@ export default function BrandingInjector() {
       set('--sidebar-background', shiftLightness(bg, -2));
       set('--sidebar-foreground', fg);
       set('--sidebar-border', border);
+      set('--sidebar-accent', sec);
+      set('--sidebar-accent-foreground', fg);
     }
 
     // Cleanup on unmount
