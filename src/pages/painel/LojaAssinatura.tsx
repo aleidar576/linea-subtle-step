@@ -27,8 +27,8 @@ import { settingsApi } from '@/services/api';
 import { useSaaSPixels } from '@/hooks/useSaaSPixels';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  trialing: { label: 'Trial Ativo', className: 'bg-blue-500/10 text-blue-600' },
-  active: { label: 'Ativa', className: 'bg-green-500/10 text-green-600' },
+  trialing: { label: 'Trial Ativo', className: 'bg-primary/10 text-primary' },
+  active: { label: 'Ativa', className: 'bg-primary/15 text-primary' },
   past_due: { label: 'Atrasada', className: 'bg-destructive/10 text-destructive' },
   canceled: { label: 'Cancelada', className: 'bg-muted text-muted-foreground' },
 };
