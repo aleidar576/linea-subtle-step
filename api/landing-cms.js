@@ -1,4 +1,4 @@
-const { connectDB } = require('../lib/mongodb');
+const connectDB = require('../lib/mongodb');
 const { requireAdmin } = require('../lib/auth');
 const LandingPageCMS = require('../models/LandingPageCMS');
 
