@@ -508,7 +508,8 @@ const LojaAssinatura = () => {
                 {plano.textoBotao || (plano.isSobMedida ? 'Falar com Especialista' : plano.isPagamentoUnico ? 'Contratar Agora' : 'Começar 7 Dias Grátis')}
               </Button>
 
-              {/* ── TEXTO DESTAQUE ── */}
+              {/* ── LISTA DE FEATURES (mt-auto ancora no fundo do card) ── */}
+              <div className="mt-auto">
               {plano.textoDestaque && (
                 <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
                   <CornerDownRight className="h-4 w-4 text-primary shrink-0" />
