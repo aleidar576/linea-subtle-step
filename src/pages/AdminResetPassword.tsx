@@ -20,12 +20,11 @@ const AdminResetPassword = () => {
 
   if (!token) {
     return (
-      <div className="dark">
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
         <Card className="w-full max-w-md border-border/50 shadow-lg">
           <CardContent className="flex flex-col items-center gap-4 py-10">
             <h2 className="text-xl font-bold text-destructive">Token inválido</h2>
-            <p className="text-sm text-slate-400 text-center">
+            <p className="text-sm text-muted-foreground text-center">
               O link de redefinição é inválido ou expirou.
             </p>
             <Link to="/admin/recuperar-senha">
@@ -33,7 +32,6 @@ const AdminResetPassword = () => {
             </Link>
           </CardContent>
         </Card>
-      </div>
       </div>
     );
   }
@@ -61,15 +59,14 @@ const AdminResetPassword = () => {
 
   if (success) {
     return (
-      <div className="dark">
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
         <Card className="w-full max-w-md border-border/50 shadow-lg">
           <CardContent className="flex flex-col items-center gap-4 py-10">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
-            <h2 className="text-xl font-bold text-slate-100">Senha Redefinida!</h2>
-            <p className="text-sm text-slate-400 text-center">
+            <h2 className="text-xl font-bold text-foreground">Senha Redefinida!</h2>
+            <p className="text-sm text-muted-foreground text-center">
               Sua senha foi atualizada. Faça login com a nova senha.
             </p>
             <Link to="/admin/login">
@@ -78,33 +75,31 @@ const AdminResetPassword = () => {
           </CardContent>
         </Card>
       </div>
-      </div>
     );
   }
 
   return (
-    <div className="dark">
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
             <Lock className="h-8 w-8 text-primary" />
           </div>
-          <SaaSLogo size={0} showName={true} nameClassName="text-2xl text-slate-100 tracking-tight" className="justify-center" iconClassName="hidden" />
-          <p className="text-sm text-slate-400">Definir nova senha</p>
+          <SaaSLogo size={0} showName={true} nameClassName="text-2xl text-foreground tracking-tight" className="justify-center" iconClassName="hidden" />
+          <p className="text-sm text-muted-foreground">Definir nova senha</p>
         </div>
 
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg text-center text-slate-100">Nova Senha</CardTitle>
-            <p className="text-sm text-slate-400 text-center">
+            <CardTitle className="text-lg text-center text-foreground">Nova Senha</CardTitle>
+            <p className="text-sm text-muted-foreground text-center">
               Digite e confirme sua nova senha
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-200">Nova Senha</Label>
+                <Label htmlFor="password" className="text-foreground">Nova Senha</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -126,7 +121,7 @@ const AdminResetPassword = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm" className="text-slate-200">Confirmar Senha</Label>
+                <Label htmlFor="confirm" className="text-foreground">Confirmar Senha</Label>
                 <Input
                   id="confirm"
                   type={showPassword ? 'text' : 'password'}
@@ -144,7 +139,7 @@ const AdminResetPassword = () => {
             </form>
 
             <div className="mt-4 text-center">
-              <Link to="/admin/login" className="text-sm text-slate-400 hover:text-primary transition-colors">
+              <Link to="/admin/login" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 <ArrowLeft className="mr-1 h-3 w-3 inline" />
                 Voltar ao Login
               </Link>
@@ -152,7 +147,6 @@ const AdminResetPassword = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
     </div>
   );
 };
