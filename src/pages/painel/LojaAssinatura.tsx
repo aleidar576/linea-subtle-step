@@ -410,7 +410,7 @@ const LojaAssinatura = () => {
               )}
 
               {/* ── HEADER CENTRALIZADO (altura fixa para alinhar cards) ── */}
-              <div className="text-center pt-2 min-h-[140px] flex flex-col justify-start">
+              <div className="text-center pt-2 h-auto md:h-[140px] flex flex-col justify-start">
                 <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
                   {plano.destaque && <Zap className="h-6 w-6 text-primary" />}
                   {plano.nome}
@@ -428,7 +428,7 @@ const LojaAssinatura = () => {
               </div>
 
               {/* ── PREÇO MASSIVO (altura fixa para alinhar) ── */}
-              <div className="text-center py-8 min-h-[140px] flex flex-col items-center justify-center">
+              <div className="text-center py-8 h-auto md:h-[140px] flex flex-col items-center justify-center">
                 {(() => {
                   const precoReal = (plano.preco_promocional > 0 ? plano.preco_promocional : plano.preco_original) || 0;
 
@@ -509,7 +509,7 @@ const LojaAssinatura = () => {
               </Button>
 
               {/* ── LISTA DE FEATURES (mt-auto ancora no fundo do card) ── */}
-              <div className="mt-auto">
+              <div>
               {plano.textoDestaque && (
                 <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
                   <CornerDownRight className="h-4 w-4 text-primary shrink-0" />
