@@ -420,7 +420,7 @@ const LojaAssinatura = () => {
 
               {/* ── CTA ACIMA DA LISTA ── */}
               <Button
-                className="w-full gap-2 rounded-full bg-green-500 hover:bg-green-600 text-white border-0 mb-8 h-12 text-base font-semibold"
+                className="w-full gap-2 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 mb-8 h-12 text-base font-semibold"
                 onClick={() => {
                   if (plano.isSobMedida) {
                     window.open(`https://wa.me/${plano.whatsappNumero}?text=${encodeURIComponent(plano.whatsappMensagem || '')}`, '_blank');
