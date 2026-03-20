@@ -6,7 +6,7 @@ import { ContentTransition } from '@/components/PageTransition';
 import { Suspense, useEffect } from 'react';
 import GlobalLoader from '@/components/ui/GlobalLoader';
 import {
-  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone
+  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone, LayoutTemplate
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
