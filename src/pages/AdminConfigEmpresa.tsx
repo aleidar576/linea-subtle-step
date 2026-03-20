@@ -15,6 +15,15 @@ interface Depoimento {
   texto: string;
 }
 
+const BRANDING_DEFAULTS: Record<string, string> = {
+  branding_cor_primaria: '#3CC7F5',
+  branding_cor_secundaria: '#EE49FD',
+  branding_fundo_dark: '#1E1E2E',
+  branding_fundo_light: '#FFFFFF',
+  branding_texto_light: '#F3F4F6',
+  branding_texto_dark: '#111827',
+};
+
 const SETTING_KEYS = [
   'global_domain', 'termos_uso', 'browser_icon',
   'dias_tolerancia_inadimplencia', 'dias_tolerancia_taxas', 'depoimentos_landing_page',
@@ -23,6 +32,7 @@ const SETTING_KEYS = [
   'saas_logo_size', 'saas_logo_size_home', 'saas_logo_size_login',
   'whatsapp_suporte',
   'platform_seo_title', 'platform_seo_description', 'platform_seo_og_image',
+  ...Object.keys(BRANDING_DEFAULTS),
 ];
 
 const AdminConfigEmpresa = () => {
