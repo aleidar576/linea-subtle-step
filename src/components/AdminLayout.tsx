@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/admin/tickets', label: 'Tickets', icon: ShieldCheck },
   { to: '/admin/pacotes-comentarios', label: 'Pacotes', icon: MessageSquare },
   { to: '/admin/marketing', label: 'Marketing', icon: Megaphone },
+  { to: '/admin/landing-page', label: 'Landing Page', icon: LayoutTemplate },
   { to: '/admin/integracoes', label: 'Integrações', icon: Plug },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings },
   { to: '/admin/estatisticas', label: 'Estatísticas', icon: BarChart3 },

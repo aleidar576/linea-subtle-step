@@ -193,6 +193,7 @@ const SaaSApp = () => (
                       <Route path="pacotes-comentarios" element={<AdminPacotesComentarios />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="marketing" element={<AdminMarketing />} />
+                      <Route path="landing-page" element={<AdminLandingPage />} />
                       <Route path="gateways" element={<AdminGateways />} />
                       <Route path="estatisticas" element={<AdminEstatisticas />} />
                     </Route>
