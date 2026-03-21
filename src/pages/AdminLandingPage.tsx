@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Save, GripVertical, Image as ImageIcon, Type, Zap, HelpCircle, LayoutTemplate, Info, Phone, FileText } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, GripVertical, Image as ImageIcon, Type, Zap, HelpCircle, LayoutTemplate, Info, Phone, FileText, Megaphone, Rocket } from 'lucide-react';
 
 const EMPTY_CMS: LandingPageCMSData = {
   hero: { titulo: '', subtitulo: '', ctaTexto: '', bottomTexto: '', imagemUrl: '' },
@@ -20,6 +20,8 @@ const EMPTY_CMS: LandingPageCMSData = {
   sobre: { titulo: '', conteudo: '', imagemUrl: '' },
   contato: { email: '', whatsapp: '', textoApoio: '' },
   legal: { termosUso: '', politicaPrivacidade: '' },
+  ctaIntermediario: { titulo: '', subtitulo: '', textoBotao: '', link: '' },
+  ctaFinal: { titulo: '', subtitulo: '', imagemUrl: '', textoBotao: '', link: '' },
 };
 
 const AdminLandingPage = () => {
@@ -39,6 +41,8 @@ const AdminLandingPage = () => {
         sobre: cms.sobre || EMPTY_CMS.sobre,
         contato: cms.contato || EMPTY_CMS.contato,
         legal: cms.legal || EMPTY_CMS.legal,
+        ctaIntermediario: cms.ctaIntermediario || EMPTY_CMS.ctaIntermediario,
+        ctaFinal: cms.ctaFinal || EMPTY_CMS.ctaFinal,
       });
       setLoading(false);
     });
@@ -135,6 +139,16 @@ const AdminLandingPage = () => {
     setData(prev => ({ ...prev, legal: { ...prev.legal, [field]: value } }));
   }, []);
 
+  // ── CTA Intermediário helpers ──
+  const updateCtaIntermediario = useCallback((field: string, value: string) => {
+    setData(prev => ({ ...prev, ctaIntermediario: { ...prev.ctaIntermediario, [field]: value } }));
+  }, []);
+
+  // ── CTA Final helpers ──
+  const updateCtaFinal = useCallback((field: string, value: string) => {
+    setData(prev => ({ ...prev, ctaFinal: { ...prev.ctaFinal, [field]: value } }));
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -166,7 +180,9 @@ const AdminLandingPage = () => {
           <TabsTrigger value="zpattern" className="gap-1.5 text-xs"><GripVertical className="h-3.5 w-3.5" />Blocos Z-Pattern</TabsTrigger>
           <TabsTrigger value="features" className="gap-1.5 text-xs"><Zap className="h-3.5 w-3.5" />Recursos</TabsTrigger>
           <TabsTrigger value="integrations" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" />Integrações</TabsTrigger>
+          <TabsTrigger value="cta-intermediario" className="gap-1.5 text-xs"><Megaphone className="h-3.5 w-3.5" />CTA Intermediário</TabsTrigger>
           <TabsTrigger value="faq" className="gap-1.5 text-xs"><HelpCircle className="h-3.5 w-3.5" />FAQ</TabsTrigger>
+          <TabsTrigger value="cta-final" className="gap-1.5 text-xs"><Rocket className="h-3.5 w-3.5" />CTA Final</TabsTrigger>
           <TabsTrigger value="sobre" className="gap-1.5 text-xs"><Info className="h-3.5 w-3.5" />Sobre Nós</TabsTrigger>
           <TabsTrigger value="contato" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" />Contato</TabsTrigger>
           <TabsTrigger value="legal" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Textos Legais</TabsTrigger>
@@ -331,7 +347,7 @@ const AdminLandingPage = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Logos de Integrações</CardTitle>
-                <CardDescription>Logos de parceiros e integrações exibidas em carrossel.</CardDescription>
+                <CardDescription>Logos de parceiros e integrações exibidas em carrossel infinito.</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={addIntegration} className="gap-1.5">
                 <Plus className="h-4 w-4" /> Adicionar Logo
@@ -365,13 +381,44 @@ const AdminLandingPage = () => {
           </Card>
         </TabsContent>
 
+        {/* ═══════════════ CTA INTERMEDIÁRIO ═══════════════ */}
+        <TabsContent value="cta-intermediario">
+          <Card>
+            <CardHeader>
+              <CardTitle>CTA Intermediário</CardTitle>
+              <CardDescription>Seção de chamada para ação exibida entre os blocos de conteúdo e a seção de planos. Fundo com cor primária.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-w-lg">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input value={data.ctaIntermediario.titulo} onChange={e => updateCtaIntermediario('titulo', e.target.value)} placeholder="Pronto para começar?" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Textarea value={data.ctaIntermediario.subtitulo} onChange={e => updateCtaIntermediario('subtitulo', e.target.value)} placeholder="Crie sua loja em minutos..." rows={2} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Texto do Botão</Label>
+                  <Input value={data.ctaIntermediario.textoBotao} onChange={e => updateCtaIntermediario('textoBotao', e.target.value)} placeholder="Começar agora" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Link do Botão</Label>
+                  <Input value={data.ctaIntermediario.link} onChange={e => updateCtaIntermediario('link', e.target.value)} placeholder="/registro" />
+                  <p className="text-[11px] text-muted-foreground">Use caminhos relativos como /registro ou URLs completas.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ═══════════════ FAQ ═══════════════ */}
         <TabsContent value="faq">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Perguntas Frequentes</CardTitle>
-                <CardDescription>Seção de dúvidas exibida no final da landing page.</CardDescription>
+                <CardDescription>Seção de dúvidas exibida em 2 colunas no desktop.</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={addFAQ} className="gap-1.5">
                 <Plus className="h-4 w-4" /> Adicionar Pergunta
@@ -403,6 +450,48 @@ const AdminLandingPage = () => {
                   </CardContent>
                 </Card>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ═══════════════ CTA FINAL ═══════════════ */}
+        <TabsContent value="cta-final">
+          <Card>
+            <CardHeader>
+              <CardTitle>CTA Final</CardTitle>
+              <CardDescription>Seção de conversão final exibida antes do footer. Fundo escuro com imagem mockup.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Título</Label>
+                    <Input value={data.ctaFinal.titulo} onChange={e => updateCtaFinal('titulo', e.target.value)} placeholder="Comece sua jornada agora" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subtítulo</Label>
+                    <Textarea value={data.ctaFinal.subtitulo} onChange={e => updateCtaFinal('subtitulo', e.target.value)} placeholder="Milhares de empreendedores já estão..." rows={2} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Texto do Botão</Label>
+                    <Input value={data.ctaFinal.textoBotao} onChange={e => updateCtaFinal('textoBotao', e.target.value)} placeholder="Criar minha loja grátis" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Link do Botão</Label>
+                    <Input value={data.ctaFinal.link} onChange={e => updateCtaFinal('link', e.target.value)} placeholder="/registro" />
+                    <p className="text-[11px] text-muted-foreground">Use caminhos relativos como /registro ou URLs completas.</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Imagem Mockup</Label>
+                  <ImageUploader
+                    adminMode
+                    qualityProfile="banner"
+                    value={data.ctaFinal.imagemUrl}
+                    onChange={url => updateCtaFinal('imagemUrl', url)}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
