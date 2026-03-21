@@ -1,38 +1,32 @@
 
 
-## Correção de Alinhamento dos Cards — `LojaAssinatura.tsx`
+## Hero Section — Correção de Layout Premium
 
-### Problema
-A classe `mt-auto` na div de features (linha 512) cria um gap visual gigante entre o CTA e a lista de vantagens.
+### Arquivo: `src/pages/LandingPage.tsx` (linhas 92–144)
 
-### 3 Alterações Pontuais
+### Mudanças
 
-**Arquivo:** `src/pages/painel/LojaAssinatura.tsx`
+**1. Grid container (linha 95)**
+Substituir `grid md:grid-cols-2 gap-12 items-center` por:
+- Mobile: `flex flex-col-reverse gap-8`
+- Desktop: `md:grid md:grid-cols-2 items-center gap-16`
 
-**1. Remover `mt-auto` da lista de features (linha 512)**
-```
-// DE:
-<div className="mt-auto">
-// PARA:
-<div>
-```
+**2. Bloco de texto (linha 97)**
+Adicionar `max-w-xl` na div do motion.
 
-**2. Header — trocar `min-h` por `h` fixo responsivo (linha 413)**
-```
-// DE:
-<div className="text-center pt-2 min-h-[140px] flex flex-col justify-start">
-// PARA:
-<div className="text-center pt-2 h-auto md:h-[140px] flex flex-col justify-start">
-```
+**3. Tipografia**
+- Título (linha 99): `text-4xl md:text-5xl font-extrabold leading-tight text-zinc-900` (reduzir de `text-6xl`)
+- Subtítulo (linha 104): `text-lg md:text-xl text-zinc-600 font-medium mt-5 mb-8`
 
-**3. Bloco de preço — trocar `min-h` por `h` fixo responsivo (linha 431)**
-```
-// DE:
-<div className="text-center py-8 min-h-[140px] flex flex-col items-center justify-center">
-// PARA:
-<div className="text-center py-8 h-auto md:h-[140px] flex flex-col items-center justify-center">
-```
+**4. CTA — layout empilhado (linhas 110–124)**
+Substituir o input-group inline (flex horizontal com rounded-full) por layout vertical:
+- Input email: `w-full` com borda sutil, fundo branco, placeholder "Seu melhor email", `rounded-xl h-12`
+- Botão abaixo com `mt-4 w-full rounded-xl h-12` cor primária
+- `hero.bottomTexto` abaixo com `mt-3`
 
-### Resultado
-No desktop, Header (140px) + Preço (140px) = 280px fixos acima do CTA em todos os cards. O botão CTA fica sempre na mesma coordenada Y. No mobile, `h-auto` permite fluxo natural sem cortes.
+**5. Imagem (linhas 132–141)**
+Envolver em `<div className="flex justify-center md:justify-end">`, e na `<img>`:
+`w-full h-auto object-contain max-w-[500px] max-h-[500px] rounded-3xl shadow-2xl`
+
+### Nenhum outro arquivo é alterado.
 
