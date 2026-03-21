@@ -92,30 +92,30 @@ const LandingPage = () => {
       {/* ══════════════ HERO ══════════════ */}
       <section className="bg-white">
         <div className="container mx-auto px-4 py-20 md:py-28">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="flex flex-col-reverse gap-8 md:grid md:grid-cols-2 items-center gap-y-8 md:gap-16">
             {/* Text */}
-            <motion.div {...reveal()}>
+            <motion.div {...reveal()} className="max-w-xl">
               {hero.titulo && (
-                <h1 className="text-4xl md:text-6xl font-extrabold leading-[1.08] tracking-tight text-zinc-900 mb-6">
+                <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-zinc-900">
                   {hero.titulo}
                 </h1>
               )}
               {hero.subtitulo && (
-                <p className="text-lg md:text-xl text-zinc-500 leading-relaxed mb-8 max-w-lg">
+                <p className="text-lg md:text-xl text-zinc-600 font-medium mt-5 mb-8">
                   {hero.subtitulo}
                 </p>
               )}
 
-              {/* Email input group */}
-              <div className="flex items-center bg-white border border-zinc-200 rounded-full shadow-lg shadow-zinc-900/5 max-w-md overflow-hidden">
+              {/* CTA stacked */}
+              <div className="w-full">
                 <Input
                   type="email"
-                  placeholder="Seu email"
-                  className="border-0 shadow-none focus-visible:ring-0 bg-transparent h-12 pl-5 text-zinc-900 placeholder:text-zinc-400 rounded-full"
+                  placeholder="Seu melhor email"
+                  className="w-full h-12 rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 shadow-sm focus-visible:ring-primary"
                   onKeyDown={(e) => e.key === 'Enter' && navigate('/registro')}
                 />
                 <Button
-                  className="rounded-full h-10 px-6 mr-1 text-white shrink-0 gap-1.5"
+                  className="mt-4 w-full h-12 rounded-xl text-white text-base font-semibold gap-2"
                   style={{ backgroundColor: 'hsl(var(--primary))' }}
                   onClick={() => navigate('/registro')}
                 >
@@ -124,17 +124,17 @@ const LandingPage = () => {
               </div>
 
               {hero.bottomTexto && (
-                <p className="text-xs text-zinc-400 mt-4">{hero.bottomTexto}</p>
+                <p className="text-xs text-zinc-400 mt-3">{hero.bottomTexto}</p>
               )}
             </motion.div>
 
             {/* Image */}
             {hero.imagemUrl && (
-              <motion.div {...reveal(0.15)}>
+              <motion.div {...reveal(0.15)} className="flex justify-center md:justify-end">
                 <img
                   src={hero.imagemUrl}
                   alt="Plataforma"
-                  className="w-full h-auto object-contain rounded-2xl shadow-2xl"
+                  className="w-full h-auto object-contain max-w-[500px] max-h-[500px] rounded-3xl shadow-2xl"
                   loading="eager"
                 />
               </motion.div>
