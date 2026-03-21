@@ -1333,6 +1333,21 @@ export interface LegalCMS {
   politicaPrivacidade: string;
 }
 
+export interface CTAIntermediarioCMS {
+  titulo: string;
+  subtitulo: string;
+  textoBotao: string;
+  link: string;
+}
+
+export interface CTAFinalCMS {
+  titulo: string;
+  subtitulo: string;
+  imagemUrl: string;
+  textoBotao: string;
+  link: string;
+}
+
 export interface LandingPageCMSData {
   hero: HeroCMS;
   zPatternBlocks: ZPatternBlock[];
@@ -1342,6 +1357,8 @@ export interface LandingPageCMSData {
   sobre: SobreCMS;
   contato: ContatoCMS;
   legal: LegalCMS;
+  ctaIntermediario: CTAIntermediarioCMS;
+  ctaFinal: CTAFinalCMS;
 }
 
 const EMPTY_CMS: LandingPageCMSData = {
@@ -1353,6 +1370,8 @@ const EMPTY_CMS: LandingPageCMSData = {
   sobre: { titulo: '', conteudo: '', imagemUrl: '' },
   contato: { email: '', whatsapp: '', textoApoio: '' },
   legal: { termosUso: '', politicaPrivacidade: '' },
+  ctaIntermediario: { titulo: '', subtitulo: '', textoBotao: '', link: '' },
+  ctaFinal: { titulo: '', subtitulo: '', imagemUrl: '', textoBotao: '', link: '' },
 };
 
 export const adminApi = {

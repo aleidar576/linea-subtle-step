@@ -43,6 +43,21 @@ const LegalSchema = new mongoose.Schema({
   politicaPrivacidade: { type: String, default: '' },
 }, { _id: false });
 
+const CTAIntermediarioSchema = new mongoose.Schema({
+  titulo: { type: String, default: '' },
+  subtitulo: { type: String, default: '' },
+  textoBotao: { type: String, default: '' },
+  link: { type: String, default: '' },
+}, { _id: false });
+
+const CTAFinalSchema = new mongoose.Schema({
+  titulo: { type: String, default: '' },
+  subtitulo: { type: String, default: '' },
+  imagemUrl: { type: String, default: '' },
+  textoBotao: { type: String, default: '' },
+  link: { type: String, default: '' },
+}, { _id: false });
+
 const LandingPageCMSSchema = new mongoose.Schema({
   hero: { type: HeroSchema, default: () => ({}) },
   zPatternBlocks: { type: [ZPatternBlockSchema], default: [] },
@@ -52,6 +67,8 @@ const LandingPageCMSSchema = new mongoose.Schema({
   sobre: { type: SobreSchema, default: () => ({}) },
   contato: { type: ContatoSchema, default: () => ({}) },
   legal: { type: LegalSchema, default: () => ({}) },
+  ctaIntermediario: { type: CTAIntermediarioSchema, default: () => ({}) },
+  ctaFinal: { type: CTAFinalSchema, default: () => ({}) },
 }, { timestamps: true });
 
 LandingPageCMSSchema.statics.getSingleton = async function () {
