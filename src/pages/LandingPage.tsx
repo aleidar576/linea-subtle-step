@@ -172,6 +172,7 @@ const LandingPage = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroEmail, setHeroEmail] = useState('');
+  const [pricingTab, setPricingTab] = useState<'saas' | 'loja_pronta'>('saas');
 
   useEffect(() => {
     Promise.all([publicLandingApi.getCMS(), publicLandingApi.getPlanos()])
