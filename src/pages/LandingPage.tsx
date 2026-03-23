@@ -171,6 +171,7 @@ const LandingPage = () => {
   const [cms, setCms] = useState<LandingPageCMSData | null>(null);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heroEmail, setHeroEmail] = useState('');
 
   useEffect(() => {
     Promise.all([publicLandingApi.getCMS(), publicLandingApi.getPlanos()])
