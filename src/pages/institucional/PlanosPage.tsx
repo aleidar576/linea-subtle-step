@@ -150,6 +150,7 @@ const PlanosPage = () => {
   const [cms, setCms] = useState<LandingPageCMSData | null>(null);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pricingTab, setPricingTab] = useState<'saas' | 'loja_pronta'>('saas');
 
   useEffect(() => {
     Promise.all([publicLandingApi.getCMS(), publicLandingApi.getPlanos()])
