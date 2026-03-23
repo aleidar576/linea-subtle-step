@@ -162,9 +162,9 @@ const PlanosPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  /* Split planos */
-  const planosSaaS = planos.filter(p => !p.isSobMedida);
-  const planosLojaPronta = planos.filter(p => p.isSobMedida);
+  /* Split planos by categoria (same rule as painel do lojista) */
+  const planosSaaS = planos.filter(p => (p.categoria || 'business') === 'business');
+  const planosLojaPronta = planos.filter(p => (p.categoria || 'business') === 'loja_pronta');
 
   /* Split FAQ into 2 columns */
   const faqItems = cms?.faq || [];
