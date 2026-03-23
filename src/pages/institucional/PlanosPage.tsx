@@ -29,6 +29,122 @@ const buildWhatsAppLink = (numero: string, mensagem: string) => {
   return `https://wa.me/${clean}?text=${encodeURIComponent(mensagem)}`;
 };
 
+/* ───────── FAQ Column (light mode) ───────── */
+
+const FAQColumn = ({ items, offset = 0 }: { items: { pergunta: string; resposta: string }[]; offset?: number }) => (
+  <Accordion type="single" collapsible className="space-y-3">
+    {items.map((item, i) => (
+      <AccordionItem
+        key={i}
+        value={`faq-${offset + i}`}
+        className="border border-zinc-200 rounded-xl px-5 data-[state=open]:shadow-sm transition-shadow bg-white"
+      >
+        <AccordionTrigger className="text-left font-medium text-zinc-900 hover:no-underline py-4">
+          {item.pergunta}
+        </AccordionTrigger>
+        <AccordionContent className="text-zinc-500 leading-relaxed pb-4">
+          {item.resposta}
+        </AccordionContent>
+      </AccordionItem>
+    ))}
+  </Accordion>
+);
+
+/* ───────── Pricing Card (light mode absoluto) ───────── */
+
+const PricingCard = ({ plano, index, navigate }: { plano: Plano; index: number; navigate: (path: string) => void }) => {
+  const isHighlight = plano.destaque;
+  const isSobMedida = plano.isSobMedida;
+  const hasPriceDiscount = plano.preco_original > 0 && plano.preco_promocional > 0 && plano.preco_original !== plano.preco_promocional;
+
+  return (
+    <motion.div
+      {...reveal(0.08 * index)}
+      className={`relative bg-white rounded-2xl p-7 flex flex-col transition-shadow duration-300 ${
+        isHighlight
+          ? 'border-2 shadow-lg hover:shadow-xl'
+          : 'border border-zinc-200 shadow-sm hover:shadow-md'
+      }`}
+      style={isHighlight ? { borderColor: 'hsl(var(--primary))' } : undefined}
+    >
+      {isHighlight && (
+        <div
+          className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-white"
+          style={{ backgroundColor: 'hsl(var(--primary))' }}
+        >
+          Mais popular
+        </div>
+      )}
+
+      <h3 className="text-lg font-bold text-zinc-900">{plano.nome}</h3>
+      {plano.subtitulo && (
+        <p className="text-sm text-zinc-500 mt-1">{plano.subtitulo}</p>
+      )}
+
+      <div className="my-6">
+        {isSobMedida && plano.preco_promocional === 0 ? (
+          <p className="text-2xl font-bold text-zinc-900">Sob Medida</p>
+        ) : (
+          <>
+            {hasPriceDiscount && (
+              <p className="text-sm text-zinc-400 line-through">
+                {formatCurrency(plano.preco_original)}/mês
+              </p>
+            )}
+            <p className="text-3xl font-extrabold text-zinc-900">
+              {plano.preco_promocional === 0 ? 'Grátis' : (
+                <>
+                  {formatCurrency(plano.preco_promocional)}
+                  <span className="text-sm font-normal text-zinc-500">
+                    {plano.isPagamentoUnico ? ' único' : '/mês'}
+                  </span>
+                </>
+              )}
+            </p>
+          </>
+        )}
+      </div>
+
+      {isSobMedida ? (
+        <a
+          href={buildWhatsAppLink(plano.whatsappNumero, plano.whatsappMensagem || `Olá! Tenho interesse no plano ${plano.nome}.`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-xl h-11 px-6 text-sm font-semibold text-white transition-colors hover:opacity-90"
+          style={{ backgroundColor: 'hsl(var(--primary))' }}
+        >
+          {plano.textoBotao || 'Falar com especialista'} <ArrowRight className="h-4 w-4" />
+        </a>
+      ) : (
+        <Button
+          className="w-full h-11 rounded-xl text-white hover:opacity-90"
+          style={{ backgroundColor: 'hsl(var(--primary))' }}
+          onClick={() => navigate('/registro')}
+        >
+          {plano.textoBotao || 'Criar conta gratuita'} <ArrowRight className="h-4 w-4" />
+        </Button>
+      )}
+
+      <ul className="mt-6 space-y-2.5 flex-1">
+        {(plano.vantagens || []).map((v, vi) => (
+          <li key={vi} className="flex items-start gap-2 text-sm text-zinc-600">
+            <Check className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
+            <span>{v}</span>
+          </li>
+        ))}
+        {(plano.desvantagens || []).map((d, di) => (
+          <li key={`d-${di}`} className="flex items-start gap-2 text-sm text-zinc-400">
+            <X className="h-4 w-4 shrink-0 mt-0.5 text-zinc-300" />
+            <span className="line-through">{d}</span>
+          </li>
+        ))}
+      </ul>
+    </motion.div>
+  );
+};
+
+/* ───────── Main Component ───────── */
+
 const PlanosPage = () => {
   const navigate = useNavigate();
   const [cms, setCms] = useState<LandingPageCMSData | null>(null);
@@ -44,6 +160,16 @@ const PlanosPage = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  /* Split planos */
+  const planosSaaS = planos.filter(p => !p.isSobMedida);
+  const planosLojaPronta = planos.filter(p => p.isSobMedida);
+
+  /* Split FAQ into 2 columns */
+  const faqItems = cms?.faq || [];
+  const faqHalf = Math.ceil(faqItems.length / 2);
+  const faqLeft = faqItems.slice(0, faqHalf);
+  const faqRight = faqItems.slice(faqHalf);
 
   if (loading) {
     return (
@@ -61,7 +187,7 @@ const PlanosPage = () => {
 
   return (
     <InstitucionalLayout>
-      {/* Pricing */}
+      {/* ══════════════ PLANOS SaaS ══════════════ */}
       <section className="bg-white py-20 md:py-28">
         <div className="container mx-auto px-4">
           <motion.div {...reveal()} className="text-center mb-14">
@@ -73,102 +199,48 @@ const PlanosPage = () => {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {planos.map((plano, i) => {
-              const isHighlight = plano.destaque;
-              const isSobMedida = plano.isSobMedida;
-              const hasPriceDiscount = plano.preco_original > 0 && plano.preco_promocional > 0 && plano.preco_original !== plano.preco_promocional;
-
-              return (
-                <motion.div
-                  key={plano._id}
-                  {...reveal(0.08 * i)}
-                  className={`relative bg-white rounded-2xl p-7 flex flex-col transition-shadow duration-300 ${
-                    isHighlight ? 'border-2 shadow-lg hover:shadow-xl' : 'border border-zinc-200 shadow-sm hover:shadow-md'
-                  }`}
-                  style={isHighlight ? { borderColor: 'hsl(var(--primary))' } : undefined}
-                >
-                  {isHighlight && (
-                    <div
-                      className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-white"
-                      style={{ backgroundColor: 'hsl(var(--primary))' }}
-                    >
-                      Mais popular
-                    </div>
-                  )}
-                  <h3 className="text-lg font-bold text-zinc-900">{plano.nome}</h3>
-                  {plano.subtitulo && <p className="text-sm text-zinc-500 mt-1">{plano.subtitulo}</p>}
-
-                  <div className="my-6">
-                    {isSobMedida && plano.preco_promocional === 0 ? (
-                      <p className="text-2xl font-bold text-zinc-900">Sob Medida</p>
-                    ) : (
-                      <>
-                        {hasPriceDiscount && (
-                          <p className="text-sm text-zinc-400 line-through">{formatCurrency(plano.preco_original)}/mês</p>
-                        )}
-                        <p className="text-3xl font-extrabold text-zinc-900">
-                          {plano.preco_promocional === 0 ? 'Grátis' : (
-                            <>{formatCurrency(plano.preco_promocional)}<span className="text-sm font-normal text-zinc-500">{plano.isPagamentoUnico ? ' único' : '/mês'}</span></>
-                          )}
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  {isSobMedida ? (
-                    <a
-                      href={buildWhatsAppLink(plano.whatsappNumero, plano.whatsappMensagem || `Olá! Tenho interesse no plano ${plano.nome}.`)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-lg h-11 px-6 text-sm font-semibold text-white transition-colors"
-                      style={{ backgroundColor: 'hsl(var(--primary))' }}
-                    >
-                      {plano.textoBotao || 'Falar com especialista'} <ArrowRight className="h-4 w-4" />
-                    </a>
-                  ) : (
-                    <Button className="w-full h-11 rounded-lg text-white" style={{ backgroundColor: 'hsl(var(--primary))' }} onClick={() => navigate('/registro')}>
-                      {plano.textoBotao || 'Criar conta gratuita'} <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-
-                  <ul className="mt-6 space-y-2.5 flex-1">
-                    {(plano.vantagens || []).map((v, vi) => (
-                      <li key={vi} className="flex items-start gap-2 text-sm text-zinc-600">
-                        <Check className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
-                        <span>{v}</span>
-                      </li>
-                    ))}
-                    {(plano.desvantagens || []).map((d, di) => (
-                      <li key={`d-${di}`} className="flex items-start gap-2 text-sm text-zinc-400">
-                        <X className="h-4 w-4 shrink-0 mt-0.5 text-zinc-300" />
-                        <span className="line-through">{d}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              );
-            })}
-          </div>
+          {planosSaaS.length > 0 && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {planosSaaS.map((plano, i) => (
+                <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* FAQ */}
-      {cms && cms.faq.length > 0 && (
-        <section className="bg-zinc-50 py-20 md:py-28">
+      {/* ══════════════ PLANOS LOJA PRONTA ══════════════ */}
+      {planosLojaPronta.length > 0 && (
+        <section className="bg-zinc-50 py-20 md:py-28 border-t border-zinc-200">
+          <div className="container mx-auto px-4">
+            <motion.div {...reveal()} className="text-center mb-14">
+              <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight mb-3">
+                Loja Pronta
+              </h2>
+              <p className="text-zinc-500 max-w-lg mx-auto">
+                Sua loja montada por especialistas, pronta para vender. Ideal para quem quer começar sem complicação.
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {planosLojaPronta.map((plano, i) => (
+                <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════ FAQ (2 colunas) ══════════════ */}
+      {faqItems.length > 0 && (
+        <section className="bg-white py-20 md:py-28 border-t border-zinc-200">
           <div className="container mx-auto px-4">
             <motion.div {...reveal()} className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">Dúvidas frequentes</h2>
             </motion.div>
-            <motion.div {...reveal(0.1)} className="max-w-3xl mx-auto">
-              <Accordion type="single" collapsible className="space-y-3">
-                {cms.faq.map((item, i) => (
-                  <AccordionItem key={i} value={`faq-${i}`} className="border border-zinc-200 rounded-xl px-5 data-[state=open]:shadow-sm transition-shadow bg-white">
-                    <AccordionTrigger className="text-left font-medium text-zinc-900 hover:no-underline py-4">{item.pergunta}</AccordionTrigger>
-                    <AccordionContent className="text-zinc-500 leading-relaxed pb-4">{item.resposta}</AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+            <motion.div {...reveal(0.1)} className="max-w-5xl mx-auto grid md:grid-cols-2 gap-x-8 gap-y-0">
+              <FAQColumn items={faqLeft} offset={0} />
+              <FAQColumn items={faqRight} offset={faqHalf} />
             </motion.div>
           </div>
         </section>

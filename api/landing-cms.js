@@ -28,10 +28,17 @@ module.exports = async function handler(req, res) {
     if (!admin) return res.status(401).json({ error: 'Não autorizado.' });
 
     try {
-      const { hero, zPatternBlocks, miniFeatures, integrations, faq, sobre, contato, legal, ctaIntermediario, ctaFinal } = req.body;
+      const allowed = ['hero', 'zPatternBlocks', 'miniFeatures', 'integrations', 'faq', 'sobre', 'contato', 'legal', 'ctaIntermediario', 'ctaFinal'];
+      const $set = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) $set[key] = req.body[key];
+      }
+      if (Object.keys($set).length === 0) {
+        return res.status(400).json({ error: 'Nenhum campo válido enviado.' });
+      }
       const doc = await LandingPageCMS.findOneAndUpdate(
         {},
-        { hero, zPatternBlocks, miniFeatures, integrations, faq, sobre, contato, legal, ctaIntermediario, ctaFinal },
+        { $set },
         { upsert: true, new: true, runValidators: true }
       );
       return res.status(200).json(doc);
