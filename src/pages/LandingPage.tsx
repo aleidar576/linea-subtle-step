@@ -379,43 +379,37 @@ const LandingPage = () => {
         </section>
       )}
 
-      {/* ══════════════ PRICING — SaaS ══════════════ */}
-      {planosSaaS.length > 0 && (
+      {/* ══════════════ PRICING — TABS ══════════════ */}
+      {(planosSaaS.length > 0 || planosLojaPronta.length > 0) && (
         <section id="planos" className="bg-muted/50 py-20 md:py-28">
           <div className="container mx-auto px-4">
             <motion.div {...reveal()} className="text-center mb-14">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-3">
                 Comece pelo plano ideal
               </h2>
-              <p className="text-muted-foreground max-w-lg mx-auto">
+              <p className="text-muted-foreground max-w-lg mx-auto mb-8">
                 Escolha o plano que se encaixa no seu momento. Sem surpresas, sem taxas escondidas.
               </p>
+              {planosSaaS.length > 0 && planosLojaPronta.length > 0 && (
+                <div className="inline-flex items-center gap-1 bg-muted rounded-xl p-1">
+                  <button
+                    onClick={() => setPricingTab('saas')}
+                    className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${pricingTab === 'saas' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Planos Mensais
+                  </button>
+                  <button
+                    onClick={() => setPricingTab('loja_pronta')}
+                    className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${pricingTab === 'loja_pronta' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Loja Pronta
+                  </button>
+                </div>
+              )}
             </motion.div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {planosSaaS.map((plano, i) => (
-                <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ══════════════ PRICING — LOJA PRONTA ══════════════ */}
-      {planosLojaPronta.length > 0 && (
-        <section className="bg-background py-20 md:py-28">
-          <div className="container mx-auto px-4">
-            <motion.div {...reveal()} className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-3">
-                Loja Pronta
-              </h2>
-              <p className="text-muted-foreground max-w-lg mx-auto">
-                Sua loja online montada por especialistas, pronta para vender.
-              </p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {planosLojaPronta.map((plano, i) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+              {(pricingTab === 'saas' ? planosSaaS : planosLojaPronta).map((plano, i) => (
                 <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
               ))}
             </div>
