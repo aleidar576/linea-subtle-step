@@ -171,6 +171,7 @@ const LandingPage = () => {
   const [cms, setCms] = useState<LandingPageCMSData | null>(null);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heroEmail, setHeroEmail] = useState('');
 
   useEffect(() => {
     Promise.all([publicLandingApi.getCMS(), publicLandingApi.getPlanos()])
@@ -232,20 +233,27 @@ const LandingPage = () => {
               )}
 
               {/* CTA inline on desktop, stacked on mobile */}
-              <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+              <form
+                className="flex flex-col sm:flex-row gap-3 w-full max-w-md"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  navigate(heroEmail.trim() ? `/registro?email=${encodeURIComponent(heroEmail.trim())}` : '/registro');
+                }}
+              >
                 <input
                   type="email"
                   placeholder="Seu melhor email"
+                  value={heroEmail}
+                  onChange={(e) => setHeroEmail(e.target.value)}
                   className="flex-1 h-12 rounded-xl px-5 border border-border bg-background text-foreground placeholder:text-muted-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  onKeyDown={(e) => e.key === 'Enter' && navigate('/registro')}
                 />
                 <Button
+                  type="submit"
                   className="h-12 rounded-xl px-8 text-base font-semibold gap-2 bg-primary text-primary-foreground hover:opacity-90 whitespace-nowrap"
-                  onClick={() => navigate('/registro')}
                 >
                   {hero.ctaTexto || 'Começar grátis'} <ArrowRight className="h-4 w-4" />
                 </Button>
-              </div>
+              </form>
 
               {hero.bottomTexto && (
                 <p className="text-xs text-muted-foreground mt-3">{hero.bottomTexto}</p>
