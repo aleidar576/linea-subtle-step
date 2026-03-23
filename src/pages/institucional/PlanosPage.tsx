@@ -150,6 +150,7 @@ const PlanosPage = () => {
   const [cms, setCms] = useState<LandingPageCMSData | null>(null);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pricingTab, setPricingTab] = useState<'saas' | 'loja_pronta'>('saas');
 
   useEffect(() => {
     Promise.all([publicLandingApi.getCMS(), publicLandingApi.getPlanos()])
@@ -187,49 +188,41 @@ const PlanosPage = () => {
 
   return (
     <InstitucionalLayout>
-      {/* ══════════════ PLANOS SaaS ══════════════ */}
+      {/* ══════════════ PLANOS — TABS ══════════════ */}
       <section className="bg-white py-20 md:py-28">
         <div className="container mx-auto px-4">
           <motion.div {...reveal()} className="text-center mb-14">
             <h1 className="text-3xl md:text-5xl font-extrabold text-zinc-900 tracking-tight mb-3">
               Planos e preços
             </h1>
-            <p className="text-zinc-500 max-w-lg mx-auto">
+            <p className="text-zinc-500 max-w-lg mx-auto mb-8">
               Escolha o plano que se encaixa no seu momento. Sem surpresas, sem taxas escondidas.
             </p>
+            {planosSaaS.length > 0 && planosLojaPronta.length > 0 && (
+              <div className="inline-flex items-center gap-1 bg-zinc-100 rounded-xl p-1">
+                <button
+                  onClick={() => setPricingTab('saas')}
+                  className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${pricingTab === 'saas' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
+                >
+                  Planos Mensais
+                </button>
+                <button
+                  onClick={() => setPricingTab('loja_pronta')}
+                  className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${pricingTab === 'loja_pronta' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
+                >
+                  Loja Pronta
+                </button>
+              </div>
+            )}
           </motion.div>
 
-          {planosSaaS.length > 0 && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {planosSaaS.map((plano, i) => (
-                <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
-              ))}
-            </div>
-          )}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {(pricingTab === 'saas' ? planosSaaS : planosLojaPronta).map((plano, i) => (
+              <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
+            ))}
+          </div>
         </div>
       </section>
-
-      {/* ══════════════ PLANOS LOJA PRONTA ══════════════ */}
-      {planosLojaPronta.length > 0 && (
-        <section className="bg-zinc-50 py-20 md:py-28 border-t border-zinc-200">
-          <div className="container mx-auto px-4">
-            <motion.div {...reveal()} className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight mb-3">
-                Loja Pronta
-              </h2>
-              <p className="text-zinc-500 max-w-lg mx-auto">
-                Sua loja montada por especialistas, pronta para vender. Ideal para quem quer começar sem complicação.
-              </p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {planosLojaPronta.map((plano, i) => (
-                <PricingCard key={plano._id} plano={plano} index={i} navigate={navigate} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ══════════════ FAQ (2 colunas) ══════════════ */}
       {faqItems.length > 0 && (
