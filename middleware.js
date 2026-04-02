@@ -5,7 +5,7 @@
 // ============================================
 
 export const config = {
-  matcher: ['/((?!api/|_next/|_vercel/|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|webp|avif|mp4|webm)).*)'],
+  matcher: ['/((?!api/|_next/|_vercel/|@vite/|@fs/|node_modules/|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|webp|avif|mp4|webm)).*)'],
 };
 
 // Robust bot User-Agent regex (case-insensitive)

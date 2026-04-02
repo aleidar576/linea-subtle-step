@@ -179,6 +179,8 @@ module.exports = async function handler(req, res) {
     }
 
     // Bloqueio por taxas pendentes (status_taxas === 'bloqueado' fora da carência)
+    // ATENÇÃO: Desativado, lojistas não serão mais bloqueados por taxas.
+    /*
     if (dono && dono.status_taxas === 'bloqueado' && !dono.modo_amigo && dono.data_bloqueio_taxas) {
       const Setting = require('../models/Setting.js');
       const tolTaxasSetting = await Setting.findOne({ key: 'dias_tolerancia_taxas', loja_id: null }).lean();
@@ -192,6 +194,7 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ error: 'Loja bloqueada por taxas pendentes', is_blocked: true });
       }
     }
+    */
 
     // Bloqueio por acesso suspenso pelo admin
     if (dono && dono.acesso_bloqueado) {

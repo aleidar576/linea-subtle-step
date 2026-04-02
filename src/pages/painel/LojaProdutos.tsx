@@ -89,6 +89,7 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
     short_description: '',
     description: '',
     price: 0,
+    preco_custo: 0,
     original_price: null,
     image: '',
     images: [],
@@ -121,7 +122,7 @@ function getEmptyProduct(lojaId: string): Partial<LojaProduct> {
 }
 
 // === CSV Helpers ===
-const CSV_COLUMNS = ['name', 'short_description', 'price', 'original_price', 'estoque', 'category_ids', 'is_active', 'promotion', 'image', 'images'];
+const CSV_COLUMNS = ['name', 'short_description', 'price', 'preco_custo', 'original_price', 'estoque', 'category_ids', 'is_active', 'promotion', 'image', 'images'];
 
 function productsToCsv(products: LojaProduct[]): string {
   const header = CSV_COLUMNS.join(',');
@@ -142,7 +143,7 @@ function productsToCsv(products: LojaProduct[]): string {
 
 function csvModelTemplate(): string {
   const header = CSV_COLUMNS.join(',');
-  const example = 'Produto Exemplo,Descrição curta,9990,,10,"cat-id-1;cat-id-2",true,10% OFF,https://exemplo.com/img.jpg,""';
+  const example = 'Produto Exemplo,Descrição curta,9990,5000,,10,"cat-id-1;cat-id-2",true,10% OFF,https://exemplo.com/img.jpg,""';
   return [header, example].join('\n');
 }
 
@@ -174,6 +175,7 @@ function jsonExample(): Partial<LojaProduct> {
     description: 'Descrição longa detalhada do produto com informações completas.',
     description_image: null,
     price: 9990,
+    preco_custo: 5000,
     original_price: 14990,
     image: 'https://exemplo.com/imagem-principal.jpg',
     images: ['https://exemplo.com/img1.jpg', 'https://exemplo.com/img2.jpg'],
@@ -246,6 +248,7 @@ const BULK_COLUMNS: BulkColumn[] = [
   { key: 'status', label: 'Status', default: true },
   { key: 'categorias', label: 'Categorias', default: true },
   { key: 'price', label: 'Preço', default: true },
+  { key: 'preco_custo', label: 'Preço de Custo', default: false },
   { key: 'original_price', label: 'Preço Promocional', default: true },
   { key: 'estoque', label: 'Estoque', default: true },
   { key: 'parcelas_fake', label: 'Parcelas', default: false },
@@ -806,6 +809,7 @@ const LojaProdutos = () => {
             name: row.name,
             short_description: row.short_description || '',
             price: Number(row.price) || 0,
+            preco_custo: Number(row.preco_custo) || 0,
             original_price: row.original_price ? Number(row.original_price) : null,
             estoque: Number(row.estoque) || 0,
             is_active: row.is_active !== 'false',
@@ -877,6 +881,7 @@ const LojaProdutos = () => {
       } else {
         if (!data.name) errors.push('Campo "name" é obrigatório.');
         if (data.price !== undefined && (typeof data.price !== 'number' || data.price < 0)) errors.push('"price" deve ser um número positivo (em centavos).');
+        if (data.preco_custo !== undefined && (typeof data.preco_custo !== 'number' || data.preco_custo < 0)) errors.push('"preco_custo" deve ser um número positivo (em centavos).');
         if (data.image && typeof data.image !== 'string') errors.push('"image" deve ser uma URL (string).');
         if (data.images && !Array.isArray(data.images)) errors.push('"images" deve ser um array de URLs.');
       }
@@ -1165,10 +1170,15 @@ ${jsonExampleStr}`;
                       <CardTitle className="text-base">Preço e Promoção</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <Label>Preço</Label>
                           <CurrencyInput value={editingProduct.price || 0} onChange={v => setField('price', v)} />
+                        </div>
+                        <div>
+                          <Label>Preço de Custo</Label>
+                          <CurrencyInput value={editingProduct.preco_custo || 0} onChange={v => setField('preco_custo', v)} />
+                          <p className="text-[10px] text-muted-foreground mt-1">Apenas para controle interno, não é exibido na loja.</p>
                         </div>
                         <div>
                           <Label>Preço Promocional</Label>
@@ -2331,6 +2341,13 @@ ${jsonExampleStr}`;
                         <CurrencyInput
                           value={getBulkValue(p._id!, 'price') || 0}
                           onChange={v => setBulkField(p._id!, 'price', v)}
+                          className="h-8 text-xs"
+                        />
+                      )}
+                      {col.key === 'preco_custo' && (
+                        <CurrencyInput
+                          value={getBulkValue(p._id!, 'preco_custo') || 0}
+                          onChange={v => setBulkField(p._id!, 'preco_custo', v)}
                           className="h-8 text-xs"
                         />
                       )}

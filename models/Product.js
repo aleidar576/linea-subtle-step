@@ -43,6 +43,7 @@ const ProductSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   description_image: { type: String, default: null },
   price: { type: Number, default: 0 },
+  preco_custo: { type: Number, default: 0 },
   original_price: { type: Number, default: null },
   image: { type: String, default: '' },
   images: { type: [String], default: [] },

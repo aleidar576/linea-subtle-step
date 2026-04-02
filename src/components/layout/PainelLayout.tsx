@@ -348,49 +348,8 @@ const PainelLayout = () => {
         })()}
 
         {/* Banner: Taxas em falha */}
-        {lojistaProfile?.status_taxas === 'falha' && (
-          <div className="mb-4 rounded-lg bg-yellow-500/15 border border-yellow-500/30 p-4 text-center">
-            <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
-            <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
-              Cobrança de taxas falhou. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
-            </span>
-          </div>
-        )}
 
         {/* Banner: Taxas bloqueadas */}
-        {lojistaProfile?.status_taxas === 'bloqueado' && (() => {
-          const dataBloqueio = lojistaProfile.data_bloqueio_taxas ? new Date(lojistaProfile.data_bloqueio_taxas) : null;
-          const toleranciaExtraTaxas = (lojistaProfile as any)?.tolerancia_extra_dias_taxas || 0;
-          const totalToleranciaTaxas = diasToleranciaTaxas + toleranciaExtraTaxas;
-
-          if (dataBloqueio) {
-            const agora = new Date();
-            const diffDias = Math.floor((agora.getTime() - dataBloqueio.getTime()) / (1000 * 60 * 60 * 24));
-            const bloqueadoReal = diffDias > totalToleranciaTaxas;
-
-            if (bloqueadoReal) {
-              return (
-                <div
-                  className="mb-4 rounded-lg bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold"
-                  onClick={() => navigate('/painel/assinatura')}
-                >
-                  <AlertTriangle className="h-5 w-5 inline mr-2" />
-                  LOJA BLOQUEADA POR TAXAS PENDENTES — REGULARIZE AGORA
-                </div>
-              );
-            }
-          }
-
-          // Fallback: show warning banner (with or without date)
-          return (
-            <div className="mb-4 rounded-lg bg-destructive/15 border border-destructive/30 p-4 text-center">
-              <AlertTriangle className="h-4 w-4 inline mr-2 text-destructive" />
-              <span className="text-sm text-destructive font-medium">
-                Taxas pendentes! Sua loja será suspensa em breve. <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
-              </span>
-            </div>
-          );
-        })()}
 
         <ContentTransition>
           <Suspense fallback={<GlobalLoader />}>

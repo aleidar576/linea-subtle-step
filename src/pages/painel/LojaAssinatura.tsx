@@ -238,105 +238,7 @@ const LojaAssinatura = () => {
             </div>
           </div>
 
-          {/* BLOCO 2: Taxas de Transação Acumuladas */}
-          <div className="bg-card border border-border rounded-xl p-8 space-y-4">
-            <div className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" />
-              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Taxas de Transação Acumuladas</p>
-            </div>
-
-            {isTrial && currentPlano && (
-              <div className="flex items-start gap-2 rounded-lg bg-primary/10 p-3 border border-primary/30">
-                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <div className="text-xs text-muted-foreground font-medium space-y-1">
-                  <p>
-                    Taxa vigente durante o trial: <strong className="text-foreground">{taxaVigente}%</strong> por transação.
-                  </p>
-                  <p>
-                    Após o trial, a taxa será de <strong className="text-foreground">{currentPlano.taxa_transacao_percentual ?? currentPlano.taxa_transacao ?? 1.5}%</strong>
-                    {(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + ${formatCurrency(currentPlano.taxa_transacao_fixa)}` : ''} por transação.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold text-foreground">
-                {formatCurrency(taxasAcumuladas)}
-              </span>
-            </div>
-
-            {taxasAcumuladas > 0 && dataVencimentoTaxas ? (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Será debitado do seu cartão em:</span>
-                <span className="font-medium">{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</span>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nenhuma taxa acumulada no momento.</p>
-            )}
-
-            {!isTrial && currentPlano && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Taxa por transação:</span>
-                <span className="font-medium">
-                  {taxaVigente}%{(currentPlano.taxa_transacao_fixa || 0) > 0 ? ` + ${formatCurrency(currentPlano.taxa_transacao_fixa)}` : ''}
-                </span>
-              </div>
-            )}
-
-            {profile.status_taxas === 'ok' && taxasAcumuladas > 0 && (
-              <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2">
-                {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Pagar Taxas Antecipadamente
-              </Button>
-            )}
-
-            {profile.status_taxas === 'falha' && taxasAcumuladas > 0 && (
-               <div className="rounded-lg bg-secondary/15 p-4 border border-secondary/20 space-y-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-secondary shrink-0" />
-                  <p className="text-sm text-secondary font-medium">
-                    Atenção: Não conseguimos debitar as taxas de {formatCurrency(taxasAcumuladas)} do seu cartão.
-                    {dataVencimentoTaxas && <> O sistema tentará novamente em <strong>{new Date(dataVencimentoTaxas).toLocaleDateString('pt-BR')}</strong>.</>}
-                  </p>
-                </div>
-                <Button onClick={handlePayManual} disabled={payManualLoading} variant="outline" className="w-full gap-2 border-secondary/30 text-secondary hover:bg-secondary/10">
-                  {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                  Regularizar Pagamento Agora
-                </Button>
-              </div>
-            )}
-
-            {profile.status_taxas === 'bloqueado' && taxasAcumuladas > 0 && (
-              <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/30 space-y-3">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
-                  <div className="text-sm text-destructive font-medium">
-                    <p>Ação Necessária: O limite de tentativas automáticas foi atingido. As taxas de {formatCurrency(taxasAcumuladas)} estão pendentes.</p>
-                    {profile.data_bloqueio_taxas ? (() => {
-                      const toleranciaExtra = (profile as any)?.tolerancia_extra_dias_taxas || 0;
-                      const dataBloqueio = new Date(profile.data_bloqueio_taxas);
-                      const dataLimite = new Date(dataBloqueio);
-                      dataLimite.setDate(dataLimite.getDate() + diasToleranciaTaxas + toleranciaExtra);
-                      return (
-                        <p className="mt-1 font-bold">
-                          Regularize até {dataLimite.toLocaleDateString('pt-BR')} para evitar a suspensão da sua loja.
-                        </p>
-                      );
-                    })() : (
-                      <p className="mt-1 font-bold">
-                        Regularize o mais rápido possível para evitar a suspensão da sua loja.
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <Button onClick={handlePayManual} disabled={payManualLoading} variant="destructive" className="w-full gap-2">
-                  {payManualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                  Regularizar Pagamento Agora
-                </Button>
-              </div>
-            )}
-          </div>
+          {/* BLOCO 2 REMOVIDO: Taxas de Transação Acumuladas */}
         </div>
       </div>
     );
@@ -418,13 +320,7 @@ const LojaAssinatura = () => {
                 {plano.subtitulo && (
                   <p className="text-sm text-muted-foreground mt-1">{plano.subtitulo}</p>
                 )}
-              {/* Taxa de transação - oculta para sob medida */}
-              {!plano.isSobMedida && !plano.isPagamentoUnico && (
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  Taxa de transação: {plano.taxa_transacao_percentual ?? plano.taxa_transacao}%
-                  {(plano.taxa_transacao_fixa || 0) > 0 ? ` + ${formatCurrency(plano.taxa_transacao_fixa)}` : ''}
-                </p>
-              )}
+              {/* Taxa de transação removida do visual */}
               </div>
 
               {/* ── PREÇO MASSIVO (altura fixa para alinhar) ── */}

@@ -48,6 +48,9 @@ module.exports = async function handler(req, res) {
 
   // === CRON: Cobrança Semanal de Taxas ===
   if (scope === 'cron-taxas' && method === 'GET') {
+    // ATENÇÃO: Cobrança de taxas de transação desativada.
+    return res.status(200).json({ message: 'Cobrança de taxas desativada.' });
+    /*
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.authorization;
     if (cronSecret && (!authHeader || authHeader !== `Bearer ${cronSecret}`)) {
@@ -62,10 +65,14 @@ module.exports = async function handler(req, res) {
       console.error('[CRON-TAXAS] Erro geral:', err);
       return res.status(500).json({ error: 'Erro ao processar cron de taxas' });
     }
+    */
   }
 
   // === PAGAMENTO MANUAL DE TAXAS ===
   if (scope === 'pagar-taxas-manual' && method === 'POST') {
+    // ATENÇÃO: Cobrança manual desativada.
+    return res.status(400).json({ error: 'Cobrança manual de taxas desativada.' });
+    /*
     const user = verifyLojista(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
@@ -78,6 +85,7 @@ module.exports = async function handler(req, res) {
       const msg = err?.raw?.message || err?.message || 'Erro desconhecido';
       return res.status(400).json({ error: `Falha no pagamento: ${msg}. Atualize seu método de pagamento no portal Stripe e tente novamente.` });
     }
+    */
   }
 
   // Ler raw body uma única vez

@@ -472,6 +472,7 @@ export interface LojaProduct {
   description_image?: string | null;
   price: number;
   preco?: number;
+  preco_custo?: number;
   original_price?: number | null;
   originalPrice?: number | null;
   preco_original?: number | null;

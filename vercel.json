@@ -1,4 +1,6 @@
 {
+  "devCommand": "node scripts/dev-stub.cjs",
+
   "rewrites": [
     { "source": "/api/auth-action", "destination": "/api/auth-action.ts" },
     { "source": "/api/admins", "destination": "/api/admins.js" },
