@@ -729,6 +729,33 @@ export default function LojaLayout({ hostname }: LojaLayoutProps) {
     firePixelEvent('PageView');
   }, [location.pathname, location.search, loja?.pixels]);
 
+  useEffect(() => {
+    if (!loja?._id) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const sessionKey = `visit_registered_${loja._id}_${today}`;
+    if (sessionStorage.getItem(sessionKey) === '1') return;
+
+    const storageKey = `visitor_id_${loja._id}`;
+    let visitorId = localStorage.getItem(storageKey);
+    if (!visitorId) {
+      visitorId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(storageKey, visitorId);
+    }
+
+    sessionStorage.setItem(sessionKey, '1');
+    lojaPublicaApi.registrarVisita({
+      loja_id: loja._id,
+      visitor_id: visitorId,
+      path_inicial: location.pathname + location.search,
+      referrer: document.referrer || '',
+    }).catch(() => {
+      sessionStorage.removeItem(sessionKey);
+    });
+  }, [loja?._id, location.pathname, location.search]);
+
   // Dynamic favicon only (title handled by each page component)
   useEffect(() => {
     if (!loja) return;

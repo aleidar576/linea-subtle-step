@@ -136,6 +136,7 @@ export interface Loja {
   icone: string;
   dominio_customizado: string | null;
   dominio_verificado: boolean;
+  timezone?: string;
   slogan?: string | null;
   seo_config?: {
     title?: string | null;
@@ -1187,6 +1188,8 @@ export const lojaPublicaApi = {
     publicPostRequest<{ success: boolean; fretes: CalculatedFreight[] }>(
       '/fretes?scope=calcular-frete', data
     ),
+  registrarVisita: (data: { loja_id: string; visitor_id: string; path_inicial: string; referrer?: string }) =>
+    publicPostRequest<{ success: boolean; inserted: boolean; date_key: string }>('/analytics', data),
 };
 
 // === Gateways API ===
@@ -1238,8 +1241,9 @@ export interface RelatorioData {
   docCount?: number;
   intervalDays?: number;
   vendas_por_dia: Array<{ _id: string; count: number; total: number }>;
+  visitantes_por_dia: Array<{ date_key: string; visitantes_unicos: number; pageviews?: number }>;
   vendas_por_produto: Array<{ nome: string; quantidade: number; receita: number }>;
-  totais: { pedidos: number; receita: number };
+  totais: { pedidos: number; receita: number; visitantes: number };
 }
 
 export const relatoriosApi = {

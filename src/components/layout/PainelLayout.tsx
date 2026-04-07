@@ -15,13 +15,18 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Store, Home, Plus, LogOut, User, CreditCard, ChevronDown, ChevronRight,
   Loader2, BarChart3, Package, Settings, ShoppingCart, Boxes, Truck,
   Users, Image, Tag, Sun, Moon, Monitor,
   Code, FileText, Bell, TrendingUp, Star, Mail, AlertTriangle, Megaphone, StoreIcon,
-  LayoutTemplate
+  LayoutTemplate,
+  Search,
+  LayoutDashboard,
+  HelpCircle,
+  ChevronsUpDown,
+  Ticket,
+  Link as LinkIcon
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -32,54 +37,87 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Loja } from '@/services/saas-api';
 
-// Grouped submenu structure
+// --- Icon Helpers ---
+// Mapeamos os ícones do Material Symbols (usados no HTML) para os mais próximos do Lucide-React
+const getLucideIcon = (materialName: string) => {
+  switch (materialName) {
+    case 'dashboard': return BarChart3;
+    case 'analytics': return TrendingUp;
+    case 'inventory_2': return Package;
+    case 'category': return Boxes;
+    case 'storage': return FileText;
+    case 'shopping_cart': return ShoppingCart;
+    case 'group': return Users;
+    case 'bar_chart': return BarChart3;
+    case 'palette': return LayoutTemplate;
+    case 'description': return FileText;
+    case 'campaign': return Megaphone;
+    case 'settings': return Settings;
+    case 'help': return HelpCircle;
+    case 'logout': return LogOut;
+    case 'add_circle': return Plus;
+    case 'unfold_more': return ChevronsUpDown;
+    case 'star': return Star;
+    case 'image': return Image;
+    case 'tag': return Ticket;
+    case 'mail': return Mail;
+    case 'code': return Code;
+    case 'store': return StoreIcon;
+    case 'truck': return Truck;
+    case 'credit_card': return CreditCard;
+    case 'link': return LinkIcon;
+    default: return Tag;
+  }
+};
+
+// Grouped submenu structure (adapted for the new sidebar)
 const MENU_GROUPS = [
   {
-    label: 'Produtos',
-    icon: Package,
+    label: 'Inventário',
+    iconName: 'inventory_2',
     items: [
-      { path: '/produtos', label: 'Produtos' },
-      { path: '/categorias', label: 'Categorias' },
-      { path: '/estoque', label: 'Estoque' },
-      { path: '/pacotes-avaliacoes', label: 'Avaliações' },
+      { path: '/produtos', label: 'Produtos', iconName: 'inventory_2' },
+      { path: '/categorias', label: 'Categorias', iconName: 'category' },
+      { path: '/estoque', label: 'Estoque', iconName: 'storage' },
+      { path: '/pacotes-avaliacoes', label: 'Avaliações', iconName: 'star' },
     ],
   },
   {
     label: 'Vendas',
-    icon: ShoppingCart,
+    iconName: 'shopping_cart',
     items: [
-      { path: '/pedidos', label: 'Pedidos' },
-      { path: '/clientes', label: 'Clientes' },
-      { path: '/relatorios', label: 'Relatórios' },
+      { path: '/pedidos', label: 'Pedidos', iconName: 'shopping_cart' },
+      { path: '/clientes', label: 'Clientes', iconName: 'group' },
+      { path: '/relatorios', label: 'Relatórios', iconName: 'bar_chart' },
     ],
   },
   {
-    label: 'Loja Virtual',
-    icon: LayoutTemplate,
+    label: 'Personalização',
+    iconName: 'palette',
     items: [
-      { path: '/temas', label: 'Temas' },
-      { path: '/paginas', label: 'Páginas' },
-      { path: '/conteudo', label: 'Conteúdo' },
+      { path: '/temas', label: 'Temas', iconName: 'palette' },
+      { path: '/paginas', label: 'Páginas', iconName: 'description' },
+      { path: '/conteudo', label: 'Conteúdo', iconName: 'image' },
     ],
   },
   {
     label: 'Marketing',
-    icon: Megaphone,
+    iconName: 'campaign',
     items: [
-      { path: '/cupons', label: 'Cupons' },
-      { path: '/newsletter', label: 'Newsletter' },
-      { path: '/pixels', label: 'Pixels & Scripts' },
+      { path: '/cupons', label: 'Cupons', iconName: 'tag' },
+      { path: '/newsletter', label: 'Newsletter', iconName: 'mail' },
+      { path: '/pixels', label: 'Pixels & Scripts', iconName: 'code' },
     ],
   },
   {
     label: 'Administração',
-    icon: Settings,
+    iconName: 'settings',
     items: [
-      { path: '/perfil-loja', label: 'Perfil da Loja' },
-      { path: '/fretes', label: 'Fretes' },
-      { path: '/gateways', label: 'Gateways' },
-      { path: '/integracoes', label: 'Integrações' },
-      { path: '/configuracoes', label: 'Configurações' },
+      { path: '/perfil-loja', label: 'Perfil da Loja', iconName: 'store' },
+      { path: '/fretes', label: 'Fretes', iconName: 'truck' },
+      { path: '/gateways', label: 'Gateways', iconName: 'credit_card' },
+      { path: '/integracoes', label: 'Integrações', iconName: 'link' },
+      { path: '/configuracoes', label: 'Configurações', iconName: 'settings' },
     ],
   },
 ];
@@ -107,6 +145,12 @@ const PainelLayout = () => {
   const { toast } = useToast();
   const [diasToleranciaInadimplencia, setDiasToleranciaInadimplencia] = useState(5);
   const [diasToleranciaTaxas, setDiasToleranciaTaxas] = useState(3);
+  
+  // State para o switcher de lojas (o select superior)
+  const [isStoreSwitcherOpen, setIsStoreSwitcherOpen] = useState(false);
+  // State para a loja selecionada atualmente no switcher (se a URL não definir uma)
+  const [activeLojaFallback, setActiveLojaFallback] = useState<Loja | null>(null);
+
   useFaviconUpdater();
 
   useEffect(() => {
@@ -131,14 +175,25 @@ const PainelLayout = () => {
     return () => window.removeEventListener('refresh-lojista-profile', handleRefresh);
   }, []);
 
+  const safeLojas = Array.isArray(lojas) ? lojas.filter(l => l.is_active) : [];
+  
+  // Extrai a loja da URL
+  const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
+  const urlLojaId = lojaMatch ? lojaMatch[1] : null;
+  const currentLoja = urlLojaId ? safeLojas.find(l => l._id === urlLojaId) : (activeLojaFallback || (safeLojas.length > 0 ? safeLojas[0] : null));
+
+  // Auto-set fallback store if we have stores but no active fallback and not in a store URL
   useEffect(() => {
-    const safeLojas = Array.isArray(lojas) ? lojas : [];
-    const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
+     if (!urlLojaId && safeLojas.length > 0 && !activeLojaFallback) {
+         setActiveLojaFallback(safeLojas[0]);
+     }
+  }, [safeLojas, urlLojaId, activeLojaFallback]);
+
+
+  useEffect(() => {
     if (lojaMatch) {
-      const lojaId = lojaMatch[1];
-      const currentLoja = safeLojas.find(l => l._id === lojaId);
       const lojaName = currentLoja?.nome || 'Loja';
-      const afterLojaId = location.pathname.replace(`/painel/loja/${lojaId}`, '');
+      const afterLojaId = location.pathname.replace(`/painel/loja/${urlLojaId}`, '');
       const activeSub = ALL_SUBMENUS.find(sub => {
         if (sub.path === '') return afterLojaId === '' || afterLojaId === '/';
         return afterLojaId.startsWith(sub.path);
@@ -148,7 +203,7 @@ const PainelLayout = () => {
     } else {
       document.title = `Painel · ${brandName}`;
     }
-  }, [location.pathname, lojas, brandName]);
+  }, [location.pathname, currentLoja, brandName, lojaMatch, urlLojaId]);
 
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -158,8 +213,7 @@ const PainelLayout = () => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const ThemeIcon = themeChoice === 'dark' ? Sun : themeChoice === 'light' ? Moon : Monitor;
-  const themeLabel = themeChoice === 'dark' ? 'Modo Claro' : themeChoice === 'light' ? 'Modo Escuro' : 'Seguir Sistema';
-
+  const themeLabel = themeChoice === 'dark' ? 'Modo Escuro' : themeChoice === 'light' ? 'Modo Claro' : 'Modo Sistema';
   const safeNotifs = Array.isArray(notificacoes) ? notificacoes : [];
   const unreadCount = safeNotifs.filter(n => !n.lida).length;
 
@@ -176,187 +230,273 @@ const PainelLayout = () => {
     }
   };
 
+  const handleLojaSelect = (lojaId: string) => {
+      setIsStoreSwitcherOpen(false);
+      // Ao selecionar a loja no menu superior, mandamos para o overview dela
+      navigate(`/painel/loja/${lojaId}`);
+  };
+
+  const isGlobalVisionActive = location.pathname === '/painel';
+  const basePath = currentLoja ? `/painel/loja/${currentLoja._id}` : '/painel';
+  const afterLojaId = currentLoja ? location.pathname.replace(`/painel/loja/${currentLoja._id}`, '') : '';
+  const isOverviewActive = !isGlobalVisionActive && (afterLojaId === '' || afterLojaId === '/');
+
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-sidebar flex flex-col shrink-0 h-screen sticky top-0">
-        <div className="p-4 border-b border-sidebar-border">
-          <Link to="/painel" className="flex items-center gap-2">
-            <SaaSLogo context="panel" theme="auto" nameClassName="text-sidebar-foreground" />
-          </Link>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-sidebar-border/50 hover:[&::-webkit-scrollbar-thumb]:bg-sidebar-border [&::-webkit-scrollbar-thumb]:rounded-full">
-          <Link
-            to="/painel"
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              location.pathname === '/painel'
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-            }`}
-          >
-            <Home className="h-4 w-4" /> Início
-          </Link>
-
-          <div className="pt-3 pb-1 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lojas</div>
-
-          {lojasLoading ? (
-            <div className="px-3 py-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
-          ) : lojas && Array.isArray(lojas) && lojas.filter(l => l.is_active).length > 0 ? (
-            lojas.filter(l => l.is_active).map(loja => (
-              <LojaMenuItem key={loja._id} loja={loja} currentPath={location.pathname} />
-            ))
-          ) : null}
-
-          <CreateLojaButton />
-        </nav>
-
-        <div className="p-3 border-t border-sidebar-border">
-          <div className="flex items-center gap-2 mb-2">
-            <button
-              onClick={toggleTheme}
-              className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
-              title={themeLabel}
-            >
-              <ThemeIcon className="h-4 w-4" />
-            </button>
-
-            {/* Bell Notifications */}
-            <DropdownMenu>
+    <div className="flex min-h-screen w-full bg-background text-foreground font-body overflow-hidden">
+      
+      {/* Full-Height SideNavBar */}
+      <aside className="h-screen w-64 fixed left-0 top-0 overflow-y-auto bg-card border-r border-border flex flex-col py-6 px-4 font-headline tracking-tight z-50">
+        
+        {/* Brand Header / Store Switcher */}
+        <div className="mb-6 px-2">
+            <DropdownMenu open={isStoreSwitcherOpen} onOpenChange={setIsStoreSwitcherOpen}>
               <DropdownMenuTrigger asChild>
-                <button className="relative flex items-center justify-center h-8 w-8 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors">
-                  <Bell className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                  <span className="text-sm font-semibold">Notificações</span>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={() => marcarTodasLidas.mutate()}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Marcar todas como lidas
-                    </button>
-                  )}
-                </div>
-                {!safeNotifs.length ? (
-                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhuma notificação</div>
-                ) : (
-                  safeNotifs.slice(0, 20).map(n => (
-                    <div key={n._id} className={`px-3 py-2 border-b border-border last:border-0 ${!n.lida ? 'bg-accent/30' : ''}`}>
-                      <p className="text-sm font-medium">{n.titulo}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{n.mensagem}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{new Date(n.criado_em).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-sidebar-accent text-sm">
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt="Avatar" className="h-8 w-8 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
-                    {user?.nome?.slice(0, 3).toUpperCase() || 'USR'}
-                  </div>
-                )}
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-sidebar-foreground truncate">{user?.nome}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {user?.modo_amigo ? (
-                      <span className="inline-flex items-center gap-1 text-green-500 font-semibold">VIP</span>
+                <div className="flex items-center gap-3 px-2 py-2.5 bg-accent/40 hover:bg-accent rounded-xl cursor-pointer transition-colors group">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-black shrink-0 overflow-hidden shadow-sm">
+                    {currentLoja?.icone ? (
+                         <img src={currentLoja.icone} alt="Loja Icon" className="w-full h-full object-cover" />
                     ) : (
-                      <span>{(() => {
-                        const resolvedPlano = lojistaProfile?.plano_id
-                          ? planosList.find(p => p._id === lojistaProfile.plano_id)
-                          : null;
-                        return resolvedPlano?.nome || 'Free';
-                      })()}</span>
+                         currentLoja?.nome?.slice(0, 2).toUpperCase() || 'LJ'
                     )}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-foreground truncate">{currentLoja?.nome || 'Selecione a Loja'}</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Ecommerce Manager</p>
+                  </div>
+                  <ChevronsUpDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/perfil')}><User className="h-4 w-4" /> Perfil</DropdownMenuItem>
-              <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/assinatura')}><CreditCard className="h-4 w-4" /> Planos</DropdownMenuItem>
-              <DropdownMenuItem className="gap-2" onClick={() => setShowNotifPrefs(true)}><Bell className="h-4 w-4" /> Notificações</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 text-destructive" onClick={() => { logout(); navigate('/login'); }}>
-                <LogOut className="h-4 w-4" /> Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="start">
+                 {lojasLoading ? (
+                    <div className="p-2 flex justify-center"><Loader2 className="w-4 h-4 animate-spin" /></div>
+                 ) : (
+                    safeLojas.map(loja => (
+                      <DropdownMenuItem key={loja._id} onClick={() => handleLojaSelect(loja._id)} className="cursor-pointer">
+                         <Store className="w-4 h-4 mr-2" />
+                         {loja.nome}
+                      </DropdownMenuItem>
+                    ))
+                 )}
+                 <DropdownMenuSeparator />
+                 <CreateLojaDialogTrigger />
+              </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 flex flex-col gap-1">
+            
+            {/* Visão Global (Global Dashboard) */}
+            <Link 
+              to="/painel" 
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                isGlobalVisionActive 
+                  ? 'text-primary border-r-2 border-primary bg-primary/10 active:scale-95' 
+                  : 'text-muted-foreground hover:text-primary hover:bg-accent/50'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span className="text-sm font-bold">Visão Global</span>
+            </Link>
+
+            {/* Overview (Current Store Dashboard) */}
+            <Link 
+              to={basePath} 
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                 isOverviewActive
+                  ? 'text-primary border-r-2 border-primary bg-primary/10 active:scale-95' 
+                  : 'text-muted-foreground hover:text-primary hover:bg-accent/50'
+              }`}
+            >
+              <TrendingUp className="w-5 h-5" />
+              <span className="text-sm font-bold">Overview</span>
+            </Link>
+
+            {/* Mapeamento dos Menus Dinâmicos da Loja Atual */}
+            {currentLoja && MENU_GROUPS.map((group) => {
+                 // Ao invés de collapsible, o HTML mostrou grupos estáticos com títulos miúdos
+                 return (
+                    <div key={group.label} className="mt-2">
+                        <div className="mb-1 px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-4">
+                           {group.label}
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            {group.items.map(item => {
+                                const fullPath = `${basePath}${item.path}`;
+                                const isActive = !isGlobalVisionActive && afterLojaId.startsWith(item.path);
+                                const Icon = getLucideIcon(item.iconName);
+                                return (
+                                    <Link 
+                                      key={item.path}
+                                      to={fullPath}
+                                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                                        isActive 
+                                         ? 'text-primary border-r-2 border-primary bg-primary/10' 
+                                         : 'text-muted-foreground hover:text-primary hover:bg-accent/50'
+                                      }`}
+                                    >
+                                      <Icon className="w-4 h-4 opacity-80" />
+                                      <span className="font-semibold">{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                 );
+            })}
+
+        </nav>
+
+        {/* Bottom Actions */}
+        <div className="mt-auto pt-6 space-y-2 border-t border-border/50">
+          <Link to="/painel/produtos/novo" className="w-full flex items-center justify-center gap-2 py-3 mb-2 rounded-xl bg-primary text-on-primary text-sm font-bold shadow-lg shadow-primary/20 scale-95 active:scale-90 transition-transform">
+            <Plus className="w-4 h-4" />
+            Novo Produto
+          </Link>
+          
+          <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-4 py-2 text-muted-foreground hover:text-primary transition-colors text-left">
+            <ThemeIcon className="w-5 h-5" />
+            <span className="text-xs font-bold uppercase tracking-wider">{themeLabel}</span>
+          </button>
+          
+          <button onClick={() => { logout(); navigate('/login'); }} className="w-full flex items-center gap-3 px-4 py-2 text-muted-foreground hover:text-destructive transition-colors text-left">
+            <LogOut className="w-5 h-5" />
+            <span className="text-xs font-bold uppercase tracking-wider">Sair</span>
+          </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 p-6 overflow-y-auto">
-        {/* Global Search */}
-        {(() => {
-          const lojaMatch = location.pathname.match(/\/painel\/loja\/([^/]+)/);
-          const activeLojaId = lojaMatch ? lojaMatch[1] : null;
-          if (!activeLojaId) return null;
-          return (
-            <div className="mb-4">
-              <GlobalSearch lojaId={activeLojaId} />
-            </div>
-          );
-        })()}
+      {/* Main Content Wrapper */}
+      <div className="ml-64 flex flex-col min-h-screen bg-background flex-1 min-w-0">
+        
+        {/* TopNavBar */}
+        <header className="bg-background/80 backdrop-blur-xl sticky top-0 z-40 border-b border-border h-16 shrink-0 flex justify-between items-center w-full px-8 py-3">
+          
+          {/* Global Search Bar */}
+          <div className="flex items-center gap-4 flex-1">
+             <div className="relative w-full max-w-md">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground" />
+                 {/* Substituímos o input visual pelo componente real que lida com a busca */}
+                 <div className="absolute inset-0 opacity-0 z-10">
+                    <GlobalSearch lojaId={currentLoja?._id || ''} />
+                 </div>
+                 <Input className="w-full bg-slate-100 dark:bg-slate-100 border-none rounded-full pl-10 pr-4 h-9 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-800 placeholder:text-slate-400" placeholder="Buscar pedidos, produtos..." />
+             </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                     <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-background"></span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              {/* Notif content here */}
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                   <span className="text-sm font-semibold">Notificações</span>
+                   {unreadCount > 0 && (
+                     <button onClick={() => marcarTodasLidas.mutate()} className="text-xs text-primary hover:underline">Marcar todas como lidas</button>
+                   )}
+                 </div>
+                 {!safeNotifs.length ? (
+                   <div className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhuma notificação</div>
+                 ) : (
+                   safeNotifs.slice(0, 20).map(n => (
+                     <div key={n._id} className={`px-3 py-2 border-b border-border last:border-0 ${!n.lida ? 'bg-accent/30' : ''}`}>
+                       <p className="text-sm font-medium">{n.titulo}</p>
+                       <p className="text-xs text-muted-foreground line-clamp-2">{n.mensagem}</p>
+                     </div>
+                   ))
+                 )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        {/* Banner: Mensalidade past_due */}
-        {lojistaProfile?.subscription_status === 'past_due' && (() => {
-          const toleranciaGlobal = diasToleranciaInadimplencia;
-          const toleranciaExtra = (lojistaProfile as any)?.tolerancia_extra_dias || 0;
-          const totalTolerancia = toleranciaGlobal + toleranciaExtra;
-          const vencimento = lojistaProfile.data_vencimento ? new Date(lojistaProfile.data_vencimento) : null;
-          const agora = new Date();
-          const diffDias = vencimento ? Math.floor((agora.getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-          const bloqueado = diffDias > totalTolerancia;
+            <button onClick={() => navigate('/painel/configuracoes')} className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors">
+               <Settings className="w-5 h-5" />
+            </button>
+            
+            <div className="h-8 w-px bg-border mx-2"></div>
+            
+            {/* User Profile */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-3 pl-2 text-left hover:opacity-80 transition-opacity">
+                    <div className="hidden sm:block text-right">
+                       <p className="text-sm font-bold text-foreground">{user?.nome}</p>
+                       <p className="text-[10px] text-muted-foreground">
+                         {user?.modo_amigo ? 'VIP' : (lojistaProfile?.plano_id ? planosList.find(p => p._id === lojistaProfile.plano_id)?.nome : 'Free')}
+                       </p>
+                    </div>
+                    {user?.avatar_url ? (
+                        <img src={user.avatar_url} alt="Profile" className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
+                    ) : (
+                        <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground ring-2 ring-primary/20">
+                          {user?.nome?.slice(0, 2).toUpperCase() || 'US'}
+                        </div>
+                    )}
+                  </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/perfil')}><User className="w-4 h-4" /> Perfil</DropdownMenuItem>
+                <DropdownMenuItem className="gap-2" onClick={() => navigate('/painel/assinatura')}><CreditCard className="w-4 h-4" /> Planos</DropdownMenuItem>
+                <DropdownMenuItem className="gap-2" onClick={() => setShowNotifPrefs(true)}><Bell className="w-4 h-4" /> Notificações</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2 text-destructive" onClick={() => { logout(); navigate('/login'); }}>
+                  <LogOut className="w-4 h-4" /> Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          if (bloqueado) {
+          </div>
+        </header>
+
+        {/* Dashboard Canvas (Main Route Outlet) */}
+        <main className="flex-1 p-8 overflow-y-auto">
+          {/* Banners Administrativos */}
+          {lojistaProfile?.subscription_status === 'past_due' && (() => {
+            const toleranciaGlobal = diasToleranciaInadimplencia;
+            const toleranciaExtra = (lojistaProfile as any)?.tolerancia_extra_dias || 0;
+            const totalTolerancia = toleranciaGlobal + toleranciaExtra;
+            const vencimento = lojistaProfile.data_vencimento ? new Date(lojistaProfile.data_vencimento) : null;
+            const agora = new Date();
+            const diffDias = vencimento ? Math.floor((agora.getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            const bloqueado = diffDias > totalTolerancia;
+
+            if (bloqueado) {
+              return (
+                <div
+                  className="mb-8 rounded-xl bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold shadow-lg shadow-destructive/20"
+                  onClick={() => navigate('/painel/assinatura')}
+                >
+                  <AlertTriangle className="h-5 w-5 inline mr-2" />
+                  SUA LOJA FOI BLOQUEADA, REGULARIZE AGORA CLICANDO AQUI
+                </div>
+              );
+            }
+            const dataLimite = vencimento ? new Date(vencimento.getTime() + totalTolerancia * 24 * 60 * 60 * 1000) : null;
             return (
-              <div
-                className="mb-4 rounded-lg bg-destructive p-4 text-destructive-foreground text-center cursor-pointer font-bold"
-                onClick={() => navigate('/painel/assinatura')}
-              >
-                <AlertTriangle className="h-5 w-5 inline mr-2" />
-                SUA LOJA FOI BLOQUEADA, REGULARIZE AGORA CLICANDO AQUI
+              <div className="mb-8 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-center">
+                <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
+                <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
+                  Seu pagamento está pendente.{dataLimite && <> Regularize até <strong>{dataLimite.toLocaleDateString('pt-BR')}</strong>.</>}{' '}
+                  <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
+                </span>
               </div>
             );
-          }
-          const dataLimite = vencimento ? new Date(vencimento.getTime() + totalTolerancia * 24 * 60 * 60 * 1000) : null;
-          return (
-            <div className="mb-4 rounded-lg bg-yellow-500/15 border border-yellow-500/30 p-4 text-center">
-              <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-600" />
-              <span className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
-                Seu pagamento está pendente.{dataLimite && <> Regularize até <strong>{dataLimite.toLocaleDateString('pt-BR')}</strong>.</>}{' '}
-                <button onClick={() => navigate('/painel/assinatura')} className="underline font-bold">Regularize agora</button>
-              </span>
-            </div>
-          );
-        })()}
+          })()}
 
-        {/* Banner: Taxas em falha */}
+          <ContentTransition>
+            <Suspense fallback={<GlobalLoader />}>
+              <Outlet />
+            </Suspense>
+          </ContentTransition>
+        </main>
 
-        {/* Banner: Taxas bloqueadas */}
-
-        <ContentTransition>
-          <Suspense fallback={<GlobalLoader />}>
-            <Outlet />
-          </Suspense>
-        </ContentTransition>
-      </main>
+      </div>
 
       {/* Email Preferences Dialog */}
       <Dialog open={showNotifPrefs} onOpenChange={setShowNotifPrefs}>
@@ -391,87 +531,8 @@ const PainelLayout = () => {
   );
 };
 
-// === Loja Menu Item with grouped Collapsible submenus ===
-const LojaMenuItem = ({ loja, currentPath }: { loja: Loja; currentPath: string }) => {
-  const basePath = `/painel/loja/${loja._id}`;
-  const isInThisLoja = currentPath.startsWith(basePath);
-  const [open, setOpen] = useState(isInThisLoja);
-  const afterLojaId = currentPath.replace(basePath, '');
-
-  // Determine which group is active
-  const activeGroupIndex = MENU_GROUPS.findIndex(g =>
-    g.items.some(item => afterLojaId.startsWith(item.path))
-  );
-
-  return (
-    <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
-          isInThisLoja ? 'bg-sidebar-accent/50 text-sidebar-foreground font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-        }`}
-      >
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        <Store className="h-4 w-4" />
-        <span className="truncate flex-1 text-left">{loja.nome}</span>
-      </button>
-      {open && (
-        <div className="ml-3 mt-1.5 space-y-1">
-          {/* Overview (no group) */}
-          <Link
-            to={basePath}
-            className={`relative flex items-center gap-2 pl-10 pr-3 py-2 text-[13px] rounded-md transition-colors ${
-              (afterLojaId === '' || afterLojaId === '/')
-                ? 'text-sidebar-accent-foreground bg-sidebar-accent/10 font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:w-[3px] before:bg-primary before:rounded-r-full'
-                : 'text-muted-foreground font-medium hover:text-sidebar-foreground transition-colors'
-            }`}
-          >
-            <BarChart3 className="h-4 w-4 mr-1" />
-            Overview
-          </Link>
-
-          {/* Grouped menus */}
-          {MENU_GROUPS.map((group, gi) => {
-            const isGroupActive = gi === activeGroupIndex;
-            const GroupIcon = group.icon;
-            return (
-              <Collapsible key={group.label} defaultOpen={isGroupActive}>
-                <CollapsibleTrigger className="group text-[11px] uppercase tracking-[0.15em] font-bold text-muted-foreground hover:text-sidebar-foreground transition-colors flex items-center w-full px-3 py-2">
-                  <GroupIcon className="w-4 h-4 mr-3 shrink-0" />
-                  <span className="flex-1 text-left">{group.label}</span>
-                  <ChevronDown className="ml-auto w-4 h-4 text-muted-foreground/60 transition-transform duration-200 group-data-[state=closed]:-rotate-90" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-                  <div className="space-y-0.5 mt-0.5">
-                    {group.items.map(item => {
-                      const fullPath = `${basePath}${item.path}`;
-                      const isActive = afterLojaId.startsWith(item.path);
-                      return (
-                        <Link
-                          key={item.path}
-                          to={fullPath}
-                          className={`relative block pl-10 pr-3 py-2 text-[13px] rounded-md transition-colors ${
-                            isActive
-                              ? 'text-sidebar-accent-foreground bg-sidebar-accent/10 font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:w-[3px] before:bg-primary before:rounded-r-full'
-                              : 'text-muted-foreground font-medium hover:text-sidebar-foreground transition-colors'
-                          }`}
-                        >
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const CreateLojaButton = () => {
+// Componente helper para disparar a criação de loja pelo Menu
+const CreateLojaDialogTrigger = () => {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState('');
   const createLoja = useCreateLoja();
@@ -492,9 +553,10 @@ const CreateLojaButton = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-sidebar-accent text-sm text-primary font-medium">
-          <Plus className="h-4 w-4" /> Nova Loja
-        </button>
+         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-primary font-bold">
+            <Plus className="w-4 h-4 mr-2" />
+            Criar Nova Loja
+         </DropdownMenuItem>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -516,3 +578,4 @@ const CreateLojaButton = () => {
 };
 
 export default PainelLayout;
+

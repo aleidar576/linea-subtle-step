@@ -4,6 +4,7 @@
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { nowUtc } = require('../lib/utc.js');
 
 const EnderecoSchema = new mongoose.Schema({
   apelido: { type: String, default: 'Casa' },
@@ -39,7 +40,7 @@ const ClienteSchema = new mongoose.Schema({
   // Addresses
   enderecos: { type: [EnderecoSchema], default: [] },
 
-  criado_em: { type: Date, default: () => new Date() },
+  criado_em: { type: Date, default: () => nowUtc() },
 });
 
 ClienteSchema.index({ loja_id: 1, email: 1 }, { unique: true });

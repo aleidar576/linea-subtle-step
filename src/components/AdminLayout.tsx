@@ -6,7 +6,7 @@ import { ContentTransition } from '@/components/PageTransition';
 import { Suspense, useEffect } from 'react';
 import GlobalLoader from '@/components/ui/GlobalLoader';
 import {
-  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone, LayoutTemplate
+  Store, Users, Settings, BarChart3, LogOut, ShieldCheck, ChevronDown, Loader2, Sun, Moon, Monitor, Bell, MessageSquare, Plug, CreditCard, Megaphone, LayoutTemplate, ChevronsUpDown
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -64,25 +64,32 @@ const AdminLayout = () => {
   const themeLabel = themeChoice === 'dark' ? 'Modo Claro' : themeChoice === 'light' ? 'Modo Escuro' : 'Seguir Sistema';
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex text-foreground">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-sidebar flex flex-col shrink-0 h-screen sticky top-0">
-        <div className="p-4 border-b border-sidebar-border">
-          <Link to="/admin/lojistas" className="flex items-center gap-2">
-            <SaaSLogo context="panel" theme="auto" nameClassName="text-sidebar-foreground" />
-          </Link>
+      <aside className="w-64 border-r border-sidebar-border bg-sidebar flex flex-col shrink-0 h-screen sticky top-0 px-4 py-6">
+        <div className="mb-6 px-2">
+          <div className="flex items-center gap-3 px-2 py-2.5 bg-accent/40 hover:bg-accent rounded-xl transition-colors group">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-black shrink-0 overflow-hidden shadow-sm">
+              <span className="text-sm">AD</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-foreground truncate">Admin SaaS</h3>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Painel Administrativo</p>
+            </div>
+            <ChevronsUpDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname.startsWith(item.to);
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground border-r-2 border-primary'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
                 }`}
               >
@@ -93,7 +100,7 @@ const AdminLayout = () => {
           })}
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="pt-6 mt-auto border-t border-sidebar-border">
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={toggleTheme}

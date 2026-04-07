@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { relatoriosApi } from '@/services/saas-api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Loader2, Download, CalendarDays, BarChart3, TrendingUp, Package, Mail, ChevronDown, FileSpreadsheet, FileText } from 'lucide-react';
+import { getStoreDateRange, type PeriodoRange } from '@/lib/store-timezone';
+import { Loader2, Download, CalendarDays, BarChart3, TrendingUp, Package, Mail, ChevronDown, FileSpreadsheet, FileText, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -27,33 +28,6 @@ const PERIODOS = [
   { label: 'Todo o tempo', value: 'all' },
   { label: 'Personalizado', value: 'custom' },
 ];
-
-function getDateRange(periodo: string, dateFrom?: Date, dateTo?: Date) {
-  const now = new Date();
-  if (periodo === 'hoje') {
-    const d = new Date(now); d.setHours(0, 0, 0, 0);
-    return { from: d.toISOString(), to: now.toISOString() };
-  }
-  if (periodo === 'ontem') {
-    const d = new Date(now); d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0);
-    const e = new Date(d); e.setHours(23, 59, 59, 999);
-    return { from: d.toISOString(), to: e.toISOString() };
-  }
-  if (periodo === '7d') {
-    const d = new Date(now); d.setDate(d.getDate() - 7); d.setHours(0, 0, 0, 0);
-    return { from: d.toISOString(), to: now.toISOString() };
-  }
-  if (periodo === '30d') {
-    const d = new Date(now); d.setDate(d.getDate() - 30); d.setHours(0, 0, 0, 0);
-    return { from: d.toISOString(), to: now.toISOString() };
-  }
-  if (periodo === 'custom' && dateFrom && dateTo) {
-    const f = new Date(dateFrom); f.setHours(0, 0, 0, 0);
-    const t = new Date(dateTo); t.setHours(23, 59, 59, 999);
-    return { from: f.toISOString(), to: t.toISOString() };
-  }
-  return { from: undefined, to: undefined };
-}
 
 function exportCSV(data: any[], filename: string) {
   if (!data.length) return;
@@ -81,7 +55,7 @@ const LojaRelatorios = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
 
-  const range = getDateRange(periodo, dateFrom, dateTo);
+  const range = getStoreDateRange(periodo as PeriodoRange, dateFrom, dateTo);
 
   const { data: relatorio, isLoading } = useQuery({
     queryKey: ['relatorios', id, periodo, range.from, range.to],
@@ -89,12 +63,29 @@ const LojaRelatorios = () => {
     enabled: !!id && (periodo !== 'custom' || (!!dateFrom && !!dateTo)),
   });
 
+  const periodoLabel = (() => {
+    if (periodo === 'custom' && dateFrom && dateTo) {
+      return `${format(dateFrom, 'dd/MM/yyyy', { locale: ptBR })} → ${format(dateTo, 'dd/MM/yyyy', { locale: ptBR })}`;
+    }
+
+    switch (periodo) {
+      case 'hoje': return 'Hoje';
+      case 'ontem': return 'Ontem';
+      case '7d': return 'Últimos 7 dias';
+      case '30d': return 'Últimos 30 dias';
+      case 'all': return 'Todo o tempo';
+      case 'custom': return 'Período personalizado';
+      default: return 'Últimos 30 dias';
+    }
+  })();
+
   if (lojaLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const isAsync = relatorio?.status === 'async_report';
   const vendasDia = Array.isArray(relatorio?.vendas_por_dia) ? relatorio.vendas_por_dia : [];
   const vendasProduto = Array.isArray(relatorio?.vendas_por_produto) ? relatorio.vendas_por_produto : [];
-  const totais = relatorio?.totais || { pedidos: 0, receita: 0 };
+  const totais = relatorio?.totais || { pedidos: 0, receita: 0, visitantes: 0 };
+  const visitantesDia = Array.isArray(relatorio?.visitantes_por_dia) ? relatorio.visitantes_por_dia : [];
 
   const vendasDiaExport = vendasDia.map((v: any) => ({ Data: v._id, Pedidos: v.count, 'Receita (R$)': v.total.toFixed(2) }));
   const produtosExport = vendasProduto.map((v: any) => ({ Produto: v.nome, Quantidade: v.quantidade, 'Receita (R$)': v.receita.toFixed(2) }));
@@ -119,6 +110,10 @@ const LojaRelatorios = () => {
                 {p.label}
               </button>
             ))}
+          </div>
+          <div className="text-xs text-muted-foreground rounded-lg border border-border px-3 py-2 bg-card">
+            {periodoLabel}
+            {loja?.timezone ? <span className="ml-2 text-[11px]">· {loja.timezone}</span> : null}
           </div>
           {periodo === 'custom' && (
             <div className="flex items-center gap-2">
@@ -166,7 +161,7 @@ const LojaRelatorios = () => {
       {/* Totais - only show when not async */}
       {!isAsync && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-1"><TrendingUp className="h-4 w-4 text-chart-1" /><span className="text-sm text-muted-foreground">Total de Pedidos</span></div>
@@ -185,11 +180,18 @@ const LojaRelatorios = () => {
                 <p className="text-3xl font-bold">R$ {totais.pedidos > 0 ? (totais.receita / totais.pedidos).toFixed(2) : '0.00'}</p>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-1"><Eye className="h-4 w-4 text-chart-4" /><span className="text-sm text-muted-foreground">Visitantes</span></div>
+                <p className="text-3xl font-bold">{totais.visitantes}</p>
+              </CardContent>
+            </Card>
           </div>
 
           <Tabs defaultValue="timeline" className="space-y-6">
             <TabsList>
               <TabsTrigger value="timeline" className="gap-1"><BarChart3 className="h-3 w-3" /> Vendas ao Longo do Tempo</TabsTrigger>
+              <TabsTrigger value="visitors" className="gap-1"><Eye className="h-3 w-3" /> Visitantes por Dia</TabsTrigger>
               <TabsTrigger value="products" className="gap-1"><Package className="h-3 w-3" /> Vendas por Produto</TabsTrigger>
             </TabsList>
 
@@ -217,6 +219,34 @@ const LojaRelatorios = () => {
                     </ResponsiveContainer>
                   ) : (
                     <p className="text-center text-sm text-muted-foreground py-12">Nenhum dado de vendas para o período selecionado.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="visitors">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Visitantes por Dia</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                  ) : visitantesDia.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={visitantesDia}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="date_key" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }}
+                          formatter={(value: number) => [value, 'Visitantes']}
+                        />
+                        <Bar dataKey="visitantes_unicos" fill="hsl(var(--chart-4, var(--primary)))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-12">Nenhum dado de visitantes para o período selecionado.</p>
                   )}
                 </CardContent>
               </Card>

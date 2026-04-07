@@ -48,6 +48,17 @@ const UF_LIST = [
   'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
 ];
 
+const TIMEZONE_OPTIONS = [
+  { value: 'America/Sao_Paulo', label: 'Brasil — São Paulo (GMT-03)' },
+  { value: 'America/Manaus', label: 'Brasil — Manaus (GMT-04)' },
+  { value: 'America/Rio_Branco', label: 'Brasil — Rio Branco (GMT-05)' },
+  { value: 'America/New_York', label: 'Estados Unidos — Nova York' },
+  { value: 'America/Mexico_City', label: 'México — Cidade do México' },
+  { value: 'Europe/Lisbon', label: 'Portugal — Lisboa' },
+  { value: 'Europe/Madrid', label: 'Espanha — Madri' },
+  { value: 'Europe/London', label: 'Reino Unido — Londres' },
+];
+
 const emptyEmpresa: LojaEmpresa = {
   tipo_documento: '', documento: '', razao_social: '', email_suporte: '', telefone: '',
 };
@@ -66,6 +77,7 @@ const LojaPerfilLoja = () => {
   const [nomeExibicao, setNomeExibicao] = useState('');
   const [slogan, setSlogan] = useState('');
   const [favicon, setFavicon] = useState('');
+  const [timezone, setTimezone] = useState('America/Sao_Paulo');
   const [empresa, setEmpresa] = useState<LojaEmpresa>({ ...emptyEmpresa });
   const [endereco, setEndereco] = useState<LojaEndereco>({ ...emptyEndereco });
   const [saving, setSaving] = useState(false);
@@ -77,6 +89,7 @@ const LojaPerfilLoja = () => {
     setNomeExibicao(loja.nome_exibicao || '');
     setSlogan((loja as any).slogan || '');
     setFavicon(loja.favicon || '');
+    setTimezone(loja.timezone || 'America/Sao_Paulo');
     setEmpresa({ ...emptyEmpresa, ...loja.configuracoes?.empresa });
     setEndereco({ ...emptyEndereco, ...loja.configuracoes?.endereco });
   }, [loja]);
@@ -139,6 +152,7 @@ const LojaPerfilLoja = () => {
           nome_exibicao: nomeExibicao,
           slogan,
           favicon,
+          timezone,
           configuracoes: {
             empresa: empresaClean,
             endereco: enderecoClean,
@@ -183,6 +197,20 @@ const LojaPerfilLoja = () => {
           <div>
             <Label>Favicon</Label>
             <ImageUploader lojaId={id || ''} value={favicon} onChange={(url) => setFavicon(url)} placeholder="https://..." />
+          </div>
+          <div>
+            <Label>Timezone da Loja</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o timezone da loja" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">Relatórios, agregações diárias e períodos do painel devem usar este timezone como referência de negócio.</p>
           </div>
         </CardContent>
       </Card>

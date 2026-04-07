@@ -3,7 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
-const { nowGMT3 } = require('../lib/date-utils.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const PlanoSchema = new mongoose.Schema({
   nome: { type: String, required: true },
@@ -29,7 +29,7 @@ const PlanoSchema = new mongoose.Schema({
   isPagamentoUnico: { type: Boolean, default: false },
   maxParcelas: { type: Number, default: 12 },
   destaques: { type: [String], default: [] },
-  criado_em: { type: Date, default: () => nowGMT3() },
+  criado_em: { type: Date, default: () => nowUtc() },
 });
 
 module.exports = mongoose.models.Plano || mongoose.model('Plano', PlanoSchema);

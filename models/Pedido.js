@@ -3,6 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
+const { nowUtc } = require('../lib/utc.js');
 
 const PedidoItemSchema = new mongoose.Schema({
   product_id: { type: String, required: true },
@@ -67,15 +68,15 @@ const PedidoSchema = new mongoose.Schema({
   },
   appmax_sync_status: { type: String, enum: ['success', 'error', 'pending'], default: null },
   utms: { type: mongoose.Schema.Types.Mixed, default: {} },
-  criado_em: { type: Date, default: () => new Date() },
-  atualizado_em: { type: Date, default: () => new Date() },
+  criado_em: { type: Date, default: () => nowUtc() },
+  atualizado_em: { type: Date, default: () => nowUtc() },
 });
 
 // Auto-increment numero per loja
 PedidoSchema.index({ loja_id: 1, numero: -1 });
 
 PedidoSchema.pre('save', function () {
-  this.atualizado_em = new Date();
+  this.atualizado_em = nowUtc();
 });
 
 module.exports = mongoose.models.Pedido || mongoose.model('Pedido', PedidoSchema);

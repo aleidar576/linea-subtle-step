@@ -23,6 +23,7 @@ const Loja = require('../models/Loja.js');
 const Lojista = require('../models/Lojista.js');
 const authPkg = require('../lib/auth.js');
 const { sendEmail, getBranding, emailRastreioHtml } = require('../lib/email.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
@@ -348,7 +349,7 @@ module.exports = async function handler(req, res) {
       }
 
       pedido.status = novoStatus;
-      if (novoStatus === 'pago') pedido.pagamento = { ...pedido.pagamento, pago_em: new Date() };
+      if (novoStatus === 'pago') pedido.pagamento = { ...pedido.pagamento, pago_em: nowUtc() };
       await pedido.save();
 
       // === ACUMULAR TAXAS + CONVERTER CARRINHO quando pedido muda para pago ===

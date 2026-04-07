@@ -3,7 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
-const { nowGMT3 } = require('../lib/date-utils.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const CupomSchema = new mongoose.Schema({
   loja_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Loja', required: true, index: true },
@@ -17,18 +17,18 @@ const CupomSchema = new mongoose.Schema({
   
   produtos_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: [] }],
   is_active: { type: Boolean, default: true },
-  criado_em: { type: Date, default: () => nowGMT3() },
-  atualizado_em: { type: Date, default: () => nowGMT3() },
+  criado_em: { type: Date, default: () => nowUtc() },
+  atualizado_em: { type: Date, default: () => nowUtc() },
 });
 
 CupomSchema.index({ loja_id: 1, codigo: 1 }, { unique: true });
 
 CupomSchema.pre('save', function () {
-  if (!this.isNew) this.atualizado_em = nowGMT3();
+  if (!this.isNew) this.atualizado_em = nowUtc();
 });
 
 CupomSchema.pre('findOneAndUpdate', function () {
-  this.set({ atualizado_em: nowGMT3() });
+  this.set({ atualizado_em: nowUtc() });
 });
 
 module.exports = mongoose.models.Cupom || mongoose.model('Cupom', CupomSchema);

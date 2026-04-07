@@ -4,7 +4,6 @@ import { Store, CheckCircle2, Circle, Loader2, Package, ShoppingCart, Settings, 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect, useState } from 'react';
 import { lojaProductsApi, pedidosApi, lojistaApi, type Loja } from '@/services/saas-api';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -66,21 +65,24 @@ const PainelInicio = () => {
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Início</h1>
+    <div className="w-full space-y-10 pb-20">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-headline font-extrabold tracking-tight text-foreground">Início</h1>
+        <p className="text-muted-foreground">Resumo geral das suas lojas e próximos passos.</p>
+      </div>
 
       {/* KPI Cards - always visible */}
       {hasLojas && (
         <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-xl p-6">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
             <p className="text-sm text-muted-foreground">Lojas Ativas</p>
             <p className="text-3xl font-bold">{activeLojas.length}</p>
           </div>
-          <div className="bg-card border border-border rounded-xl p-6">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
             <p className="text-sm text-muted-foreground">Vendas Hoje</p>
             <p className="text-3xl font-bold">R$ 0,00</p>
           </div>
-          <div className="bg-card border border-border rounded-xl p-6">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
             <p className="text-sm text-muted-foreground">Pedidos</p>
             <p className="text-3xl font-bold">0</p>
           </div>
@@ -99,8 +101,7 @@ const PainelInicio = () => {
         <>
           {/* Onboarding Checklist - Progressive Disclosure */}
           {!isOnboardingCompleted && checked && (
-            <Card className="mb-8">
-              <CardContent className="p-6">
+            <div className="mb-8 bg-card border border-border rounded-xl p-6 shadow-sm">
                 <h3 className="font-semibold mb-4">Primeiros Passos</h3>
                 <div className="space-y-3">
                   {checklist.map((item, i) => (
@@ -118,8 +119,7 @@ const PainelInicio = () => {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           )}
 
           {/* Store Grid */}
@@ -143,13 +143,13 @@ const PainelInicio = () => {
                   : null;
 
                 return (
-                <Card key={loja._id} className="hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center justify-between text-lg">
+                <div key={loja._id} className="bg-card border border-border rounded-xl p-6 hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col">
+                  <div className="pb-4">
+                    <div className="flex items-center justify-between text-lg font-semibold">
                       <span className="truncate pr-2">{loja.nome}</span>
                       <Badge variant="success" className="border-0 shrink-0">Ativa</Badge>
-                    </CardTitle>
-                    <CardDescription>
+                    </div>
+                    <div className="mt-2 text-sm">
                       {dominioExterno ? (
                         <a
                           href={`https://${dominioExterno}`}
@@ -163,31 +163,31 @@ const PainelInicio = () => {
                       ) : (
                         <span className="text-muted-foreground italic">Domínio pendente</span>
                       )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="mt-auto pt-0">
+                    </div>
+                  </div>
+                  <div className="mt-auto pt-0">
                     <div className="grid grid-cols-2 gap-2 mt-4">
-                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/produtos`)}>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium bg-card border border-border text-foreground hover:bg-accent hover:text-accent-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/produtos`)}>
                         <Package className="w-4 h-4 mr-2" />
                         Produtos
                       </Button>
-                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/pedidos`)}>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium bg-card border border-border text-foreground hover:bg-accent hover:text-accent-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/pedidos`)}>
                         <ShoppingCart className="w-4 h-4 mr-2" />
                         Pedidos
                       </Button>
-                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/configuracoes`)}>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium bg-card border border-border text-foreground hover:bg-accent hover:text-accent-foreground" onClick={() => navigate(`/painel/loja/${loja._id}/configuracoes`)}>
                         <Settings className="w-4 h-4 mr-2" />
                         Configurações
                       </Button>
-                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium text-muted-foreground hover:text-foreground" asChild>
+                      <Button variant="secondary" size="sm" className="w-full justify-start text-xs font-medium bg-card border border-border text-foreground hover:bg-accent hover:text-accent-foreground" asChild>
                         <a href={loja.dominio_customizado ? `https://${loja.dominio_customizado}` : `/loja/${loja.slug}`} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4 mr-2" />
                           Visitar Loja
                         </a>
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
               })}
             </div>

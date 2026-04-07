@@ -6,8 +6,10 @@ const connectDB = require('../lib/mongodb.js');
 const Pedido = require('../models/Pedido.js');
 const Loja = require('../models/Loja.js');
 const Lojista = require('../models/Lojista.js');
+const LojaMetricaDiaria = require('../models/LojaMetricaDiaria.js');
 const authPkg = require('../lib/auth.js');
 const { sendReportEmail, emailRelatorioHtml, generateReportFiles, getBranding } = require('../lib/email.js');
+const { resolveStoreTimezone, buildUtcDateForStore, getDateKeyInTimezone } = require('../lib/timezone.js');
 
 const { verifyToken, getTokenFromHeader } = authPkg;
 
@@ -21,6 +23,11 @@ function requireLojista(req) {
 
 async function validateLojaOwnership(lojaId, lojistaId) {
   return Loja.findOne({ _id: lojaId, lojista_id: lojistaId });
+}
+
+function toMetricDateKey(value, timezone, endOfDay = false) {
+  if (!value) return null;
+  return getDateKeyInTimezone(buildUtcDateForStore(value, timezone, endOfDay), timezone);
 }
 
 module.exports = async function handler(req, res) {
@@ -41,13 +48,14 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && scope === 'relatorios' && loja_id) {
     const loja = await validateLojaOwnership(loja_id, lojista.lojista_id);
     if (!loja) return res.status(403).json({ error: 'Acesso negado' });
+    const timezone = resolveStoreTimezone(loja);
 
     const { date_from, date_to } = req.query;
     const matchFilter = { loja_id, status: 'pago' };
     if (date_from || date_to) {
       matchFilter.criado_em = {};
-      if (date_from) matchFilter.criado_em.$gte = new Date(date_from);
-      if (date_to) matchFilter.criado_em.$lte = new Date(date_to);
+      if (date_from) matchFilter.criado_em.$gte = buildUtcDateForStore(date_from, timezone, false);
+      if (date_to) matchFilter.criado_em.$lte = buildUtcDateForStore(date_to, timezone, true);
     }
 
     const docCount = await Pedido.countDocuments(matchFilter);
@@ -62,10 +70,10 @@ module.exports = async function handler(req, res) {
 
     if (isHeavy) {
       try {
-        const [vendas_por_dia, vendas_por_produto, totaisAgg] = await Promise.all([
+        const [vendas_por_dia, vendas_por_produto, totaisAgg, visitantes_por_dia] = await Promise.all([
           Pedido.aggregate([
             { $match: matchFilter },
-            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$criado_em' } }, count: { $sum: 1 }, total: { $sum: '$total' } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$criado_em', timezone } }, count: { $sum: 1 }, total: { $sum: '$total' } } },
             { $sort: { _id: 1 } },
           ]),
           Pedido.aggregate([
@@ -79,6 +87,15 @@ module.exports = async function handler(req, res) {
             { $match: matchFilter },
             { $group: { _id: null, pedidos: { $sum: 1 }, receita: { $sum: '$total' } } },
           ]),
+          LojaMetricaDiaria.find({
+            loja_id,
+            ...(date_from || date_to ? {
+              date_key: {
+                ...(date_from ? { $gte: toMetricDateKey(date_from, timezone, false) } : {}),
+                ...(date_to ? { $lte: getDateKeyInTimezone(buildUtcDateForStore(date_to, timezone, true), timezone) } : {}),
+              },
+            } : {}),
+          }).sort({ date_key: 1 }).lean(),
         ]);
 
         const vendasData = vendas_por_dia.map(v => ({ Data: v._id, Pedidos: v.count, Receita: v.total }));
@@ -91,7 +108,7 @@ module.exports = async function handler(req, res) {
 
         const lojistaDoc = await Lojista.findById(lojista.lojista_id).select('email nome').lean();
         const periodo = date_from && date_to
-          ? `${new Date(date_from).toLocaleDateString('pt-BR')} a ${new Date(date_to).toLocaleDateString('pt-BR')}`
+          ? `${new Date(buildUtcDateForStore(date_from, timezone, false)).toLocaleDateString('pt-BR', { timeZone: timezone })} a ${new Date(buildUtcDateForStore(date_to, timezone, true)).toLocaleDateString('pt-BR', { timeZone: timezone })}`
           : 'Todo o período';
 
         if (lojistaDoc?.email) {
@@ -108,14 +125,26 @@ module.exports = async function handler(req, res) {
         console.error('[RELATORIOS] Erro ao gerar relatório assíncrono:', err.message);
       }
 
-      return res.status(200).json({ status: 'async_report', docCount, intervalDays });
+      const totalVisitantes = visitantes_por_dia.reduce((acc, item) => acc + (item.visitantes_unicos || 0), 0);
+
+      return res.status(200).json({
+        status: 'async_report',
+        docCount,
+        intervalDays,
+        visitantes_por_dia,
+        totais: {
+          pedidos: totaisAgg[0]?.pedidos || 0,
+          receita: totaisAgg[0]?.receita || 0,
+          visitantes: totalVisitantes,
+        },
+      });
     }
 
     // Normal flow (within limits)
-    const [vendas_por_dia, vendas_por_produto, totaisAgg] = await Promise.all([
+    const [vendas_por_dia, vendas_por_produto, totaisAgg, visitantes_por_dia] = await Promise.all([
       Pedido.aggregate([
         { $match: matchFilter },
-        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$criado_em' } }, count: { $sum: 1 }, total: { $sum: '$total' } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$criado_em', timezone } }, count: { $sum: 1 }, total: { $sum: '$total' } } },
         { $sort: { _id: 1 } },
       ]),
       Pedido.aggregate([
@@ -129,12 +158,28 @@ module.exports = async function handler(req, res) {
         { $match: matchFilter },
         { $group: { _id: null, pedidos: { $sum: 1 }, receita: { $sum: '$total' } } },
       ]),
+      LojaMetricaDiaria.find({
+        loja_id,
+        ...(date_from || date_to ? {
+          date_key: {
+            ...(date_from ? { $gte: toMetricDateKey(date_from, timezone, false) } : {}),
+            ...(date_to ? { $lte: getDateKeyInTimezone(buildUtcDateForStore(date_to, timezone, true), timezone) } : {}),
+          },
+        } : {}),
+      }).sort({ date_key: 1 }).lean(),
     ]);
+
+    const totalVisitantes = visitantes_por_dia.reduce((acc, item) => acc + (item.visitantes_unicos || 0), 0);
 
     return res.status(200).json({
       vendas_por_dia,
       vendas_por_produto,
-      totais: { pedidos: totaisAgg[0]?.pedidos || 0, receita: totaisAgg[0]?.receita || 0 },
+      visitantes_por_dia,
+      totais: {
+        pedidos: totaisAgg[0]?.pedidos || 0,
+        receita: totaisAgg[0]?.receita || 0,
+        visitantes: totalVisitantes,
+      },
     });
   }
 

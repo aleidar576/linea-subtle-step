@@ -3,6 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
+const { nowUtc } = require('../lib/utc.js');
 
 const CarrinhoItemSchema = new mongoose.Schema({
   product_id: { type: String, required: true },
@@ -29,7 +30,7 @@ const CarrinhoAbandonadoSchema = new mongoose.Schema({
   txid: { type: String, default: null },
   utms: { type: mongoose.Schema.Types.Mixed, default: {} },
   convertido: { type: Boolean, default: false },
-  criado_em: { type: Date, default: () => new Date() },
+  criado_em: { type: Date, default: () => nowUtc() },
 });
 
 CarrinhoAbandonadoSchema.index({ loja_id: 1, criado_em: -1 });

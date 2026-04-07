@@ -4,7 +4,7 @@
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { nowGMT3 } = require('../lib/date-utils.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const LojistaSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -57,7 +57,7 @@ const LojistaSchema = new mongoose.Schema({
     data: { type: Date, default: Date.now },
     detalhes: { type: String, default: '' },
   }],
-  criado_em: { type: Date, default: () => nowGMT3() },
+  criado_em: { type: Date, default: () => nowUtc() },
 });
 
 LojistaSchema.pre('save', async function () {

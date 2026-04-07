@@ -15,15 +15,6 @@ interface Depoimento {
   texto: string;
 }
 
-const BRANDING_DEFAULTS: Record<string, string> = {
-  branding_cor_primaria: '#3CC7F5',
-  branding_cor_secundaria: '#EE49FD',
-  branding_fundo_dark: '#1E1E2E',
-  branding_fundo_light: '#FFFFFF',
-  branding_texto_light: '#F3F4F6',
-  branding_texto_dark: '#111827',
-};
-
 const SETTING_KEYS = [
   'global_domain', 'termos_uso', 'browser_icon',
   'dias_tolerancia_inadimplencia', 'dias_tolerancia_taxas', 'depoimentos_landing_page',
@@ -32,7 +23,6 @@ const SETTING_KEYS = [
   'saas_logo_size', 'saas_logo_size_home', 'saas_logo_size_login',
   'whatsapp_suporte',
   'platform_seo_title', 'platform_seo_description', 'platform_seo_og_image',
-  ...Object.keys(BRANDING_DEFAULTS),
 ];
 
 const AdminConfigEmpresa = () => {
@@ -60,7 +50,6 @@ const AdminConfigEmpresa = () => {
     platform_seo_title: '',
     platform_seo_description: '',
     platform_seo_og_image: '',
-    ...BRANDING_DEFAULTS,
   });
   const queryClient = useQueryClient();
 
@@ -210,112 +199,6 @@ const AdminConfigEmpresa = () => {
             <p className="text-xs text-muted-foreground mt-1">Ícone que aparece na aba do navegador em todas as áreas da plataforma (admin + painel lojista).</p>
           </div>
 
-          {/* Cores do SaaS */}
-          <div className="border-t border-border pt-4 mt-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-base">Cores do SaaS</h3>
-                <p className="text-sm text-muted-foreground">Defina as cores que serão aplicadas em todo o painel admin, painel do lojista, telas de login e homepage. <strong>Não afeta a loja pública.</strong></p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5 shrink-0"
-                onClick={() => setForm(f => ({ ...f, ...BRANDING_DEFAULTS }))}
-              >
-                <RotateCcw className="h-3.5 w-3.5" /> Restaurar Padrões
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {([
-                { key: 'branding_cor_primaria', label: 'Cor Primária' },
-                { key: 'branding_cor_secundaria', label: 'Cor Secundária' },
-                { key: 'branding_fundo_dark', label: 'Fundo Dark' },
-                { key: 'branding_fundo_light', label: 'Fundo Light' },
-                { key: 'branding_texto_light', label: 'Texto Light' },
-                { key: 'branding_texto_dark', label: 'Texto Dark' },
-              ] as const).map(({ key, label }) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-sm font-medium block">{label}</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form[key] || BRANDING_DEFAULTS[key]}
-                      onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                      className="h-10 w-12 rounded-md border border-input cursor-pointer bg-transparent p-0.5"
-                    />
-                    <Input
-                      value={form[key] || ''}
-                      onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                      placeholder={BRANDING_DEFAULTS[key]}
-                      className="flex-1 font-mono text-sm"
-                      maxLength={7}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Preview Visual */}
-            <div className="space-y-3 pt-2">
-              <h4 className="text-sm font-medium text-muted-foreground">Pré-visualização</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Dark preview */}
-                <div
-                  className="rounded-xl p-5 space-y-3 border"
-                  style={{ backgroundColor: form.branding_fundo_dark, color: form.branding_texto_light }}
-                >
-                  <p className="text-sm font-semibold opacity-60">Fundo Dark</p>
-                  <p className="text-sm">Texto em fundo escuro com as cores definidas.</p>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-4 py-2 rounded-md text-sm font-medium"
-                      style={{ backgroundColor: form.branding_cor_primaria, color: form.branding_fundo_dark }}
-                    >
-                      Primária
-                    </button>
-                    <button
-                      className="px-4 py-2 rounded-md text-sm font-medium"
-                      style={{ backgroundColor: form.branding_cor_secundaria, color: form.branding_fundo_dark }}
-                    >
-                      Secundária
-                    </button>
-                  </div>
-                </div>
-                {/* Light preview */}
-                <div
-                  className="rounded-xl p-5 space-y-3 border"
-                  style={{ backgroundColor: form.branding_fundo_light, color: form.branding_texto_dark }}
-                >
-                  <p className="text-sm font-semibold opacity-60">Fundo Light</p>
-                  <p className="text-sm">Texto em fundo claro com as cores definidas.</p>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-4 py-2 rounded-md text-sm font-medium"
-                      style={{ backgroundColor: form.branding_cor_primaria, color: '#FFFFFF' }}
-                    >
-                      Primária
-                    </button>
-                    <button
-                      className="px-4 py-2 rounded-md text-sm font-medium"
-                      style={{ backgroundColor: form.branding_cor_secundaria, color: '#FFFFFF' }}
-                    >
-                      Secundária
-                    </button>
-                  </div>
-                </div>
-              </div>
-              {/* Gradient bar */}
-              <div
-                className="h-3 rounded-full"
-                style={{
-                  background: `linear-gradient(90deg, ${form.branding_cor_primaria}, ${form.branding_cor_secundaria})`,
-                }}
-              />
-            </div>
-          </div>
         </div>
 
         {/* SEO e Compartilhamento Social */}

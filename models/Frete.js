@@ -3,7 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
-const { nowGMT3 } = require('../lib/date-utils.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const FreteSchema = new mongoose.Schema({
   loja_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Loja', required: true, index: true },
@@ -17,16 +17,16 @@ const FreteSchema = new mongoose.Schema({
   ordem_exibicao: { type: Number, default: 0 },
   pre_selecionado: { type: Boolean, default: false },
   is_active: { type: Boolean, default: true },
-  criado_em: { type: Date, default: () => nowGMT3() },
-  atualizado_em: { type: Date, default: () => nowGMT3() },
+  criado_em: { type: Date, default: () => nowUtc() },
+  atualizado_em: { type: Date, default: () => nowUtc() },
 });
 
 FreteSchema.pre('save', function () {
-  if (!this.isNew) this.atualizado_em = nowGMT3();
+  if (!this.isNew) this.atualizado_em = nowUtc();
 });
 
 FreteSchema.pre('findOneAndUpdate', function () {
-  this.set({ atualizado_em: nowGMT3() });
+  this.set({ atualizado_em: nowUtc() });
 });
 
 module.exports = mongoose.models.Frete || mongoose.model('Frete', FreteSchema);

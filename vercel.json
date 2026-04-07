@@ -15,6 +15,7 @@
     { "source": "/api/pedidos", "destination": "/api/pedidos.js" },
     { "source": "/api/crm", "destination": "/api/crm.js" },
     { "source": "/api/carrinhos", "destination": "/api/carrinhos.js" },
+    { "source": "/api/analytics", "destination": "/api/analytics.js" },
     { "source": "/api/etiquetas", "destination": "/api/etiquetas.js" },
     { "source": "/api/relatorios", "destination": "/api/relatorios.js" },
     { "source": "/api/marketing", "destination": "/api/marketing.js" },

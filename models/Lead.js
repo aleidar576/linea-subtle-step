@@ -3,13 +3,13 @@
 // ============================================
 
 const mongoose = require('mongoose');
-const { nowGMT3 } = require('../lib/date-utils.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const LeadSchema = new mongoose.Schema({
   loja_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Loja', required: true, index: true },
   email: { type: String, required: true, trim: true, lowercase: true, maxlength: 255 },
   origem: { type: String, enum: ['POPUP', 'FOOTER'], default: 'POPUP' },
-  criado_em: { type: Date, default: () => nowGMT3() },
+  criado_em: { type: Date, default: () => nowUtc() },
 });
 
 // Index único composto para evitar duplicatas por loja

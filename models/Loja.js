@@ -3,7 +3,7 @@
 // ============================================
 
 const mongoose = require('mongoose');
-const { nowGMT3 } = require('../lib/date-utils.js');
+const { nowUtc } = require('../lib/utc.js');
 
 const LojaSchema = new mongoose.Schema({
   lojista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Lojista', required: true, index: true },
@@ -15,6 +15,7 @@ const LojaSchema = new mongoose.Schema({
   icone: { type: String, default: '' },
   dominio_customizado: { type: String, default: null },
   dominio_verificado: { type: Boolean, default: false },
+  timezone: { type: String, default: 'America/Sao_Paulo' },
   seo_config: {
     title: { type: String, default: null },
     description: { type: String, default: null },
@@ -85,16 +86,16 @@ const LojaSchema = new mongoose.Schema({
   },
   ativada_por_admin: { type: Boolean, default: false },
   is_active: { type: Boolean, default: true },
-  criado_em: { type: Date, default: () => nowGMT3() },
-  atualizado_em: { type: Date, default: () => nowGMT3() },
+  criado_em: { type: Date, default: () => nowUtc() },
+  atualizado_em: { type: Date, default: () => nowUtc() },
 });
 
 LojaSchema.pre('save', function () {
-  if (!this.isNew) this.atualizado_em = nowGMT3();
+  if (!this.isNew) this.atualizado_em = nowUtc();
 });
 
 LojaSchema.pre('findOneAndUpdate', function () {
-  this.set({ atualizado_em: nowGMT3() });
+  this.set({ atualizado_em: nowUtc() });
 });
 
 module.exports = mongoose.models.Loja || mongoose.model('Loja', LojaSchema);
